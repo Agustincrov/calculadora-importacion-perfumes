@@ -684,16 +684,16 @@ async function fetchAllRates() {
   // Comparapix — find best BRL→ARS rate among PIX providers
   if (results[2].status === 'fulfilled') {
     const { data, via } = results[2].value;
-    let bestRate = 0, bestName = '';
+    let bestRate = Infinity, bestName = '';
     for (const [name, info] of Object.entries(data)) {
       if (!info.isPix) continue;
       const brlArs = info.quotes?.find(q => q.symbol === 'BRLARS');
-      if (brlArs && brlArs.buy > bestRate) {
+      if (brlArs && brlArs.buy > 0 && brlArs.buy < bestRate) {
         bestRate = brlArs.buy;
         bestName = name;
       }
     }
-    if (bestRate > 0) {
+    if (bestRate < Infinity) {
       document.getElementById('r-pix-ars').value              = bestRate.toFixed(2);
       document.getElementById('pix-ars-provider').textContent = `Mejor: ${bestName} · comparapix.ar${via === 'proxy' ? ' (proxy)' : ''}`;
       msgs.push(`PIX: ${bestName} @ ${bestRate.toFixed(2)}`);
