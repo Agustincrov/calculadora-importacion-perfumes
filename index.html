@@ -417,12 +417,12 @@
           </svg>
           Agregar producto
         </button>
-        <button class="btn btn-success" onclick="exportExcel()">
+        <button class="btn btn-success" onclick="exportNotes()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
-          Exportar Excel
+          Exportar resumen
         </button>
       </div>
     </div>
@@ -718,83 +718,80 @@ async function fetchAllRates() {
 }
 
 // ─────────────────────────────────────────────
-// Export to Excel
+// Export plain text notes
 // ─────────────────────────────────────────────
-function exportExcel() {
-  const pixRate    = getRate('r-pix');
-  const arsPerBrl  = getRate('r-pix-ars');
-  const oficial    = getRate('r-oficial');
-  const blue       = getRate('r-blue');
-  const comUSD     = getRate('r-comision');
-  const envioTotal = getRate('r-envio');
-  const totalUnits = rows.reduce((s, r) => s + r.qty, 0);
+function exportNotes() {
+  const pixRate      = getRate('r-pix');
+  const arsPerBrl    = getRate('r-pix-ars');
+  const oficial      = getRate('r-oficial');
+  const blue         = getRate('r-blue');
+  const comUSD       = getRate('r-comision');
+  const envioTotal   = getRate('r-envio');
+  const pixService   = document.getElementById('pix-ars-provider').textContent;
+  const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
   const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
   const comisionARS  = comUSD * oficial;
+  const fecha        = new Date().toLocaleString('es-AR');
 
-  const data = [
-    ['CALCULADORA DE IMPORTACIÓN — Ciudad del Este'],
-    [`Exportado: ${new Date().toLocaleString('es-AR')}`],
-    [],
-    ['TASAS'],
-    ['Valor do PIX (BRL/USD)', pixRate],
-    ['Mejor PIX BRL→ARS', arsPerBrl, document.getElementById('pix-ars-provider').textContent],
-    ['Dólar Oficial (ARS)', oficial],
-    ['Dólar Blue (ARS)', blue],
-    ['Comisión por producto (USD)', comUSD],
-    ['Costo envío total (ARS)', envioTotal],
-    [],
-    ['Producto','Precio USD','Cantidad',
-     'Costo BRL/unid','Costo ARS/unid (Fase 1)',
-     'Comisión ARS/unid (Fase 2)','Envío ARS/unid (Fase 2)','Costo total/unid',
-     'Margen %','Precio venta ARS','Precio venta USD blue','Margen real %'],
-  ];
-
-  let totalBRL = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
-
-  rows.forEach(row => {
-    const costoBRL   = row.price * pixRate;
-    const costoARS1  = arsPerBrl > 0 ? costoBRL * arsPerBrl : 0;
+  let totalCostoARS = 0, totalVenta = 0, totalGanancia = 0;
+  const productRows = rows.map(row => {
+    const costoARS1  = row.price * pixRate * arsPerBrl;
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
-    let precioARS = 0, precioUSD = 0, ganancia = 0, margenReal = 0;
+    let precioARS = 0, precioUSD = 0, ganancia = 0;
     if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
-      precioARS  = costoTotal / (1 - row.margin / 100);
-      precioUSD  = blue > 0 ? precioARS / blue : 0;
-      ganancia   = precioARS - costoTotal;
-      margenReal = ganancia / precioARS;
+      precioARS = costoTotal / (1 - row.margin / 100);
+      precioUSD = blue > 0 ? precioARS / blue : 0;
+      ganancia  = precioARS - costoTotal;
     }
-    totalBRL        += costoBRL   * row.qty;
-    totalARS1       += costoARS1  * row.qty;
-    totalComisiones += comisionARS * row.qty;
-    totalVenta      += precioARS  * row.qty;
-    totalGanancia   += ganancia   * row.qty;
-    data.push([
-      row.name, row.price, row.qty,
-      +costoBRL.toFixed(2), +costoARS1.toFixed(2),
-      +comisionARS.toFixed(2), +envioPerUnit.toFixed(2), +costoTotal.toFixed(2),
-      row.margin / 100, +precioARS.toFixed(2), +precioUSD.toFixed(2), +margenReal.toFixed(4),
-    ]);
+    totalCostoARS += costoTotal * row.qty;
+    totalVenta    += precioARS  * row.qty;
+    totalGanancia += ganancia   * row.qty;
+    return { row, costoTotal, precioARS, precioUSD, ganancia };
+  });
+  const roi = totalCostoARS > 0 ? (totalGanancia / totalCostoARS * 100).toFixed(1) : 0;
+
+  const line  = '─'.repeat(40);
+  const lines = [];
+
+  lines.push('RESUMEN DE COMPRA — Ciudad del Este');
+  lines.push(fecha);
+  lines.push(line);
+
+  lines.push('TASAS');
+  lines.push(`  PIX:           ${pixRate} BRL/USD  (${pixService})`);
+  lines.push(`  BRL → ARS:     ${arsPerBrl} ARS/BRL`);
+  lines.push(`  Dólar Oficial: $${oficial}`);
+  lines.push(`  Dólar Blue:    $${blue}`);
+  lines.push(`  Comisión:      USD ${comUSD}/producto`);
+  lines.push(`  Envío:         $${envioTotal} total ÷ ${totalUnits} unid = $${Math.round(envioPerUnit)}/unid`);
+  lines.push(line);
+
+  lines.push('PRODUCTOS');
+  productRows.forEach(({ row, costoTotal, precioARS, precioUSD, ganancia }) => {
+    const nombre = row.name || '(sin nombre)';
+    lines.push(`  ${nombre}`);
+    lines.push(`    Precio USD:       USD ${row.price}  ×  ${row.qty} unidad${row.qty !== 1 ? 'es' : ''}`);
+    lines.push(`    Costo real/unid:  $${Math.round(costoTotal).toLocaleString('es-AR')}`);
+    lines.push(`    Precio de venta:  $${Math.round(precioARS).toLocaleString('es-AR')}  (USD ${precioUSD.toFixed(2)} blue)`);
+    lines.push(`    Ganancia/unid:    $${Math.round(ganancia).toLocaleString('es-AR')}`);
+    lines.push('');
   });
 
-  const totalCostoReal = totalARS1 + totalComisiones + envioTotal;
-  const roi = totalCostoReal > 0 ? totalGanancia / totalCostoReal : 0;
+  lines.push(line);
+  lines.push('TOTALES');
+  lines.push(`  Unidades:            ${totalUnits}`);
+  lines.push(`  Costo total:         $${Math.round(totalCostoARS).toLocaleString('es-AR')}`);
+  lines.push(`  Total a cobrar:      $${Math.round(totalVenta).toLocaleString('es-AR')}`);
+  lines.push(`  Ganancia total:      $${Math.round(totalGanancia).toLocaleString('es-AR')}`);
+  lines.push(`  ROI:                 ${roi}%`);
 
-  data.push(
-    [],
-    ['RESUMEN'],
-    ['Costo BRL total', +totalBRL.toFixed(2)],
-    ['Costo ARS Fase 1 (PIX)', +totalARS1.toFixed(2)],
-    ['Comisiones Fase 2 (ARS)', +totalComisiones.toFixed(2)],
-    ['Envío Fase 2 (ARS)', +envioTotal.toFixed(2)],
-    ['Costo total real (ARS)', +totalCostoReal.toFixed(2)],
-    ['Venta total (ARS)', +totalVenta.toFixed(2)],
-    ['Ganancia real (ARS)', +totalGanancia.toFixed(2)],
-    ['ROI', +roi.toFixed(4)],
-  );
-
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Calculadora');
-  XLSX.writeFile(wb, `importacion_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `compra_${new Date().toISOString().slice(0,10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─────────────────────────────────────────────
