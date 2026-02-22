@@ -283,20 +283,21 @@
           </div>
         </div>
 
-        <!-- BRL → ARS (auto-fetch, manual fallback) -->
+        <!-- USD → BRL (auto-fetch, manual fallback) -->
         <div class="rate-item">
-          <label>Mejor PIX (ARS/BRL) <span class="pill pill-p1">FASE 1</span></label>
+          <label>Mejor PIX (BRL/USD) <span class="pill pill-p1">FASE 1</span></label>
           <div class="rate-input-wrap">
-            <span class="prefix">$</span>
-            <input type="number" id="r-pix-ars" value="0" step="0.01"
-              placeholder="auto" title="Se completa desde comparapix.ar. Si falla, ingresalo manualmente." />
+            <span class="prefix">R$</span>
+            <input type="number" id="r-pix-usd" value="0" step="0.001"
+              style="padding-left:36px" placeholder="auto"
+              title="BRL que recibís por cada USD que mandás. Se completa desde comparapix.ar." />
           </div>
-          <div id="pix-ars-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
+          <div id="pix-usd-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
         </div>
 
         <!-- Dólar Oficial -->
         <div class="rate-item">
-          <label>Dólar Oficial (ARS) <span class="pill pill-p2">FASE 2</span></label>
+          <label>Dólar Oficial (ARS) <span class="pill pill-p1">FASE 1</span><span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
             <input type="number" id="r-oficial" value="1410" step="1" />
@@ -357,11 +358,15 @@
             <span class="val" id="s-qty">0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">Costo en BRL</span>
+            <span class="lbl">BRL a mandar</span>
             <span class="val accent" id="s-brl">R$ 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">Costo en ARS (vía PIX)</span>
+            <span class="lbl">USD que pagás</span>
+            <span class="val accent" id="s-usd1">USD 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Costo en ARS (al oficial)</span>
             <span class="val accent" id="s-ars-p1">$ 0</span>
           </div>
         </div>
@@ -432,7 +437,7 @@
         <thead>
           <tr class="phase-headers">
             <th class="ph-input" colspan="4"></th>
-            <th class="ph-p1" colspan="2">Fase 1 — Costo vía PIX</th>
+            <th class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
             <th class="ph-sell" colspan="4">Precio de venta</th>
             <th class="ph-del"></th>
@@ -442,7 +447,8 @@
             <th class="bg-input">Producto</th>
             <th class="bg-input">Precio USD</th>
             <th class="bg-input">Cantidad</th>
-            <th class="bg-p1">Costo BRL/unid</th>
+            <th class="bg-p1">BRL/unid</th>
+            <th class="bg-p1">USD que pagás</th>
             <th class="bg-p1">Costo ARS/unid</th>
             <th class="bg-p2">Comisión ARS/unid</th>
             <th class="bg-p2">Envío ARS/unid</th>
@@ -506,6 +512,7 @@ function renderTable() {
       <td><input type="number" value="${row.qty}" min="0" step="1"
           oninput="updateField(${row.id},'qty',+this.value)" /></td>
       <td class="cell-computed bg-p1" id="brl-${row.id}">—</td>
+      <td class="cell-computed bg-p1" id="usd-${row.id}">—</td>
       <td class="cell-computed bg-p1" id="ars1-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="com-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="env-${row.id}">—</td>
@@ -540,41 +547,43 @@ function esc(str) { return String(str).replace(/"/g, '&quot;').replace(/</g, '&l
 // ─────────────────────────────────────────────
 // Calculations
 //
-// FASE 1 (paid via PIX, product cost only):
-//   costo_brl   = price_usd × pix_rate          (USD → BRL, store rate)
-//   costo_ars1  = costo_brl × ars_per_brl        (BRL → ARS, best comparapix service)
+// FASE 1 — Pay with USD at official rate via BRLUSD PIX service:
+//   brl_unid    = price_usd × store_pix_rate       (BRL the store wants)
+//   usd_unid    = brl_unid / pix_usd_rate           (USD you send to the PIX service)
+//   costo_ars1  = usd_unid × oficial                (what those USD cost you in ARS)
 //
 // FASE 2 (paid to shipper):
-//   comision_ars = commission_usd × oficial       (paid in ARS at official rate)
-//   envio_unid   = envio_total / total_units      (split equally, paid in plain ARS)
+//   comision_ars = commission_usd × oficial
+//   envio_unid   = envio_total / total_units
 //
-// TOTAL COST:
+// TOTAL:
 //   costo_total = costo_ars1 + comision_ars + envio_unid
 //
-// SELLING PRICE (in ARS, priced as USD-blue equivalent):
+// SELLING PRICE:
 //   precio_venta_ars      = costo_total / (1 - margin%)
 //   precio_venta_usd_blue = precio_venta_ars / blue
 //   ganancia              = precio_venta_ars - costo_total
 //   margen_real           = ganancia / precio_venta_ars
 // ─────────────────────────────────────────────
 function recalculate() {
-  const pixRate   = getRate('r-pix');       // USD → BRL
-  const arsPerBrl = getRate('r-pix-ars');  // BRL → ARS (from comparapix or manual)
-  const oficial   = getRate('r-oficial');   // ARS per USD oficial
-  const blue      = getRate('r-blue');      // ARS per USD blue
-  const comUSD    = getRate('r-comision');  // commission per product in USD
-  const envioTotal = getRate('r-envio');    // fixed shipping ARS
+  const pixRate    = getRate('r-pix');      // store rate: BRL per USD (valor do pix)
+  const pixUsdRate = getRate('r-pix-usd'); // service rate: BRL per USD (comparapix BRLUSD)
+  const oficial    = getRate('r-oficial');  // ARS per USD oficial
+  const blue       = getRate('r-blue');     // ARS per USD blue
+  const comUSD     = getRate('r-comision');
+  const envioTotal = getRate('r-envio');
 
-  const totalUnits    = rows.reduce((s, r) => s + r.qty, 0);
-  const envioPerUnit  = totalUnits > 0 ? envioTotal / totalUnits : 0;
-  const comisionARS   = comUSD * oficial;   // same for all products
+  const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
+  const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
+  const comisionARS  = comUSD * oficial;
 
-  let totalBRL = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
+  let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
 
   rows.forEach(row => {
-    // Fase 1
-    const costoBRL  = row.price * pixRate;
-    const costoARS1 = arsPerBrl > 0 ? costoBRL * arsPerBrl : 0;
+    // Fase 1: USD → BRL (via PIX service) → ARS (at oficial)
+    const brlUnid  = row.price * pixRate;
+    const usdUnid  = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
+    const costoARS1 = usdUnid * oficial;
 
     // Fase 2
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
@@ -582,22 +591,24 @@ function recalculate() {
     // Selling price
     let precioARS = 0, precioUSD = 0, ganancia = 0, margenReal = 0;
     if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
-      precioARS   = costoTotal / (1 - row.margin / 100);
-      precioUSD   = blue > 0 ? precioARS / blue : 0;
-      ganancia    = precioARS - costoTotal;
-      margenReal  = ganancia / precioARS;
+      precioARS  = costoTotal / (1 - row.margin / 100);
+      precioUSD  = blue > 0 ? precioARS / blue : 0;
+      ganancia   = precioARS - costoTotal;
+      margenReal = ganancia / precioARS;
     }
 
-    // Accumulate (per-unit × qty for totals)
-    totalBRL         += costoBRL   * row.qty;
-    totalARS1        += costoARS1  * row.qty;
-    totalComisiones  += comisionARS * row.qty;
-    totalVenta       += precioARS  * row.qty;
-    totalGanancia    += ganancia   * row.qty;
+    // Accumulate
+    totalBRL        += brlUnid   * row.qty;
+    totalUSD1       += usdUnid   * row.qty;
+    totalARS1       += costoARS1 * row.qty;
+    totalComisiones += comisionARS * row.qty;
+    totalVenta      += precioARS * row.qty;
+    totalGanancia   += ganancia  * row.qty;
 
     // Update cells
-    setCell(`brl-${row.id}`,  fmt_brl(costoBRL));
-    setCell(`ars1-${row.id}`, arsPerBrl > 0 ? fmt_ars(costoARS1) : '—');
+    setCell(`brl-${row.id}`,  fmt_brl(brlUnid));
+    setCell(`usd-${row.id}`,  pixUsdRate > 0 ? fmt_usd(usdUnid) : '—');
+    setCell(`ars1-${row.id}`, pixUsdRate > 0 ? fmt_ars(costoARS1) : '—');
     setCell(`com-${row.id}`,  fmt_ars(comisionARS));
     setCell(`env-${row.id}`,  fmt_ars(envioPerUnit));
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
@@ -611,6 +622,7 @@ function recalculate() {
 
   setText('s-qty',        fmt_num(totalUnits));
   setText('s-brl',        fmt_brl(totalBRL));
+  setText('s-usd1',       fmt_usd(totalUSD1));
   setText('s-ars-p1',     fmt_ars(totalARS1));
   setText('s-comisiones', fmt_ars(totalComisiones));
   setText('s-envio',      fmt_ars(envioTotal));
@@ -684,24 +696,28 @@ async function fetchAllRates() {
   // Comparapix — find best BRL→ARS rate among PIX providers
   if (results[2].status === 'fulfilled') {
     const { data, via } = results[2].value;
-    let bestRate = Infinity, bestName = '';
+    // Find BRLUSD service with lowest buy (= most BRL per USD)
+    // Exclude USDT services (dolarapp, binance) — symbol BRLUSD only
+    const EXCLUDE_USDT = ['dolarapp', 'binance'];
+    let bestBrlusd = Infinity, bestName = '';
     for (const [name, info] of Object.entries(data)) {
-      if (!info.isPix) continue;
-      const brlArs = info.quotes?.find(q => q.symbol === 'BRLARS');
-      if (brlArs && brlArs.buy > 0 && brlArs.buy < bestRate) {
-        bestRate = brlArs.buy;
-        bestName = name;
+      if (!info.isPix || EXCLUDE_USDT.includes(name)) continue;
+      const q = info.quotes?.find(q => q.symbol === 'BRLUSD');
+      if (q && q.buy > 0 && q.buy < bestBrlusd) {
+        bestBrlusd = q.buy;
+        bestName   = name;
       }
     }
-    if (bestRate < Infinity) {
-      document.getElementById('r-pix-ars').value              = bestRate.toFixed(2);
-      document.getElementById('pix-ars-provider').textContent = `Mejor: ${bestName} · comparapix.ar${via === 'proxy' ? ' (proxy)' : ''}`;
-      msgs.push(`PIX: ${bestName} @ ${bestRate.toFixed(2)}`);
+    if (bestBrlusd < Infinity) {
+      const brlPerUsd = 1 / bestBrlusd;
+      document.getElementById('r-pix-usd').value              = brlPerUsd.toFixed(3);
+      document.getElementById('pix-usd-provider').textContent = `Mejor: ${bestName} · ${brlPerUsd.toFixed(3)} BRL/USD · comparapix.ar`;
+      msgs.push(`PIX USD: ${bestName} @ ${brlPerUsd.toFixed(3)} BRL/USD`);
     } else {
-      document.getElementById('pix-ars-provider').textContent = 'Sin datos — ingresá el valor manualmente';
+      document.getElementById('pix-usd-provider').textContent = 'Sin datos — ingresá el valor manualmente';
     }
   } else {
-    document.getElementById('pix-ars-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+    document.getElementById('pix-usd-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
   }
 
   icon.classList.remove('spin');
@@ -722,12 +738,12 @@ async function fetchAllRates() {
 // ─────────────────────────────────────────────
 function exportNotes() {
   const pixRate      = getRate('r-pix');
-  const arsPerBrl    = getRate('r-pix-ars');
+  const pixUsdRate   = getRate('r-pix-usd');
   const oficial      = getRate('r-oficial');
   const blue         = getRate('r-blue');
   const comUSD       = getRate('r-comision');
   const envioTotal   = getRate('r-envio');
-  const pixService   = document.getElementById('pix-ars-provider').textContent;
+  const pixService   = document.getElementById('pix-usd-provider').textContent;
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
   const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
   const comisionARS  = comUSD * oficial;
@@ -735,7 +751,9 @@ function exportNotes() {
 
   let totalCostoARS = 0, totalVenta = 0, totalGanancia = 0;
   const productRows = rows.map(row => {
-    const costoARS1  = row.price * pixRate * arsPerBrl;
+    const brlUnid   = row.price * pixRate;
+    const usdUnid   = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
+    const costoARS1  = usdUnid * oficial;
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
     let precioARS = 0, precioUSD = 0, ganancia = 0;
     if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
@@ -758,8 +776,8 @@ function exportNotes() {
   lines.push(line);
 
   lines.push('TASAS');
-  lines.push(`  PIX:           ${pixRate} BRL/USD  (${pixService})`);
-  lines.push(`  BRL → ARS:     ${arsPerBrl} ARS/BRL`);
+  lines.push(`  Valor do PIX (tienda):  ${pixRate} BRL/USD`);
+  lines.push(`  Servicio PIX (USD→BRL): ${pixUsdRate} BRL/USD  (${pixService})`);
   lines.push(`  Dólar Oficial: $${oficial}`);
   lines.push(`  Dólar Blue:    $${blue}`);
   lines.push(`  Comisión:      USD ${comUSD}/producto`);
@@ -797,7 +815,7 @@ function exportNotes() {
 // ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
-['r-pix','r-pix-ars','r-oficial','r-blue','r-comision','r-envio'].forEach(id => {
+['r-pix','r-pix-usd','r-oficial','r-blue','r-comision','r-envio'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalculate);
 });
 
