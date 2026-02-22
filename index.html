@@ -648,20 +648,9 @@ function fmt_num(n) { return Number(n).toLocaleString('es-AR'); }
 // Fetch comparapix — tries direct, falls back to CORS proxy
 // ─────────────────────────────────────────────
 async function fetchComparapix() {
-  const DIRECT = 'https://api.comparapix.ar/quotes';
-  const PROXY  = `https://corsproxy.io/?url=${encodeURIComponent(DIRECT)}`;
-
-  // Try direct (works if the API sends permissive CORS headers)
-  try {
-    const res = await fetch(DIRECT);
-    if (!res.ok) throw new Error('not ok');
-    return { data: await res.json(), via: 'direct' };
-  } catch (_) {}
-
-  // Fallback: route through corsproxy.io
-  const res = await fetch(PROXY);
-  if (!res.ok) throw new Error('proxy also failed');
-  return { data: await res.json(), via: 'proxy' };
+  const res = await fetch('https://comparapi-proxy.agustincrovato7.workers.dev/');
+  if (!res.ok) throw new Error('worker failed');
+  return { data: await res.json(), via: 'worker' };
 }
 
 // ─────────────────────────────────────────────
