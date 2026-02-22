@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Importación — Ciudad del Este</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #e0e4eb;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
+      --warn: #d97706;
+      --warn-light: #fffbeb;
+      --text: #1e293b;
+      --muted: #64748b;
+      --radius: 10px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08);
+
+      /* phase colours */
+      --p1-bg: #eef6ff;
+      --p1-head: #bfdbfe;
+      --p1-text: #1d4ed8;
+      --p2-bg: #f0fdf4;
+      --p2-head: #bbf7d0;
+      --p2-text: #15803d;
+      --sell-bg: #fdf4ff;
+      --sell-head: #e9d5ff;
+      --sell-text: #7e22ce;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    header { margin-bottom: 24px; }
+    header h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    header p { color: var(--muted); font-size: .875rem; margin-top: 2px; }
+
+    /* ── Top grid ── */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 3fr 2fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 800px) { .top-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Rates ── */
+    .rates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    @media (max-width: 600px) { .rates-grid { grid-template-columns: 1fr 1fr; } }
+
+    .rate-item label {
+      display: flex; align-items: center; gap: 5px;
+      font-size: .72rem; font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .rate-item label .pill {
+      font-size: .62rem; padding: 1px 5px; border-radius: 10px; font-weight: 700;
+    }
+    .pill-p1 { background: var(--p1-head); color: var(--p1-text); }
+    .pill-p2 { background: var(--p2-head); color: var(--p2-text); }
+
+    .rate-input-wrap { position: relative; }
+    .rate-input-wrap .prefix {
+      position: absolute; left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted); font-size: .8rem; pointer-events: none;
+    }
+    .rate-input-wrap input {
+      width: 100%;
+      padding: 8px 8px 8px 34px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: .95rem; font-weight: 600;
+      color: var(--text); background: var(--bg);
+      transition: border-color .15s, background .15s;
+    }
+    .rate-input-wrap input:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+
+    .rates-bottom { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .fetch-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      font-size: .8rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    .fetch-btn:hover { background: #dbeafe; }
+    #rate-status { font-size: .72rem; color: var(--muted); }
+    #rate-status.ok { color: var(--success); }
+    #rate-status.err { color: var(--danger); }
+
+    /* ── Summary ── */
+    .summary-sections { display: flex; flex-direction: column; gap: 10px; }
+    .sum-section-label {
+      font-size: .65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .06em;
+      padding: 4px 8px; border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .sum-section-label.p1 { background: var(--p1-head); color: var(--p1-text); }
+    .sum-section-label.p2 { background: var(--p2-head); color: var(--p2-text); }
+    .sum-section-label.total { background: #e0e7ff; color: #3730a3; }
+
+    .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .stat-row .lbl { font-size: .75rem; color: var(--muted); }
+    .stat-row .val { font-size: .9rem; font-weight: 700; }
+    .val.accent { color: var(--accent); }
+    .val.success { color: var(--success); }
+    .val.warn { color: var(--warn); }
+    .val.danger { color: var(--danger); }
+    .val.purple { color: #7e22ce; }
+
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+    /* ── Products ── */
+    .products-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .products-header h2 { font-size: 1rem; font-weight: 700; }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 13px;
+      border-radius: 6px;
+      font-size: .8rem; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-outline { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .btn-success { background: var(--success); color: #fff; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .83rem; background: var(--card); }
+
+    /* Phase group headers */
+    thead tr.phase-headers th {
+      padding: 5px 10px;
+      font-size: .65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .06em;
+      text-align: center;
+      border-bottom: none;
+    }
+    th.ph-input { background: #f8fafc; color: var(--muted); }
+    th.ph-p1    { background: var(--p1-head); color: var(--p1-text); }
+    th.ph-p2    { background: var(--p2-head); color: var(--p2-text); }
+    th.ph-sell  { background: var(--sell-head); color: var(--sell-text); }
+    th.ph-del   { background: #f8fafc; }
+
+    thead tr.col-headers th {
+      padding: 8px 10px;
+      font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .04em;
+      white-space: nowrap;
+      border-bottom: 2px solid var(--border);
+      border-top: 1px solid var(--border);
+    }
+    th.bg-input { background: #f8fafc; color: var(--muted); }
+    th.bg-p1    { background: var(--p1-bg); color: var(--p1-text); }
+    th.bg-p2    { background: var(--p2-bg); color: var(--p2-text); }
+    th.bg-sell  { background: var(--sell-bg); color: var(--sell-text); }
+    th.bg-del   { background: #f8fafc; }
+
+    tbody tr:hover td { filter: brightness(.97); }
+    tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+
+    td.bg-p1  { background: var(--p1-bg); }
+    td.bg-p2  { background: var(--p2-bg); }
+    td.bg-sell { background: var(--sell-bg); }
+
+    td input[type="text"], td input[type="number"] {
+      width: 100%; min-width: 65px;
+      padding: 5px 7px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      font-size: .83rem; background: transparent; color: var(--text);
+      transition: border-color .12s, background .12s;
+    }
+    td input:focus { outline: none; border-color: var(--accent); background: #fff; }
+    td input[type="number"] { text-align: right; }
+
+    .cell-computed { text-align: right; font-weight: 500; white-space: nowrap; }
+    .cell-computed.positive { color: var(--success); }
+    .cell-computed.negative { color: var(--danger); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 7px; border-radius: 20px;
+      font-size: .73rem; font-weight: 700;
+    }
+    .badge-green  { background: #dcfce7; color: #15803d; }
+    .badge-yellow { background: #fef9c3; color: #a16207; }
+    .badge-red    { background: #fee2e2; color: #b91c1c; }
+
+    .del-btn {
+      background: none; border: none; cursor: pointer;
+      color: #cbd5e1; padding: 4px; border-radius: 4px;
+      display: flex; align-items: center;
+      transition: color .12s;
+    }
+    .del-btn:hover { color: var(--danger); }
+
+    .note {
+      margin-top: 20px;
+      padding: 12px 16px;
+      background: var(--warn-light);
+      border-left: 3px solid var(--warn);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: .8rem; color: #78350f;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin { animation: spin .7s linear infinite; display: inline-block; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1>Calculadora de Importación</h1>
+    <p>Ciudad del Este — Paraguay</p>
+  </header>
+
+  <div class="top-grid">
+
+    <!-- ── Rates card ── -->
+    <div class="card">
+      <div class="card-title">Tasas y configuración</div>
+      <div class="rates-grid">
+
+        <!-- Valor do PIX -->
+        <div class="rate-item">
+          <label>Valor do PIX <span class="pill pill-p1">FASE 1</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">R$/USD</span>
+            <input type="number" id="r-pix" value="5.32" step="0.01"
+              style="padding-left:54px" title="Tasa que manda la tienda, ej: '5,32 valor do pix aquí na loja hoje'" />
+          </div>
+        </div>
+
+        <!-- BRL → ARS (auto-fetch, manual fallback) -->
+        <div class="rate-item">
+          <label>Mejor PIX (ARS/BRL) <span class="pill pill-p1">FASE 1</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-pix-ars" value="0" step="0.01"
+              placeholder="auto" title="Se completa desde comparapix.ar. Si falla, ingresalo manualmente." />
+          </div>
+          <div id="pix-ars-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
+        </div>
+
+        <!-- Dólar Oficial -->
+        <div class="rate-item">
+          <label>Dólar Oficial (ARS) <span class="pill pill-p2">FASE 2</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-oficial" value="1410" step="1" />
+          </div>
+        </div>
+
+        <!-- Dólar Blue -->
+        <div class="rate-item">
+          <label>Dólar Blue (ARS)</label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-blue" value="1435" step="1" />
+          </div>
+        </div>
+
+        <!-- Comisión -->
+        <div class="rate-item">
+          <label>Comisión/producto <span class="pill pill-p2">FASE 2</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">USD</span>
+            <input type="number" id="r-comision" value="4" step="0.5" style="padding-left:38px" />
+          </div>
+        </div>
+
+        <!-- Envío -->
+        <div class="rate-item">
+          <label>Envío total (ARS) <span class="pill pill-p2">FASE 2</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-envio" value="17000" step="100" />
+          </div>
+        </div>
+
+      </div>
+
+      <div class="rates-bottom">
+        <button class="fetch-btn" onclick="fetchAllRates()">
+          <svg id="fetch-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          Actualizar cotizaciones
+        </button>
+        <span id="rate-status">Actualizando…</span>
+      </div>
+    </div>
+
+    <!-- ── Summary card ── -->
+    <div class="card">
+      <div class="card-title">Resumen</div>
+      <div class="summary-sections">
+
+        <div>
+          <div class="sum-section-label p1">Fase 1 — Costo producto vía PIX</div>
+          <div class="stat-row">
+            <span class="lbl">Unidades totales</span>
+            <span class="val" id="s-qty">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Costo en BRL</span>
+            <span class="val accent" id="s-brl">R$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Costo en ARS (vía PIX)</span>
+            <span class="val accent" id="s-ars-p1">$ 0</span>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div>
+          <div class="sum-section-label p2">Fase 2 — Gastos al shipper</div>
+          <div class="stat-row">
+            <span class="lbl">Comisiones (USD oficial)</span>
+            <span class="val" id="s-comisiones">$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Envío (ARS)</span>
+            <span class="val" id="s-envio">$ 0</span>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div>
+          <div class="sum-section-label total">Total</div>
+          <div class="stat-row">
+            <span class="lbl">Costo total real (ARS)</span>
+            <span class="val accent" id="s-costo-total">$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Venta total (ARS)</span>
+            <span class="val purple" id="s-venta">$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Ganancia real</span>
+            <span class="val success" id="s-ganancia">$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">ROI</span>
+            <span class="val warn" id="s-roi">0%</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Products ── -->
+  <div class="card" style="padding: 20px 24px;">
+    <div class="products-header">
+      <h2>Productos</h2>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="addRow()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Agregar producto
+        </button>
+        <button class="btn btn-success" onclick="exportExcel()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Exportar Excel
+        </button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr class="phase-headers">
+            <th class="ph-input" colspan="4"></th>
+            <th class="ph-p1" colspan="2">Fase 1 — Costo vía PIX</th>
+            <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
+            <th class="ph-sell" colspan="4">Precio de venta</th>
+            <th class="ph-del"></th>
+          </tr>
+          <tr class="col-headers">
+            <th class="bg-input">#</th>
+            <th class="bg-input">Producto</th>
+            <th class="bg-input">Precio USD</th>
+            <th class="bg-input">Cantidad</th>
+            <th class="bg-p1">Costo BRL/unid</th>
+            <th class="bg-p1">Costo ARS/unid</th>
+            <th class="bg-p2">Comisión ARS/unid</th>
+            <th class="bg-p2">Envío ARS/unid</th>
+            <th class="bg-p2">Costo total/unid</th>
+            <th class="bg-sell">Margen %</th>
+            <th class="bg-sell">Precio (ARS)</th>
+            <th class="bg-sell">Precio (USD blue)</th>
+            <th class="bg-sell">Margen real %</th>
+            <th class="bg-del"></th>
+          </tr>
+        </thead>
+        <tbody id="products-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Nota:</strong>
+    El envío (Fase 2) se divide entre <em>todos</em> los productos —
+    cuantos más productos, menor costo de envío por unidad.
+    La comisión (Fase 2) se paga al shipper en USD al tipo <em>oficial</em>.
+  </div>
+
+</div>
+<script>
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let rows = [];
+let nextId = 1;
+
+function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+// ─────────────────────────────────────────────
+// Row management
+// ─────────────────────────────────────────────
+function addRow(data = {}) {
+  rows.push({ id: nextId++, name: data.name ?? '', price: data.price ?? 0, qty: data.qty ?? 1, margin: data.margin ?? 30 });
+  renderTable();
+  recalculate();
+}
+
+function deleteRow(id) {
+  rows = rows.filter(r => r.id !== id);
+  renderTable();
+  recalculate();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('products-body');
+  tbody.innerHTML = '';
+  rows.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    tr.id = `row-${row.id}`;
+    tr.innerHTML = `
+      <td style="color:var(--muted);font-size:.72rem;text-align:center;">${idx + 1}</td>
+      <td><input type="text" value="${esc(row.name)}" placeholder="Nombre…"
+          oninput="updateField(${row.id},'name',this.value)" /></td>
+      <td><input type="number" value="${row.price}" min="0" step="0.01"
+          oninput="updateField(${row.id},'price',+this.value)" /></td>
+      <td><input type="number" value="${row.qty}" min="0" step="1"
+          oninput="updateField(${row.id},'qty',+this.value)" /></td>
+      <td class="cell-computed bg-p1" id="brl-${row.id}">—</td>
+      <td class="cell-computed bg-p1" id="ars1-${row.id}">—</td>
+      <td class="cell-computed bg-p2" id="com-${row.id}">—</td>
+      <td class="cell-computed bg-p2" id="env-${row.id}">—</td>
+      <td class="cell-computed bg-p2" id="tot-${row.id}">—</td>
+      <td class="bg-sell"><input type="number" value="${row.margin}" min="0" max="99" step="1"
+          oninput="updateField(${row.id},'margin',+this.value)" /></td>
+      <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
+      <td class="cell-computed bg-sell" id="vusd-${row.id}">—</td>
+      <td class="bg-sell" id="mreal-${row.id}" style="text-align:right;">—</td>
+      <td>
+        <button class="del-btn" onclick="deleteRow(${row.id})" title="Eliminar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateField(id, field, value) {
+  const row = rows.find(r => r.id === id);
+  if (row) { row[field] = value; recalculate(); }
+}
+
+function esc(str) { return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+// ─────────────────────────────────────────────
+// Calculations
+//
+// FASE 1 (paid via PIX, product cost only):
+//   costo_brl   = price_usd × pix_rate          (USD → BRL, store rate)
+//   costo_ars1  = costo_brl × ars_per_brl        (BRL → ARS, best comparapix service)
+//
+// FASE 2 (paid to shipper):
+//   comision_ars = commission_usd × oficial       (paid in ARS at official rate)
+//   envio_unid   = envio_total / total_units      (split equally, paid in plain ARS)
+//
+// TOTAL COST:
+//   costo_total = costo_ars1 + comision_ars + envio_unid
+//
+// SELLING PRICE (in ARS, priced as USD-blue equivalent):
+//   precio_venta_ars      = costo_total / (1 - margin%)
+//   precio_venta_usd_blue = precio_venta_ars / blue
+//   ganancia              = precio_venta_ars - costo_total
+//   margen_real           = ganancia / precio_venta_ars
+// ─────────────────────────────────────────────
+function recalculate() {
+  const pixRate   = getRate('r-pix');       // USD → BRL
+  const arsPerBrl = getRate('r-pix-ars');  // BRL → ARS (from comparapix or manual)
+  const oficial   = getRate('r-oficial');   // ARS per USD oficial
+  const blue      = getRate('r-blue');      // ARS per USD blue
+  const comUSD    = getRate('r-comision');  // commission per product in USD
+  const envioTotal = getRate('r-envio');    // fixed shipping ARS
+
+  const totalUnits    = rows.reduce((s, r) => s + r.qty, 0);
+  const envioPerUnit  = totalUnits > 0 ? envioTotal / totalUnits : 0;
+  const comisionARS   = comUSD * oficial;   // same for all products
+
+  let totalBRL = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
+
+  rows.forEach(row => {
+    // Fase 1
+    const costoBRL  = row.price * pixRate;
+    const costoARS1 = arsPerBrl > 0 ? costoBRL * arsPerBrl : 0;
+
+    // Fase 2
+    const costoTotal = costoARS1 + comisionARS + envioPerUnit;
+
+    // Selling price
+    let precioARS = 0, precioUSD = 0, ganancia = 0, margenReal = 0;
+    if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
+      precioARS   = costoTotal / (1 - row.margin / 100);
+      precioUSD   = blue > 0 ? precioARS / blue : 0;
+      ganancia    = precioARS - costoTotal;
+      margenReal  = ganancia / precioARS;
+    }
+
+    // Accumulate (per-unit × qty for totals)
+    totalBRL         += costoBRL   * row.qty;
+    totalARS1        += costoARS1  * row.qty;
+    totalComisiones  += comisionARS * row.qty;
+    totalVenta       += precioARS  * row.qty;
+    totalGanancia    += ganancia   * row.qty;
+
+    // Update cells
+    setCell(`brl-${row.id}`,  fmt_brl(costoBRL));
+    setCell(`ars1-${row.id}`, arsPerBrl > 0 ? fmt_ars(costoARS1) : '—');
+    setCell(`com-${row.id}`,  fmt_ars(comisionARS));
+    setCell(`env-${row.id}`,  fmt_ars(envioPerUnit));
+    setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
+    setCell(`vars-${row.id}`, precioARS > 0 ? fmt_ars(precioARS) : '—');
+    setCell(`vusd-${row.id}`, precioUSD > 0 ? fmt_usd(precioUSD) : '—');
+    setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
+  });
+
+  // Summary
+  const totalCostoReal = totalARS1 + totalComisiones + envioTotal;
+
+  setText('s-qty',        fmt_num(totalUnits));
+  setText('s-brl',        fmt_brl(totalBRL));
+  setText('s-ars-p1',     fmt_ars(totalARS1));
+  setText('s-comisiones', fmt_ars(totalComisiones));
+  setText('s-envio',      fmt_ars(envioTotal));
+  setText('s-costo-total',fmt_ars(totalCostoReal));
+  setText('s-venta',      fmt_ars(totalVenta));
+  setText('s-ganancia',   fmt_ars(totalGanancia));
+  const roi = totalCostoReal > 0 ? totalGanancia / totalCostoReal * 100 : 0;
+  setText('s-roi', roi.toFixed(1) + '%');
+}
+
+function setCell(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function setBadge(id, val, hasData) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!hasData) { el.innerHTML = '—'; return; }
+  const pct = (val * 100).toFixed(1) + '%';
+  const cls = val >= 0.20 ? 'badge-green' : val >= 0.10 ? 'badge-yellow' : 'badge-red';
+  el.innerHTML = `<span class="badge ${cls}">${pct}</span>`;
+}
+
+// Formatters
+function fmt_ars(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
+function fmt_brl(n) { return 'R$ ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmt_usd(n) { return 'USD ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmt_num(n) { return Number(n).toLocaleString('es-AR'); }
+
+// ─────────────────────────────────────────────
+// Fetch comparapix — tries direct, falls back to CORS proxy
+// ─────────────────────────────────────────────
+async function fetchComparapix() {
+  const DIRECT = 'https://api.comparapix.ar/quotes';
+  const PROXY  = `https://corsproxy.io/?url=${encodeURIComponent(DIRECT)}`;
+
+  // Try direct (works if the API sends permissive CORS headers)
+  try {
+    const res = await fetch(DIRECT);
+    if (!res.ok) throw new Error('not ok');
+    return { data: await res.json(), via: 'direct' };
+  } catch (_) {}
+
+  // Fallback: route through corsproxy.io
+  const res = await fetch(PROXY);
+  if (!res.ok) throw new Error('proxy also failed');
+  return { data: await res.json(), via: 'proxy' };
+}
+
+// ─────────────────────────────────────────────
+// Fetch all rates
+// ─────────────────────────────────────────────
+async function fetchAllRates() {
+  const status = document.getElementById('rate-status');
+  const icon   = document.getElementById('fetch-icon');
+  status.textContent = 'Actualizando…';
+  status.className = '';
+  icon.classList.add('spin');
+
+  const results = await Promise.allSettled([
+    fetch('https://dolarapi.com/v1/dolares/oficial').then(r => r.json()),
+    fetch('https://dolarapi.com/v1/dolares/blue').then(r => r.json()),
+    fetchComparapix(),
+  ]);
+
+  const msgs = [];
+
+  // Dollar rates
+  if (results[0].status === 'fulfilled') {
+    document.getElementById('r-oficial').value = results[0].value.venta;
+    msgs.push(`Oficial $${results[0].value.venta}`);
+  }
+  if (results[1].status === 'fulfilled') {
+    document.getElementById('r-blue').value = results[1].value.venta;
+    msgs.push(`Blue $${results[1].value.venta}`);
+  }
+
+  // Comparapix — find best BRL→ARS rate among PIX providers
+  if (results[2].status === 'fulfilled') {
+    const { data, via } = results[2].value;
+    let bestRate = 0, bestName = '';
+    for (const [name, info] of Object.entries(data)) {
+      if (!info.isPix) continue;
+      const brlArs = info.quotes?.find(q => q.symbol === 'BRLARS');
+      if (brlArs && brlArs.buy > bestRate) {
+        bestRate = brlArs.buy;
+        bestName = name;
+      }
+    }
+    if (bestRate > 0) {
+      document.getElementById('r-pix-ars').value              = bestRate.toFixed(2);
+      document.getElementById('pix-ars-provider').textContent = `Mejor: ${bestName} · comparapix.ar${via === 'proxy' ? ' (proxy)' : ''}`;
+      msgs.push(`PIX: ${bestName} @ ${bestRate.toFixed(2)}`);
+    } else {
+      document.getElementById('pix-ars-provider').textContent = 'Sin datos — ingresá el valor manualmente';
+    }
+  } else {
+    document.getElementById('pix-ars-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+  }
+
+  icon.classList.remove('spin');
+  if (msgs.length > 0) {
+    const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+    status.textContent = `✓ ${now} — ${msgs.join(' · ')}`;
+    status.className = 'ok';
+  } else {
+    status.textContent = '✗ Error al conectar con las APIs.';
+    status.className = 'err';
+  }
+
+  recalculate();
+}
+
+// ─────────────────────────────────────────────
+// Export to Excel
+// ─────────────────────────────────────────────
+function exportExcel() {
+  const pixRate    = getRate('r-pix');
+  const arsPerBrl  = getRate('r-pix-ars');
+  const oficial    = getRate('r-oficial');
+  const blue       = getRate('r-blue');
+  const comUSD     = getRate('r-comision');
+  const envioTotal = getRate('r-envio');
+  const totalUnits = rows.reduce((s, r) => s + r.qty, 0);
+  const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
+  const comisionARS  = comUSD * oficial;
+
+  const data = [
+    ['CALCULADORA DE IMPORTACIÓN — Ciudad del Este'],
+    [`Exportado: ${new Date().toLocaleString('es-AR')}`],
+    [],
+    ['TASAS'],
+    ['Valor do PIX (BRL/USD)', pixRate],
+    ['Mejor PIX BRL→ARS', arsPerBrl, pixProvider],
+    ['Dólar Oficial (ARS)', oficial],
+    ['Dólar Blue (ARS)', blue],
+    ['Comisión por producto (USD)', comUSD],
+    ['Costo envío total (ARS)', envioTotal],
+    [],
+    ['Producto','Precio USD','Cantidad',
+     'Costo BRL/unid','Costo ARS/unid (Fase 1)',
+     'Comisión ARS/unid (Fase 2)','Envío ARS/unid (Fase 2)','Costo total/unid',
+     'Margen %','Precio venta ARS','Precio venta USD blue','Margen real %'],
+  ];
+
+  let totalBRL = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
+
+  rows.forEach(row => {
+    const costoBRL   = row.price * pixRate;
+    const costoARS1  = arsPerBrl > 0 ? costoBRL * arsPerBrl : 0;
+    const costoTotal = costoARS1 + comisionARS + envioPerUnit;
+    let precioARS = 0, precioUSD = 0, ganancia = 0, margenReal = 0;
+    if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
+      precioARS  = costoTotal / (1 - row.margin / 100);
+      precioUSD  = blue > 0 ? precioARS / blue : 0;
+      ganancia   = precioARS - costoTotal;
+      margenReal = ganancia / precioARS;
+    }
+    totalBRL        += costoBRL   * row.qty;
+    totalARS1       += costoARS1  * row.qty;
+    totalComisiones += comisionARS * row.qty;
+    totalVenta      += precioARS  * row.qty;
+    totalGanancia   += ganancia   * row.qty;
+    data.push([
+      row.name, row.price, row.qty,
+      +costoBRL.toFixed(2), +costoARS1.toFixed(2),
+      +comisionARS.toFixed(2), +envioPerUnit.toFixed(2), +costoTotal.toFixed(2),
+      row.margin / 100, +precioARS.toFixed(2), +precioUSD.toFixed(2), +margenReal.toFixed(4),
+    ]);
+  });
+
+  const totalCostoReal = totalARS1 + totalComisiones + envioTotal;
+  const roi = totalCostoReal > 0 ? totalGanancia / totalCostoReal : 0;
+
+  data.push(
+    [],
+    ['RESUMEN'],
+    ['Costo BRL total', +totalBRL.toFixed(2)],
+    ['Costo ARS Fase 1 (PIX)', +totalARS1.toFixed(2)],
+    ['Comisiones Fase 2 (ARS)', +totalComisiones.toFixed(2)],
+    ['Envío Fase 2 (ARS)', +envioTotal.toFixed(2)],
+    ['Costo total real (ARS)', +totalCostoReal.toFixed(2)],
+    ['Venta total (ARS)', +totalVenta.toFixed(2)],
+    ['Ganancia real (ARS)', +totalGanancia.toFixed(2)],
+    ['ROI', +roi.toFixed(4)],
+  );
+
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Calculadora');
+  XLSX.writeFile(wb, `importacion_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ─────────────────────────────────────────────
+// Reactive inputs
+// ─────────────────────────────────────────────
+['r-pix','r-pix-ars','r-oficial','r-blue','r-comision','r-envio'].forEach(id => {
+  document.getElementById(id).addEventListener('input', recalculate);
+});
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+fetchAllRates();
+addRow();
+addRow();
+addRow();
+</script>
+</body>
+</html>
