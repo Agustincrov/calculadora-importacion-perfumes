@@ -696,12 +696,11 @@ async function fetchAllRates() {
   // Comparapix — find best BRL→ARS rate among PIX providers
   if (results[2].status === 'fulfilled') {
     const { data, via } = results[2].value;
-    // Find BRLUSD service with lowest buy (= most BRL per USD)
-    // Exclude USDT services (dolarapp, binance) — symbol BRLUSD only
-    const EXCLUDE_USDT = ['dolarapp', 'binance'];
+    // Only use brubank and astropay — real USD, no USDT
+    const ALLOWED = ['brubank', 'astropay'];
     let bestBrlusd = Infinity, bestName = '';
     for (const [name, info] of Object.entries(data)) {
-      if (!info.isPix || EXCLUDE_USDT.includes(name)) continue;
+      if (!ALLOWED.includes(name)) continue;
       const q = info.quotes?.find(q => q.symbol === 'BRLUSD');
       if (q && q.buy > 0 && q.buy < bestBrlusd) {
         bestBrlusd = q.buy;
