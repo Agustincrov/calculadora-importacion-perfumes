@@ -224,6 +224,18 @@
     td input:focus { outline: none; border-color: var(--accent); background: #fff; }
     td input[type="number"] { text-align: right; }
 
+    td select.catalog-select {
+      width: 100%; min-width: 100px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      font-size: .8rem;
+      background: var(--bg); color: var(--text);
+      margin-bottom: 4px;
+      cursor: pointer;
+    }
+    td select.catalog-select:focus { outline: none; border-color: var(--accent); background: #fff; }
+
     .cell-computed { text-align: right; font-weight: 500; white-space: nowrap; }
     .cell-computed.positive { color: var(--success); }
     .cell-computed.negative { color: var(--danger); }
@@ -422,6 +434,17 @@
           </svg>
           Agregar producto
         </button>
+        <button class="btn btn-outline" onclick="document.getElementById('catalog-file').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          Importar catálogo
+        </button>
+        <span id="catalog-status" style="font-size:.72rem;color:var(--muted);align-self:center;"></span>
+        <input type="file" id="catalog-file" accept=".xls,.xlsx" style="display:none"
+          onchange="loadCatalog(this.files[0]); this.value=''" />
         <button class="btn btn-success" onclick="exportNotes()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -479,8 +502,60 @@
 // ─────────────────────────────────────────────
 let rows = [];
 let nextId = 1;
+let catalog = []; // [{ name, price }]
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+// ─────────────────────────────────────────────
+// Catalog import
+// ─────────────────────────────────────────────
+function loadCatalog(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const wb = XLSX.read(e.target.result, { type: 'binary' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows2d = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    if (rows2d.length < 2) return;
+
+    const headers = rows2d[0].map(h => String(h ?? '').toLowerCase().trim());
+    const nameKeywords  = ['producto','product','nombre','name','descripcion','description'];
+    const priceKeywords = ['precio','price','usd','costo','cost'];
+
+    let nameCol  = headers.findIndex(h => nameKeywords.includes(h));
+    let priceCol = headers.findIndex(h => priceKeywords.includes(h));
+    if (nameCol  < 0) nameCol  = 0;
+    if (priceCol < 0) priceCol = 1;
+
+    const loaded = [];
+    for (let i = 1; i < rows2d.length; i++) {
+      const row = rows2d[i];
+      const name  = String(row[nameCol]  ?? '').trim();
+      const price = parseFloat(row[priceCol]);
+      if (name && !isNaN(price) && price >= 0) {
+        loaded.push({ name, price });
+      }
+    }
+
+    catalog = loaded;
+    document.getElementById('catalog-status').textContent =
+      catalog.length > 0 ? `${catalog.length} productos cargados` : 'Sin productos válidos';
+    renderTable();
+  };
+  reader.readAsBinaryString(file);
+}
+
+function selectFromCatalog(rowId, name) {
+  if (!name) return;
+  const row = rows.find(r => r.id === rowId);
+  const item = catalog.find(c => c.name === name);
+  if (row && item) {
+    row.name  = item.name;
+    row.price = item.price;
+    renderTable();
+    recalculate();
+  }
+}
 
 // ─────────────────────────────────────────────
 // Row management
@@ -505,7 +580,11 @@ function renderTable() {
     tr.id = `row-${row.id}`;
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;">${idx + 1}</td>
-      <td><input type="text" value="${esc(row.name)}" placeholder="Nombre…"
+      <td>${catalog.length > 0 ? `<select class="catalog-select" onchange="selectFromCatalog(${row.id}, this.value)">
+          <option value="">— catálogo —</option>
+          ${catalog.map(c => `<option value="${esc(c.name)}"${c.name === row.name ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
+        </select>` : ''}
+        <input type="text" value="${esc(row.name)}" placeholder="Nombre…"
           oninput="updateField(${row.id},'name',this.value)" /></td>
       <td><input type="number" value="${row.price}" min="0" step="0.01"
           oninput="updateField(${row.id},'price',+this.value)" /></td>

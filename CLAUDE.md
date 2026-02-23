@@ -63,7 +63,7 @@ Sells in ARS priced as USD-blue equivalent. **Margin** (not markup) — 30% mean
 }
 ```
 
-**Best BRLUSD rate** = lowest `buy` value among `brubank` and `astropay` only. Other services like satoshitango, dolarapp, binance use USDT despite showing BRLUSD symbol.
+**Best BRLUSD rate** = lowest `buy` value among `brubank` and `astropay` only (hardcoded `ALLOWED` list in fetch logic). Other services like satoshitango, dolarapp, binance use USDT despite showing BRLUSD symbol.
 Lowest BRLUSD buy = most BRL per USD = cheapest for the user.
 Convert to display: `brl_per_usd = 1 / buy` (e.g. 1/0.1953 = 5.12 BRL/USD).
 
