@@ -224,19 +224,7 @@
     td input:focus { outline: none; border-color: var(--accent); background: #fff; }
     td input[type="number"] { text-align: right; }
 
-    td select.catalog-select {
-      width: 100%; min-width: 100px;
-      padding: 4px 6px;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      font-size: .8rem;
-      background: var(--bg); color: var(--text);
-      margin-bottom: 4px;
-      cursor: pointer;
-    }
-    td select.catalog-select:focus { outline: none; border-color: var(--accent); background: #fff; }
-
-    .cell-computed { text-align: right; font-weight: 500; white-space: nowrap; }
+.cell-computed { text-align: right; font-weight: 500; white-space: nowrap; }
     .cell-computed.positive { color: var(--success); }
     .cell-computed.negative { color: var(--danger); }
 
@@ -271,6 +259,7 @@
   </style>
 </head>
 <body>
+<datalist id="catalog-datalist"></datalist>
 <div class="container">
 
   <header>
@@ -322,6 +311,16 @@
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
             <input type="number" id="r-blue" value="1435" step="1" />
+          </div>
+        </div>
+
+        <!-- USDT -->
+        <div class="rate-item">
+          <label>USDT (ARS) <span class="pill pill-p2">FASE 2</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-usdt" value="1490" step="1"
+              title="Cotización USDT en pesos — usada para convertir la comisión al shipper" />
           </div>
         </div>
 
@@ -388,7 +387,7 @@
         <div>
           <div class="sum-section-label p2">Fase 2 — Gastos al shipper</div>
           <div class="stat-row">
-            <span class="lbl">Comisiones (USD oficial)</span>
+            <span class="lbl">Comisiones (USD al USDT)</span>
             <span class="val" id="s-comisiones">$ 0</span>
           </div>
           <div class="stat-row">
@@ -442,9 +441,9 @@
           </svg>
           Importar catálogo
         </button>
-        <span id="catalog-status" style="font-size:.72rem;color:var(--muted);align-self:center;"></span>
         <input type="file" id="catalog-file" accept=".xls,.xlsx" style="display:none"
           onchange="loadCatalog(this.files[0]); this.value=''" />
+        <span id="catalog-status" style="font-size:.72rem;color:var(--muted);align-self:center;"></span>
         <button class="btn btn-success" onclick="exportNotes()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -492,7 +491,7 @@
     <strong>Nota:</strong>
     El envío (Fase 2) se divide entre <em>todos</em> los productos —
     cuantos más productos, menor costo de envío por unidad.
-    La comisión (Fase 2) se paga al shipper en USD al tipo <em>oficial</em>.
+    La comisión (Fase 2) se paga al shipper en USD al tipo <em>USDT</em>.
   </div>
 
 </div>
@@ -509,52 +508,89 @@ function getRate(id) { return parseFloat(document.getElementById(id).value) || 0
 // ─────────────────────────────────────────────
 // Catalog import
 // ─────────────────────────────────────────────
+function parsePrice(val) {
+  if (val === null || val === undefined) return NaN;
+  if (typeof val === 'number') return val;
+  let s = String(val).replace(/[^0-9.,]/g, '').trim();
+  if (s.includes(',') && s.includes('.')) {
+    const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
+    s = lastComma > lastDot
+      ? s.replace(/\./g, '').replace(',', '.')
+      : s.replace(/,/g, '');
+  } else if (s.includes(',')) {
+    const parts = s.split(',');
+    s = parts.length === 2 && parts[1].length <= 2 ? s.replace(',', '.') : s.replace(/,/g, '');
+  }
+  return parseFloat(s);
+}
+
 function loadCatalog(file) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
-    const wb = XLSX.read(e.target.result, { type: 'binary' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const wb     = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+    const sheet  = wb.Sheets[wb.SheetNames[0]];
     const rows2d = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    if (rows2d.length < 2) return;
-
-    const headers = rows2d[0].map(h => String(h ?? '').toLowerCase().trim());
-    const nameKeywords  = ['producto','product','nombre','name','descripcion','description'];
-    const priceKeywords = ['precio','price','usd','costo','cost'];
-
-    let nameCol  = headers.findIndex(h => nameKeywords.includes(h));
-    let priceCol = headers.findIndex(h => priceKeywords.includes(h));
-    if (nameCol  < 0) nameCol  = 0;
-    if (priceCol < 0) priceCol = 1;
-
-    const loaded = [];
-    for (let i = 1; i < rows2d.length; i++) {
-      const row = rows2d[i];
-      const name  = String(row[nameCol]  ?? '').trim();
-      const price = parseFloat(row[priceCol]);
-      if (name && !isNaN(price) && price >= 0) {
-        loaded.push({ name, price });
-      }
+    if (rows2d.length < 2) {
+      document.getElementById('catalog-status').textContent = 'Archivo vacío o sin datos.';
+      return;
     }
 
+    const nameKw  = ['descripcion','description','producto','product','nombre','name','articulo','item'];
+    const priceKw = ['precio','price','usd','costo','cost','valor'];
+
+    // Scan first 10 rows to find the actual header row
+    let headerRow = -1, nameCol = -1, priceCol = -1;
+    for (let i = 0; i < Math.min(10, rows2d.length); i++) {
+      const hdrs = rows2d[i].map(h => String(h ?? '').toLowerCase().trim());
+      const nc = hdrs.findIndex(h => nameKw.some(k => h.includes(k)));
+      const pc = hdrs.findIndex(h => priceKw.some(k => h.includes(k)));
+      if (nc >= 0 && pc >= 0) { headerRow = i; nameCol = nc; priceCol = pc; break; }
+    }
+    // Fallback: assume col B = description, col C = price (AMS catalog layout)
+    if (headerRow < 0) { headerRow = 0; nameCol = 1; priceCol = 2; }
+
+    const loaded = [];
+    for (let i = headerRow + 1; i < rows2d.length; i++) {
+      const row   = rows2d[i];
+      const name  = String(row[nameCol]  ?? '').trim();
+      const price = parsePrice(row[priceCol]);
+      const nl = name.toLowerCase();
+      if (name && !isNaN(price) && price >= 0 && (nl.startsWith('perfume') || nl.startsWith('tester'))) loaded.push({ name, price });
+    }
+
+    // Testers first, then perfumes
+    loaded.sort((a, b) => {
+      const at = a.name.toLowerCase().startsWith('tester');
+      const bt = b.name.toLowerCase().startsWith('tester');
+      return (bt ? 1 : 0) - (at ? 1 : 0);
+    });
     catalog = loaded;
+    updateCatalogDatalist();
     document.getElementById('catalog-status').textContent =
       catalog.length > 0 ? `${catalog.length} productos cargados` : 'Sin productos válidos';
     renderTable();
   };
-  reader.readAsBinaryString(file);
+  reader.readAsArrayBuffer(file);
 }
 
-function selectFromCatalog(rowId, name) {
-  if (!name) return;
+function updateCatalogDatalist() {
+  const dl = document.getElementById('catalog-datalist');
+  if (!dl) return;
+  dl.innerHTML = catalog.map(c => `<option value="${esc(c.name)}"></option>`).join('');
+}
+
+function onNameInput(rowId, value) {
   const row = rows.find(r => r.id === rowId);
-  const item = catalog.find(c => c.name === name);
-  if (row && item) {
-    row.name  = item.name;
+  if (!row) return;
+  row.name = value;
+  const item = catalog.find(c => c.name === value);
+  if (item) {
     row.price = item.price;
-    renderTable();
-    recalculate();
+    const priceInput = document.querySelector(`#row-${rowId} td:nth-child(3) input`);
+    if (priceInput) priceInput.value = item.price;
   }
+  recalculate();
 }
 
 // ─────────────────────────────────────────────
@@ -580,12 +616,10 @@ function renderTable() {
     tr.id = `row-${row.id}`;
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;">${idx + 1}</td>
-      <td>${catalog.length > 0 ? `<select class="catalog-select" onchange="selectFromCatalog(${row.id}, this.value)">
-          <option value="">— catálogo —</option>
-          ${catalog.map(c => `<option value="${esc(c.name)}"${c.name === row.name ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}
-        </select>` : ''}
-        <input type="text" value="${esc(row.name)}" placeholder="Nombre…"
-          oninput="updateField(${row.id},'name',this.value)" /></td>
+      <td><input type="text" ${catalog.length > 0 ? 'list="catalog-datalist"' : ''}
+          value="${esc(row.name)}"
+          placeholder="${catalog.length > 0 ? 'Buscar producto…' : 'Nombre…'}"
+          oninput="onNameInput(${row.id}, this.value)" /></td>
       <td><input type="number" value="${row.price}" min="0" step="0.01"
           oninput="updateField(${row.id},'price',+this.value)" /></td>
       <td><input type="number" value="${row.qty}" min="0" step="1"
@@ -649,12 +683,13 @@ function recalculate() {
   const pixUsdRate = getRate('r-pix-usd'); // service rate: BRL per USD (comparapix BRLUSD)
   const oficial    = getRate('r-oficial');  // ARS per USD oficial
   const blue       = getRate('r-blue');     // ARS per USD blue
+  const usdt       = getRate('r-usdt');     // ARS per USDT (used for commission)
   const comUSD     = getRate('r-comision');
   const envioTotal = getRate('r-envio');
 
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
   const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
-  const comisionARS  = comUSD * oficial;
+  const comisionARS  = comUSD * usdt;
 
   let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
 
@@ -819,12 +854,13 @@ function exportNotes() {
   const pixUsdRate   = getRate('r-pix-usd');
   const oficial      = getRate('r-oficial');
   const blue         = getRate('r-blue');
+  const usdt         = getRate('r-usdt');
   const comUSD       = getRate('r-comision');
   const envioTotal   = getRate('r-envio');
   const pixService   = document.getElementById('pix-usd-provider').textContent;
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
   const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
-  const comisionARS  = comUSD * oficial;
+  const comisionARS  = comUSD * usdt;
   const fecha        = new Date().toLocaleString('es-AR');
 
   let totalCostoARS = 0, totalVenta = 0, totalGanancia = 0;
@@ -858,6 +894,7 @@ function exportNotes() {
   lines.push(`  Servicio PIX (USD→BRL): ${pixUsdRate} BRL/USD  (${pixService})`);
   lines.push(`  Dólar Oficial: $${oficial}`);
   lines.push(`  Dólar Blue:    $${blue}`);
+  lines.push(`  USDT:          $${usdt}  (base comisión shipper)`);
   lines.push(`  Comisión:      USD ${comUSD}/producto`);
   lines.push(`  Envío:         $${envioTotal} total ÷ ${totalUnits} unid = $${Math.round(envioPerUnit)}/unid`);
   lines.push(line);
@@ -893,7 +930,7 @@ function exportNotes() {
 // ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
-['r-pix','r-pix-usd','r-oficial','r-blue','r-comision','r-envio'].forEach(id => {
+['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt','r-comision','r-envio'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalculate);
 });
 
