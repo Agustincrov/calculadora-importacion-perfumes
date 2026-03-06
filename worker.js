@@ -121,34 +121,31 @@ async function fetchInfoDolarHtml() {
   return r.text();
 }
 
-// Extract venta from a section: prices come in pairs compra (1st), venta (2nd).
-function extractVenta(section) {
-  const matches = [...section.matchAll(/(\d{1,2}\.\d{3},\d{2})/g)];
-  if (matches.length >= 2) return parseArNum(matches[1][1]); // 2nd = venta
-  if (matches.length === 1) return parseArNum(matches[0][1]);
-  return null;
-}
 
 async function fetchDolarBlue() {
+  // infodolar.com Córdoba — server-rendered ASPX
+  // The blue row has two <td class="colCompraVenta"> with data-order attributes.
+  // First = compra, second = venta. Anchor on the href to avoid other "blue" occurrences.
+  // Example: data-order="$ 1.430,00"
   const html = await fetchInfoDolarHtml();
-  // Anchor on the section heading "Precio Dólar Blue" — much more specific than just "blue"
-  // which can appear in CSS classes or nav links much earlier in the document
-  const headingIdx = html.search(/Precio\s+D[oó]lar\s+Blue/i);
-  if (headingIdx >= 0) {
-    const section = html.substring(headingIdx, headingIdx + 1500);
-    return jsonResp({ price: extractVenta(section) });
-  }
-  // Fallback: last price on the page (blue venta is the last rate shown)
-  const all = [...html.matchAll(/(\d{1,2}\.\d{3},\d{2})/g)];
-  return jsonResp({ price: all.length > 0 ? parseArNum(all[all.length - 1][1]) : null });
+  const m = html.match(/cotizacion-dolar-blue[\s\S]{0,1000}?data-order="\$\s*([\d.,]+)"[\s\S]{0,500}?data-order="\$\s*([\d.,]+)"/i);
+  return jsonResp({ price: m ? parseArNum(m[2]) : null }); // m[2] = venta
 }
 
 async function fetchDolarOficial() {
-  const html = await fetchInfoDolarHtml();
-  // Everything before the "Precio Dólar Blue" heading is the oficial section
-  const blueHeadingIdx = html.search(/Precio\s+D[oó]lar\s+Blue/i);
-  const section = blueHeadingIdx > 0 ? html.substring(0, blueHeadingIdx) : html;
-  return jsonResp({ price: extractVenta(section) });
+  // BBVA Argentina — Vue SSR page (data-v-* attrs = Vue scoped styles, content IS in HTML)
+  // Row: <td> Dolares </td><td> $&nbsp;1.390,00 </td><td> $&nbsp;1.440,00 </td>
+  // 2nd td = compra, 3rd td = venta
+  const r = await fetch('https://www.bbva.com.ar/personas/productos/inversiones/cotizacion-moneda-extranjera.html', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'es-AR,es;q=0.9',
+    },
+  });
+  const html = await r.text();
+  const m = html.match(/>\s*Dolares\s*<\/td>[\s\S]{0,300}?\$&nbsp;[\d.,]+[\s\S]{0,300}?\$&nbsp;([\d.,]+)/i);
+  return jsonResp({ price: m ? parseArNum(m[1]) : null });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
