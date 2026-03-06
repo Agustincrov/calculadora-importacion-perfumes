@@ -52,7 +52,15 @@ async function proxyComparapix() {
 // Returns the daily R$/USD rate. Field moeda2 = valor do PIX (e.g. 5.38).
 // Response: [{"id":304,"datcam":"...","moeda1":1.0,"moeda2":5.38,...}]
 async function fetchPixRate() {
-  const r = await fetch('https://app.madridcenterimportados.com/v1/cambio');
+  const r = await fetch('https://app.madridcenterimportados.com/v1/cambio', {
+    headers: {
+      'accept': 'application/json',
+      'origin': 'https://www.madridcenterimportados.com',
+      'referer': 'https://www.madridcenterimportados.com/',
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'x-api-key': 'madrid_x78BZI-kpnzZf6JZCHdeJ9XEusvYLSqwLYsEhGPGGdA',
+    },
+  });
   const data = await r.json();
   const price = Array.isArray(data) && data.length > 0 ? data[0].moeda2 : null;
   return jsonResp({ price });
