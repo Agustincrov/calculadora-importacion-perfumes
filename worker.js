@@ -48,27 +48,13 @@ async function proxyComparapix() {
   return jsonResp(data);
 }
 
-// ── PIX rate — madridcenterimportados.com ────────────────────────
-// Extracts the daily R$/USD rate from the store's homepage.
-// The value is in: <span class="text-kpurple/90">R$ 5,38</span>
+// ── PIX rate — Madrid Center API ─────────────────────────────────
+// Returns the daily R$/USD rate. Field moeda2 = valor do PIX (e.g. 5.38).
+// Response: [{"id":304,"datcam":"...","moeda1":1.0,"moeda2":5.38,...}]
 async function fetchPixRate() {
-  const r = await fetch('https://www.madridcenterimportados.com/home', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'es-AR,es;q=0.9,pt;q=0.8',
-    },
-  });
-  const html = await r.text();
-
-  // Primary: match the exact span class used on the page
-  const m = html.match(/text-kpurple\/90[^>]*>\s*R\$\s*([\d,]+)/);
-  let price = null;
-  if (m) {
-    // Brazilian format: "5,38" → 5.38
-    price = parseFloat(m[1].replace(',', '.'));
-  }
-
+  const r = await fetch('https://app.madridcenterimportados.com/v1/cambio');
+  const data = await r.json();
+  const price = Array.isArray(data) && data.length > 0 ? data[0].moeda2 : null;
   return jsonResp({ price });
 }
 

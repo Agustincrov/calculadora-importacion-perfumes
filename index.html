@@ -282,7 +282,7 @@
             <input type="number" id="r-pix" value="5.32" step="0.01"
               style="padding-left:54px" title="Tasa que manda la tienda, ej: '5,32 valor do pix aquí na loja hoje'" />
           </div>
-          <div id="pix-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Ingresá el valor que manda la tienda</div>
+          <div id="pix-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Madrid Center…</div>
         </div>
 
         <!-- USD → BRL (auto-fetch, manual fallback) -->
@@ -870,10 +870,10 @@ async function fetchAllRates() {
   const pixPrice = results[4].status === 'fulfilled' ? results[4].value?.price : null;
   if (pixPrice) {
     document.getElementById('r-pix').value         = pixPrice;
-    document.getElementById('pix-provider').textContent = `Madrid Center · R$ ${pixPrice.toFixed(2).replace('.', ',')}`;
+    document.getElementById('pix-provider').textContent = `Madrid Center · R$ ${pixPrice.toFixed(2).replace('.', ',')} · madridcenterimportados.com`;
     msgs.push(`PIX tienda R$${pixPrice}`);
   } else {
-    document.getElementById('pix-provider').textContent = 'Ingresá el valor que manda la tienda';
+    document.getElementById('pix-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
   }
 
   icon.classList.remove('spin');
