@@ -1,5 +1,5 @@
 // Cloudflare Worker — comparapi-proxy
-// Handles: comparapix, Binance P2P USDT, dólar blue Córdoba (infodolar.com), dólar oficial (BBVA)
+// Handles: comparapix, Binance P2P USDT, dólar blue Córdoba (infodolar.com), dólar oficial (BBVA), PIX rate (madridcenterimportados.com)
 //
 // Deploy: paste this into the Cloudflare Worker dashboard at
 // https://dash.cloudflare.com → Workers & Pages → comparapi-proxy → Edit Code
@@ -21,6 +21,7 @@ async function handle(req) {
   const path = new URL(req.url).pathname;
   try {
     if (path === '/' || path === '/comparapix') return await proxyComparapix();
+    if (path === '/pix-rate')      return await fetchPixRate();
     if (path === '/binance-usdt')  return await fetchBinanceUSDT();
     if (path === '/dolar-blue')    return await fetchDolarBlue();
     if (path === '/dolar-oficial') return await fetchDolarOficial();
@@ -45,6 +46,30 @@ async function proxyComparapix() {
   });
   const data = await r.json();
   return jsonResp(data);
+}
+
+// ── PIX rate — madridcenterimportados.com ────────────────────────
+// Extracts the daily R$/USD rate from the store's homepage.
+// The value is in: <span class="text-kpurple/90">R$ 5,38</span>
+async function fetchPixRate() {
+  const r = await fetch('https://www.madridcenterimportados.com/home', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'es-AR,es;q=0.9,pt;q=0.8',
+    },
+  });
+  const html = await r.text();
+
+  // Primary: match the exact span class used on the page
+  const m = html.match(/text-kpurple\/90[^>]*>\s*R\$\s*([\d,]+)/);
+  let price = null;
+  if (m) {
+    // Brazilian format: "5,38" → 5.38
+    price = parseFloat(m[1].replace(',', '.'));
+  }
+
+  return jsonResp({ price });
 }
 
 // ── Binance P2P — USDT/ARS sell price ────────────────────────────

@@ -282,6 +282,7 @@
             <input type="number" id="r-pix" value="5.32" step="0.01"
               style="padding-left:54px" title="Tasa que manda la tienda, ej: '5,32 valor do pix aquí na loja hoje'" />
           </div>
+          <div id="pix-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Madrid Center…</div>
         </div>
 
         <!-- USD → BRL (auto-fetch, manual fallback) -->
@@ -796,6 +797,7 @@ async function fetchAllRates() {
     fetch(`${WORKER}/dolar-blue`).then(r => r.json()),       // infodolar.com Córdoba blue venta
     fetch(`${WORKER}/`).then(r => r.json()),                 // comparapix PIX rates
     fetch(`${WORKER}/binance-usdt`).then(r => r.json()),     // Binance P2P USDT
+    fetch(`${WORKER}/pix-rate`).then(r => r.json()),         // Valor do PIX (Madrid Center)
   ]);
 
   const msgs = [];
@@ -855,12 +857,23 @@ async function fetchAllRates() {
 
   // ── Binance P2P — USDT ──
   const usdtPrice = results[3].status === 'fulfilled' ? results[3].value?.price : null;
+
   if (usdtPrice) {
     document.getElementById('r-usdt').value        = usdtPrice;
     document.getElementById('usdt-provider').textContent = `Binance P2P · $${usdtPrice}`;
     msgs.push(`USDT $${usdtPrice}`);
   } else {
     document.getElementById('usdt-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+  }
+
+  // ── Valor do PIX (Madrid Center) ──
+  const pixPrice = results[4].status === 'fulfilled' ? results[4].value?.price : null;
+  if (pixPrice) {
+    document.getElementById('r-pix').value         = pixPrice;
+    document.getElementById('pix-provider').textContent = `Madrid Center · R$ ${pixPrice.toFixed(2).replace('.', ',')}`;
+    msgs.push(`PIX tienda R$${pixPrice}`);
+  } else {
+    document.getElementById('pix-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
   }
 
   icon.classList.remove('spin');
