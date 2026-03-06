@@ -145,18 +145,23 @@ function extractVenta(section) {
 
 async function fetchDolarBlue() {
   const html = await fetchInfoDolarHtml();
-  const blueIdx = html.toLowerCase().indexOf('blue');
-  if (blueIdx < 0) return jsonResp({ price: null });
-  // Take the ~1500 chars after "blue" to stay in the blue section
-  const section = html.substring(blueIdx, blueIdx + 1500);
-  return jsonResp({ price: extractVenta(section) });
+  // Anchor on the section heading "Precio Dólar Blue" — much more specific than just "blue"
+  // which can appear in CSS classes or nav links much earlier in the document
+  const headingIdx = html.search(/Precio\s+D[oó]lar\s+Blue/i);
+  if (headingIdx >= 0) {
+    const section = html.substring(headingIdx, headingIdx + 1500);
+    return jsonResp({ price: extractVenta(section) });
+  }
+  // Fallback: last price on the page (blue venta is the last rate shown)
+  const all = [...html.matchAll(/(\d{1,2}\.\d{3},\d{2})/g)];
+  return jsonResp({ price: all.length > 0 ? parseArNum(all[all.length - 1][1]) : null });
 }
 
 async function fetchDolarOficial() {
   const html = await fetchInfoDolarHtml();
-  // The oficial section is everything before "blue"
-  const blueIdx = html.toLowerCase().indexOf('blue');
-  const section = blueIdx > 0 ? html.substring(0, blueIdx) : html;
+  // Everything before the "Precio Dólar Blue" heading is the oficial section
+  const blueHeadingIdx = html.search(/Precio\s+D[oó]lar\s+Blue/i);
+  const section = blueHeadingIdx > 0 ? html.substring(0, blueHeadingIdx) : html;
   return jsonResp({ price: extractVenta(section) });
 }
 
