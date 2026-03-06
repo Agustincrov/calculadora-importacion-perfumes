@@ -322,6 +322,7 @@
             <input type="number" id="r-usdt" value="1490" step="1"
               title="Cotización USDT en pesos — usada para convertir la comisión al shipper" />
           </div>
+          <div id="usdt-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Binance P2P…</div>
         </div>
 
         <!-- Comisión -->
@@ -411,6 +412,10 @@
           <div class="stat-row">
             <span class="lbl">Ganancia real</span>
             <span class="val success" id="s-ganancia">$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Ganancia (USD oficial)</span>
+            <span class="val success" id="s-ganancia-usd">USD 0</span>
           </div>
           <div class="stat-row">
             <span class="lbl">ROI</span>
@@ -742,7 +747,8 @@ function recalculate() {
   setText('s-envio',      fmt_ars(envioTotal));
   setText('s-costo-total',fmt_ars(totalCostoReal));
   setText('s-venta',      fmt_ars(totalVenta));
-  setText('s-ganancia',   fmt_ars(totalGanancia));
+  setText('s-ganancia',     fmt_ars(totalGanancia));
+  setText('s-ganancia-usd', oficial > 0 ? fmt_usd(totalGanancia / oficial) : 'USD 0');
   const roi = totalCostoReal > 0 ? totalGanancia / totalCostoReal * 100 : 0;
   setText('s-roi', roi.toFixed(1) + '%');
 }
@@ -771,13 +777,9 @@ function fmt_usd(n) { return 'USD ' + n.toLocaleString('es-AR', { minimumFractio
 function fmt_num(n) { return Number(n).toLocaleString('es-AR'); }
 
 // ─────────────────────────────────────────────
-// Fetch comparapix — tries direct, falls back to CORS proxy
+// Worker base URL
 // ─────────────────────────────────────────────
-async function fetchComparapix() {
-  const res = await fetch('https://comparapi-proxy.agustincrovato7.workers.dev/');
-  if (!res.ok) throw new Error('worker failed');
-  return { data: await res.json(), via: 'worker' };
-}
+const WORKER = 'https://comparapi-proxy.agustincrovato7.workers.dev';
 
 // ─────────────────────────────────────────────
 // Fetch all rates
@@ -790,27 +792,45 @@ async function fetchAllRates() {
   icon.classList.add('spin');
 
   const results = await Promise.allSettled([
-    fetch('https://dolarapi.com/v1/dolares/oficial').then(r => r.json()),
-    fetch('https://dolarapi.com/v1/dolares/blue').then(r => r.json()),
-    fetchComparapix(),
+    fetch(`${WORKER}/dolar-oficial`).then(r => r.json()),    // BBVA venta
+    fetch(`${WORKER}/dolar-blue`).then(r => r.json()),       // infodolar.com Córdoba blue venta
+    fetch(`${WORKER}/`).then(r => r.json()),                 // comparapix PIX rates
+    fetch(`${WORKER}/binance-usdt`).then(r => r.json()),     // Binance P2P USDT
   ]);
 
   const msgs = [];
 
-  // Dollar rates
-  if (results[0].status === 'fulfilled') {
-    document.getElementById('r-oficial').value = results[0].value.venta;
-    msgs.push(`Oficial $${results[0].value.venta}`);
-  }
-  if (results[1].status === 'fulfilled') {
-    document.getElementById('r-blue').value = results[1].value.venta;
-    msgs.push(`Blue $${results[1].value.venta}`);
+  // ── Dólar Oficial (BBVA venta) ──
+  const oficialWorker = results[0].status === 'fulfilled' ? results[0].value?.price : null;
+  if (oficialWorker) {
+    document.getElementById('r-oficial').value = oficialWorker;
+    msgs.push(`Oficial BBVA $${oficialWorker}`);
+  } else {
+    // Fallback to dolarapi.com
+    try {
+      const fb = await fetch('https://dolarapi.com/v1/dolares/oficial').then(r => r.json());
+      document.getElementById('r-oficial').value = fb.venta;
+      msgs.push(`Oficial $${fb.venta}`);
+    } catch (_) {}
   }
 
-  // Comparapix — find best BRL→ARS rate among PIX providers
+  // ── Dólar Blue Córdoba (infodolar.com) ──
+  const blueWorker = results[1].status === 'fulfilled' ? results[1].value?.price : null;
+  if (blueWorker) {
+    document.getElementById('r-blue').value = blueWorker;
+    msgs.push(`Blue Cba $${blueWorker}`);
+  } else {
+    // Fallback to dolarapi.com
+    try {
+      const fb = await fetch('https://dolarapi.com/v1/dolares/blue').then(r => r.json());
+      document.getElementById('r-blue').value = fb.venta;
+      msgs.push(`Blue $${fb.venta}`);
+    } catch (_) {}
+  }
+
+  // ── Comparapix — best BRLUSD rate ──
   if (results[2].status === 'fulfilled') {
-    const { data, via } = results[2].value;
-    // Only use brubank and astropay — real USD, no USDT
+    const data = results[2].value;
     const ALLOWED = ['brubank', 'astropay'];
     let bestBrlusd = Infinity, bestName = '';
     for (const [name, info] of Object.entries(data)) {
@@ -825,12 +845,22 @@ async function fetchAllRates() {
       const brlPerUsd = 1 / bestBrlusd;
       document.getElementById('r-pix-usd').value              = brlPerUsd.toFixed(3);
       document.getElementById('pix-usd-provider').textContent = `Mejor: ${bestName} · ${brlPerUsd.toFixed(3)} BRL/USD · comparapix.ar`;
-      msgs.push(`PIX USD: ${bestName} @ ${brlPerUsd.toFixed(3)} BRL/USD`);
+      msgs.push(`PIX: ${bestName} @ ${brlPerUsd.toFixed(3)}`);
     } else {
       document.getElementById('pix-usd-provider').textContent = 'Sin datos — ingresá el valor manualmente';
     }
   } else {
     document.getElementById('pix-usd-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+  }
+
+  // ── Binance P2P — USDT ──
+  const usdtPrice = results[3].status === 'fulfilled' ? results[3].value?.price : null;
+  if (usdtPrice) {
+    document.getElementById('r-usdt').value        = usdtPrice;
+    document.getElementById('usdt-provider').textContent = `Binance P2P · $${usdtPrice}`;
+    msgs.push(`USDT $${usdtPrice}`);
+  } else {
+    document.getElementById('usdt-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
   }
 
   icon.classList.remove('spin');
@@ -911,11 +941,13 @@ function exportNotes() {
   });
 
   lines.push(line);
+  const gananciaUSD = oficial > 0 ? (totalGanancia / oficial).toFixed(2) : '—';
   lines.push('TOTALES');
   lines.push(`  Unidades:            ${totalUnits}`);
   lines.push(`  Costo total:         $${Math.round(totalCostoARS).toLocaleString('es-AR')}`);
   lines.push(`  Total a cobrar:      $${Math.round(totalVenta).toLocaleString('es-AR')}`);
   lines.push(`  Ganancia total:      $${Math.round(totalGanancia).toLocaleString('es-AR')}`);
+  lines.push(`  Ganancia (USD):      USD ${gananciaUSD}  (÷ oficial $${oficial})`);
   lines.push(`  ROI:                 ${roi}%`);
 
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
