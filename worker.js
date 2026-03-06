@@ -1,5 +1,5 @@
 // Cloudflare Worker — comparapi-proxy
-// Handles: comparapix, Binance P2P USDT, dólar blue Córdoba (infodolar.com), dólar oficial (BBVA), PIX rate (madridcenterimportados.com)
+// Handles: comparapix, Binance P2P USDT, dólar blue Córdoba + oficial (infodolar.com Córdoba), PIX rate (madridcenterimportados.com — SPA, always null)
 //
 // Deploy: paste this into the Cloudflare Worker dashboard at
 // https://dash.cloudflare.com → Workers & Pages → comparapi-proxy → Edit Code
@@ -119,95 +119,49 @@ async function fetchBinanceUSDT() {
   return jsonResp({ price });
 }
 
-// ── Dólar Blue Córdoba — infodolar.com ───────────────────────────
-// infodolar.com is server-rendered ASPX → HTML scraping works
-async function fetchDolarBlue() {
+// ── infodolar.com Córdoba — shared fetch ─────────────────────────
+// Server-rendered ASPX — page has two sections:
+//   Section 1 (before "blue"): oficial — Compra $X, Venta $Y
+//   Section 2 (after "blue"):  blue    — Compra $X, Venta $Y
+// Prices appear in Argentine format (e.g. 1.430,00). Compra comes first, Venta second.
+async function fetchInfoDolarHtml() {
   const r = await fetch('https://www.infodolar.com/cotizacion-dolar-provincia-cordoba.aspx', {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
-    },
-  });
-  const html = await r.text();
-  let price = null;
-
-  // The page has a "blue" section. Look for the Venta value (Argentine number format: 1.430,00)
-  // Strategy 1: find "blue" keyword close to a price pattern
-  const m1 = html.match(/[Bb]lue[\s\S]{0,600}?(\d{1,2}\.\d{3},\d{2})/);
-  if (m1) {
-    price = parseArNum(m1[1]);
-  }
-
-  // Strategy 2: all Argentine-format prices → take the last one (sell is after buy)
-  if (!price) {
-    const all = [...html.matchAll(/(\d{1,2}\.\d{3},\d{2})/g)];
-    if (all.length > 0) {
-      price = parseArNum(all[all.length - 1][1]);
-    }
-  }
-
-  return jsonResp({ price });
-}
-
-// ── Dólar Oficial BBVA ───────────────────────────────────────────
-// BBVA uses Next.js — try to extract from __NEXT_DATA__ embedded JSON.
-// Falls back to null; index.html will then use dolarapi.com as fallback.
-async function fetchDolarOficial() {
-  const r = await fetch('https://www.bbva.com.ar/personas/productos/inversiones/cotizacion-moneda-extranjera.html', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'es-AR,es;q=0.9',
     },
   });
-  const html = await r.text();
-  let price = null;
+  return r.text();
+}
 
-  // Try __NEXT_DATA__ (Next.js server-side props)
-  const nd = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-  if (nd) {
-    try {
-      price = extractUSDVenta(JSON.parse(nd[1]));
-    } catch (_) {}
-  }
+// Extract venta from a section: prices come in pairs compra (1st), venta (2nd).
+function extractVenta(section) {
+  const matches = [...section.matchAll(/(\d{1,2}\.\d{3},\d{2})/g)];
+  if (matches.length >= 2) return parseArNum(matches[1][1]); // 2nd = venta
+  if (matches.length === 1) return parseArNum(matches[0][1]);
+  return null;
+}
 
-  // Try any embedded JSON blob in script tags
-  if (!price) {
-    for (const m of html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
-      const s = m[1];
-      if (!s.includes('USD') && !s.includes('dolar') && !s.includes('divisa')) continue;
-      const vm = s.match(/[Uu][Ss][Dd][\s\S]{0,300}?venta["'\s:]+(\d{3,4}(?:[.,]\d{1,2})?)/i)
-              || s.match(/venta["'\s:]+(\d{3,4}(?:[.,]\d{1,2})?)[\s\S]{0,300}?[Uu][Ss][Dd]/i);
-      if (vm) { price = parseFloat(vm[1].replace(',', '.')); break; }
-    }
-  }
+async function fetchDolarBlue() {
+  const html = await fetchInfoDolarHtml();
+  const blueIdx = html.toLowerCase().indexOf('blue');
+  if (blueIdx < 0) return jsonResp({ price: null });
+  // Take the ~1500 chars after "blue" to stay in the blue section
+  const section = html.substring(blueIdx, blueIdx + 1500);
+  return jsonResp({ price: extractVenta(section) });
+}
 
-  return jsonResp({ price });
+async function fetchDolarOficial() {
+  const html = await fetchInfoDolarHtml();
+  // The oficial section is everything before "blue"
+  const blueIdx = html.toLowerCase().indexOf('blue');
+  const section = blueIdx > 0 ? html.substring(0, blueIdx) : html;
+  return jsonResp({ price: extractVenta(section) });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
 function parseArNum(s) {
   // "1.430,00" → 1430.00
   return parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
-}
-
-function extractUSDVenta(obj) {
-  if (!obj || typeof obj !== 'object') return null;
-  const keys = Object.keys(obj);
-  const hasVenta = keys.some(k => ['venta','sell','saleRate','sale'].includes(k));
-  const hasCode  = keys.some(k => ['code','iso','currency','name'].includes(k));
-  if (hasVenta && hasCode) {
-    const code = String(obj.code || obj.iso || obj.currency || obj.name || '').toUpperCase();
-    if (code.includes('USD') || code.includes('DOLAR') || code.includes('DÓLAR')) {
-      return obj.venta || obj.sell || obj.saleRate || obj.sale || null;
-    }
-  }
-  for (const v of Object.values(obj)) {
-    if (v && typeof v === 'object') {
-      const r = extractUSDVenta(v);
-      if (r !== null) return r;
-    }
-  }
-  return null;
 }

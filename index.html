@@ -282,7 +282,7 @@
             <input type="number" id="r-pix" value="5.32" step="0.01"
               style="padding-left:54px" title="Tasa que manda la tienda, ej: '5,32 valor do pix aquí na loja hoje'" />
           </div>
-          <div id="pix-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Madrid Center…</div>
+          <div id="pix-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Ingresá el valor que manda la tienda</div>
         </div>
 
         <!-- USD → BRL (auto-fetch, manual fallback) -->
@@ -793,7 +793,7 @@ async function fetchAllRates() {
   icon.classList.add('spin');
 
   const results = await Promise.allSettled([
-    fetch(`${WORKER}/dolar-oficial`).then(r => r.json()),    // BBVA venta
+    fetch(`${WORKER}/dolar-oficial`).then(r => r.json()),    // infodolar.com Córdoba oficial venta
     fetch(`${WORKER}/dolar-blue`).then(r => r.json()),       // infodolar.com Córdoba blue venta
     fetch(`${WORKER}/`).then(r => r.json()),                 // comparapix PIX rates
     fetch(`${WORKER}/binance-usdt`).then(r => r.json()),     // Binance P2P USDT
@@ -806,7 +806,7 @@ async function fetchAllRates() {
   const oficialWorker = results[0].status === 'fulfilled' ? results[0].value?.price : null;
   if (oficialWorker) {
     document.getElementById('r-oficial').value = oficialWorker;
-    msgs.push(`Oficial BBVA $${oficialWorker}`);
+    msgs.push(`Oficial Cba $${oficialWorker}`);
   } else {
     // Fallback to dolarapi.com
     try {
@@ -873,7 +873,7 @@ async function fetchAllRates() {
     document.getElementById('pix-provider').textContent = `Madrid Center · R$ ${pixPrice.toFixed(2).replace('.', ',')}`;
     msgs.push(`PIX tienda R$${pixPrice}`);
   } else {
-    document.getElementById('pix-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+    document.getElementById('pix-provider').textContent = 'Ingresá el valor que manda la tienda';
   }
 
   icon.classList.remove('spin');
