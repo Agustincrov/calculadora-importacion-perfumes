@@ -563,7 +563,7 @@ function loadCatalog(file) {
       const name  = String(row[nameCol]  ?? '').trim();
       const price = parsePrice(row[priceCol]);
       const nl = name.toLowerCase();
-      if (name && !isNaN(price) && price >= 0 && (nl.startsWith('perfume') || nl.startsWith('tester'))) loaded.push({ name, price });
+      if (name && !isNaN(price) && price > 0) loaded.push({ name, price });
     }
 
     // Testers first, then perfumes
