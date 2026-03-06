@@ -582,15 +582,26 @@ function loadCatalog(file) {
 }
 
 function updateCatalogDatalist() {
+  // Intentionally empty on load — datalist is filled dynamically as the user types
   const dl = document.getElementById('catalog-datalist');
-  if (!dl) return;
-  dl.innerHTML = catalog.map(c => `<option value="${esc(c.name)}"></option>`).join('');
+  if (dl) dl.innerHTML = '';
 }
 
 function onNameInput(rowId, value) {
   const row = rows.find(r => r.id === rowId);
   if (!row) return;
   row.name = value;
+
+  // Dynamically filter catalog so the browser datalist always has a manageable set
+  if (catalog.length > 0) {
+    const q = value.toLowerCase().trim();
+    const matches = q.length === 0
+      ? catalog.slice(0, 50)
+      : catalog.filter(c => c.name.toLowerCase().includes(q)).slice(0, 150);
+    const dl = document.getElementById('catalog-datalist');
+    if (dl) dl.innerHTML = matches.map(c => `<option value="${esc(c.name)}"></option>`).join('');
+  }
+
   const item = catalog.find(c => c.name === value);
   if (item) {
     row.price = item.price;
