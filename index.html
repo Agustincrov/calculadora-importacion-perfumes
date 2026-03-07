@@ -39,56 +39,57 @@
 
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      padding: 24px 16px 60px;
+      padding: 28px 24px 60px;
     }
 
-    .container { max-width: 1400px; margin: 0 auto; }
+    .container { max-width: 1760px; margin: 0 auto; }
 
-    header { margin-bottom: 24px; }
-    header h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
-    header p { color: var(--muted); font-size: .875rem; margin-top: 2px; }
+    header { margin-bottom: 28px; }
+    header h1 { font-size: 1.7rem; font-weight: 700; color: var(--accent); }
+    header p { color: var(--muted); font-size: .9rem; margin-top: 3px; }
 
     /* ── Top grid ── */
     .top-grid {
       display: grid;
       grid-template-columns: 3fr 2fr;
-      gap: 16px;
-      margin-bottom: 24px;
+      gap: 20px;
+      margin-bottom: 28px;
     }
-    @media (max-width: 800px) { .top-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .top-grid { grid-template-columns: 1fr; } }
 
     .card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px 24px;
+      padding: 24px 28px;
       box-shadow: var(--shadow);
     }
     .card-title {
-      font-size: .75rem;
+      font-size: .78rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .06em;
       color: var(--muted);
-      margin-bottom: 16px;
+      margin-bottom: 18px;
     }
 
     /* ── Rates ── */
-    .rates-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    @media (max-width: 600px) { .rates-grid { grid-template-columns: 1fr 1fr; } }
+    .rates-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    @media (max-width: 700px) { .rates-grid { grid-template-columns: 1fr 1fr; } }
 
     .rate-item label {
       display: flex; align-items: center; gap: 5px;
-      font-size: .72rem; font-weight: 700;
+      font-size: .75rem; font-weight: 700;
       color: var(--muted);
-      margin-bottom: 5px;
+      margin-bottom: 6px;
       text-transform: uppercase; letter-spacing: .04em;
     }
     .rate-item label .pill {
-      font-size: .62rem; padding: 1px 5px; border-radius: 10px; font-weight: 700;
+      font-size: .65rem; padding: 1px 6px; border-radius: 10px; font-weight: 700;
     }
     .pill-p1 { background: var(--p1-head); color: var(--p1-text); }
     .pill-p2 { background: var(--p2-head); color: var(--p2-text); }
@@ -101,47 +102,47 @@
     }
     .rate-input-wrap input {
       width: 100%;
-      padding: 8px 8px 8px 34px;
+      padding: 9px 8px 9px 34px;
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: .95rem; font-weight: 600;
+      font-size: 1rem; font-weight: 600;
       color: var(--text); background: var(--bg);
       transition: border-color .15s, background .15s;
     }
     .rate-input-wrap input:focus { outline: none; border-color: var(--accent); background: #fff; }
 
 
-    .rates-bottom { display: flex; align-items: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+    .rates-bottom { display: flex; align-items: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
     .fetch-btn {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px;
+      padding: 8px 16px;
       background: var(--accent-light);
       color: var(--accent);
       border: 1px solid #bfdbfe;
       border-radius: 6px;
-      font-size: .8rem; font-weight: 600;
+      font-size: .85rem; font-weight: 600;
       cursor: pointer; transition: background .15s;
     }
     .fetch-btn:hover { background: #dbeafe; }
-    #rate-status { font-size: .72rem; color: var(--muted); }
+    #rate-status { font-size: .75rem; color: var(--muted); }
     #rate-status.ok { color: var(--success); }
     #rate-status.err { color: var(--danger); }
 
     /* ── Summary ── */
-    .summary-sections { display: flex; flex-direction: column; gap: 10px; }
+    .summary-sections { display: flex; flex-direction: column; gap: 12px; }
     .sum-section-label {
-      font-size: .65rem; font-weight: 800;
+      font-size: .68rem; font-weight: 800;
       text-transform: uppercase; letter-spacing: .06em;
-      padding: 4px 8px; border-radius: 4px;
-      margin-bottom: 6px;
+      padding: 4px 9px; border-radius: 4px;
+      margin-bottom: 8px;
     }
     .sum-section-label.p1 { background: var(--p1-head); color: var(--p1-text); }
     .sum-section-label.p2 { background: var(--p2-head); color: var(--p2-text); }
     .sum-section-label.total { background: #e0e7ff; color: #3730a3; }
 
-    .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
-    .stat-row .lbl { font-size: .75rem; color: var(--muted); }
-    .stat-row .val { font-size: .9rem; font-weight: 700; }
+    .stat-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .stat-row .lbl { font-size: .82rem; color: var(--muted); }
+    .stat-row .val { font-size: .97rem; font-weight: 700; }
     .val.accent { color: var(--accent); }
     .val.success { color: var(--success); }
     .val.warn { color: var(--warn); }
@@ -153,15 +154,15 @@
     /* ── Products ── */
     .products-header {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
+      margin-bottom: 18px;
     }
-    .products-header h2 { font-size: 1rem; font-weight: 700; }
+    .products-header h2 { font-size: 1.1rem; font-weight: 700; }
     .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn {
       display: inline-flex; align-items: center; gap: 5px;
-      padding: 7px 13px;
+      padding: 8px 15px;
       border-radius: 6px;
-      font-size: .8rem; font-weight: 600;
+      font-size: .85rem; font-weight: 600;
       cursor: pointer; border: none;
       transition: opacity .15s;
     }
@@ -172,12 +173,12 @@
     /* ── Table ── */
     .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
 
-    table { width: 100%; border-collapse: collapse; font-size: .83rem; background: var(--card); }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; background: var(--card); }
 
     /* Phase group headers */
     thead tr.phase-headers th {
-      padding: 5px 10px;
-      font-size: .65rem; font-weight: 800;
+      padding: 6px 10px;
+      font-size: .68rem; font-weight: 800;
       text-transform: uppercase; letter-spacing: .06em;
       text-align: center;
       border-bottom: none;
@@ -189,8 +190,8 @@
     th.ph-del   { background: #f8fafc; }
 
     thead tr.col-headers th {
-      padding: 8px 10px;
-      font-size: .68rem; font-weight: 700;
+      padding: 9px 10px;
+      font-size: .71rem; font-weight: 700;
       text-transform: uppercase; letter-spacing: .04em;
       white-space: nowrap;
       border-bottom: 2px solid var(--border);
@@ -204,7 +205,7 @@
 
     tbody tr:hover td { filter: brightness(.97); }
     tbody td {
-      padding: 7px 10px;
+      padding: 9px 10px;
       border-bottom: 1px solid var(--border);
       vertical-align: middle;
     }
@@ -215,11 +216,11 @@
     td.bg-sell { background: var(--sell-bg); }
 
     td input[type="text"], td input[type="number"] {
-      width: 100%; min-width: 65px;
-      padding: 5px 7px;
+      width: 100%; min-width: 55px;
+      padding: 6px 7px;
       border: 1px solid transparent;
       border-radius: 5px;
-      font-size: .83rem; background: transparent; color: var(--text);
+      font-size: .88rem; background: transparent; color: var(--text);
       transition: border-color .12s, background .12s;
     }
     td input:focus { outline: none; border-color: var(--accent); background: #fff; }
@@ -342,6 +343,16 @@
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
             <input type="number" id="r-envio" value="17000" step="100" />
+          </div>
+        </div>
+
+        <!-- Clientes -->
+        <div class="rate-item">
+          <label>Clientes <span class="pill pill-p2">FASE 2</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">#</span>
+            <input type="number" id="r-clientes" value="1" min="1" step="1" style="padding-left:28px"
+              title="Número de clientes que comparten el envío. El costo de envío se divide por igual entre clientes." />
           </div>
         </div>
 
@@ -474,7 +485,7 @@
             <th class="ph-input" colspan="4"></th>
             <th class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
-            <th class="ph-sell" colspan="4">Precio de venta</th>
+            <th class="ph-sell" colspan="5">Precio de venta</th>
             <th class="ph-del"></th>
           </tr>
           <tr class="col-headers">
@@ -483,15 +494,16 @@
             <th class="bg-input">Precio USD</th>
             <th class="bg-input">Cantidad</th>
             <th class="bg-p1">BRL/unid</th>
-            <th class="bg-p1">USD que pagás</th>
-            <th class="bg-p1">Costo ARS/unid</th>
-            <th class="bg-p2">Comisión ARS/unid</th>
-            <th class="bg-p2">Envío ARS/unid</th>
-            <th class="bg-p2">Costo total/unid</th>
+            <th class="bg-p1">USD pagás</th>
+            <th class="bg-p1">Costo ARS</th>
+            <th class="bg-p2">Comisión</th>
+            <th class="bg-p2">Envío</th>
+            <th class="bg-p2">Costo total</th>
             <th class="bg-sell">Margen %</th>
-            <th class="bg-sell">Precio (ARS)</th>
-            <th class="bg-sell">Precio (USD blue)</th>
-            <th class="bg-sell">Margen real %</th>
+            <th class="bg-sell">Precio ARS</th>
+            <th class="bg-sell">USD blue</th>
+            <th class="bg-sell">Ganancia</th>
+            <th class="bg-sell">Margen real</th>
             <th class="bg-del"></th>
           </tr>
         </thead>
@@ -502,8 +514,8 @@
 
   <div class="note">
     <strong>Nota:</strong>
-    El envío (Fase 2) se divide entre <em>todos</em> los productos —
-    cuantos más productos, menor costo de envío por unidad.
+    El envío (Fase 2) se divide entre el número de <em>clientes</em> — cada cliente paga una parte fija
+    sin importar cuántas unidades compre. Ajustá el campo <em>Clientes</em> según cuántas personas comparten el envío.
     La comisión (Fase 2) se paga al shipper en USD al tipo <em>USDT</em>.
   </div>
 
@@ -658,6 +670,7 @@ function renderTable() {
           oninput="updateField(${row.id},'margin',+this.value)" /></td>
       <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="vusd-${row.id}">—</td>
+      <td class="cell-computed bg-sell" id="gan-${row.id}">—</td>
       <td class="bg-sell" id="mreal-${row.id}" style="text-align:right;">—</td>
       <td>
         <button class="del-btn" onclick="deleteRow(${row.id})" title="Eliminar">
@@ -712,7 +725,7 @@ function recalculate() {
   const envioTotal = getRate('r-envio');
 
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
-  const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
+  const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
   const comisionARS  = comUSD * usdt;
 
   let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
@@ -723,7 +736,8 @@ function recalculate() {
     const usdUnid  = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
     const costoARS1 = usdUnid * oficial;
 
-    // Fase 2
+    // Fase 2: envío dividido por clientes (cada cliente paga una parte fija sin importar cuántas unidades)
+    const envioPerUnit = clientes > 0 && row.qty > 0 ? envioTotal / clientes / row.qty : 0;
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
 
     // Selling price
@@ -752,6 +766,7 @@ function recalculate() {
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
     setCell(`vars-${row.id}`, precioARS > 0 ? fmt_ars(precioARS) : '—');
     setCell(`vusd-${row.id}`, precioUSD > 0 ? fmt_usd(precioUSD) : '—');
+    setCell(`gan-${row.id}`,  ganancia   > 0 ? fmt_ars(ganancia)  : '—');
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
 
@@ -920,15 +935,16 @@ function exportNotes() {
   const envioTotal   = getRate('r-envio');
   const pixService   = document.getElementById('pix-usd-provider').textContent;
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
-  const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
+  const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
   const comisionARS  = comUSD * usdt;
   const fecha        = new Date().toLocaleString('es-AR');
 
   let totalCostoARS = 0, totalVenta = 0, totalGanancia = 0;
   const productRows = rows.map(row => {
-    const brlUnid   = row.price * pixRate;
-    const usdUnid   = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
+    const brlUnid    = row.price * pixRate;
+    const usdUnid    = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
     const costoARS1  = usdUnid * oficial;
+    const envioPerUnit = clientes > 0 && row.qty > 0 ? envioTotal / clientes / row.qty : 0;
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
     let precioARS = 0, precioUSD = 0, ganancia = 0;
     if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
@@ -957,7 +973,7 @@ function exportNotes() {
   lines.push(`  Dólar Blue:    $${blue}`);
   lines.push(`  USDT:          $${usdt}  (base comisión shipper)`);
   lines.push(`  Comisión:      USD ${comUSD}/producto`);
-  lines.push(`  Envío:         $${envioTotal} total ÷ ${totalUnits} unid = $${Math.round(envioPerUnit)}/unid`);
+  lines.push(`  Envío:         $${envioTotal} total ÷ ${clientes} cliente${clientes !== 1 ? 's' : ''} = $${Math.round(envioTotal / clientes)}/cliente`);
   lines.push(line);
 
   lines.push('PRODUCTOS');
@@ -1015,7 +1031,7 @@ function copyPrices() {
 // ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
-['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt','r-comision','r-envio'].forEach(id => {
+['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt','r-comision','r-envio','r-clientes'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalculate);
 });
 
