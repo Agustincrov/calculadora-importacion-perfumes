@@ -729,6 +729,9 @@ function recalculate() {
   const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
   const comisionARS  = comUSD * usdt;
 
+  // El envío se paga UNA sola vez (por cliente), repartido equitativamente entre todas las unidades
+  const envioPerUnit = totalUnits > 0 ? envioTotal / clientes / totalUnits : 0;
+
   let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
 
   rows.forEach(row => {
@@ -737,8 +740,7 @@ function recalculate() {
     const usdUnid  = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
     const costoARS1 = usdUnid * oficial;
 
-    // Fase 2: envío dividido por clientes (cada cliente paga una parte fija sin importar cuántas unidades)
-    const envioPerUnit = clientes > 0 && row.qty > 0 ? envioTotal / clientes / row.qty : 0;
+    // Fase 2: envío repartido entre todas las unidades (se paga una sola vez total)
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
 
     // Selling price
