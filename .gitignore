@@ -1,0 +1,23 @@
+# Claude project context (internal, not for public)
+CLAUDE.md
+
+# Private docs
+docs/mensaje-promocional.txt
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
