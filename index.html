@@ -486,7 +486,7 @@
             <th class="ph-input" colspan="4"></th>
             <th class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
-            <th class="ph-sell" colspan="5">Precio de venta</th>
+            <th class="ph-sell" colspan="7">Precio de venta</th>
             <th class="ph-del"></th>
           </tr>
           <tr class="col-headers">
@@ -502,8 +502,10 @@
             <th class="bg-p2">Costo total</th>
             <th class="bg-sell">Margen %</th>
             <th class="bg-sell">Precio ARS</th>
-            <th class="bg-sell">USD blue</th>
+            <th class="bg-sell">Precio lista</th>
+            <th class="bg-sell">USD lista</th>
             <th class="bg-sell">Ganancia</th>
+            <th class="bg-sell">Ganancia USD</th>
             <th class="bg-sell">Margen real</th>
             <th class="bg-del"></th>
           </tr>
@@ -670,8 +672,10 @@ function renderTable() {
       <td class="bg-sell"><input type="number" value="${row.margin}" min="0" max="99" step="1"
           oninput="updateField(${row.id},'margin',+this.value)" /></td>
       <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
+      <td class="cell-computed bg-sell" id="lista-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="vusd-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="gan-${row.id}">—</td>
+      <td class="cell-computed bg-sell" id="ganusd-${row.id}">—</td>
       <td class="bg-sell" id="mreal-${row.id}" style="text-align:right;">—</td>
       <td>
         <button class="del-btn" onclick="deleteRow(${row.id})" title="Eliminar">
@@ -743,13 +747,21 @@ function recalculate() {
     // Fase 2: envío repartido entre todas las unidades (se paga una sola vez total)
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
 
+    // Precio lista: costo con envío completo (como si el cliente comprara solo ese producto)
+    const costoIndividual = costoARS1 + comisionARS + (envioTotal / clientes);
+
     // Selling price
-    let precioARS = 0, precioUSD = 0, ganancia = 0, margenReal = 0;
+    let precioARS = 0, precioUSD = 0, ganancia = 0, gananciaUSD = 0, margenReal = 0;
+    let precioLista = 0, precioListaUSD = 0;
     if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
       precioARS  = costoTotal / (1 - row.margin / 100);
-      precioUSD  = blue > 0 ? precioARS / blue : 0;
       ganancia   = precioARS - costoTotal;
+      gananciaUSD = blue > 0 ? ganancia / blue : 0;
       margenReal = ganancia / precioARS;
+    }
+    if (row.margin > 0 && row.margin < 100 && costoIndividual > 0) {
+      precioLista    = costoIndividual / (1 - row.margin / 100);
+      precioListaUSD = blue > 0 ? precioLista / blue : 0;
     }
 
     // Accumulate
@@ -767,9 +779,11 @@ function recalculate() {
     setCell(`com-${row.id}`,  fmt_ars(comisionARS));
     setCell(`env-${row.id}`,  fmt_ars(envioPerUnit));
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
-    setCell(`vars-${row.id}`, precioARS > 0 ? fmt_ars(precioARS) : '—');
-    setCell(`vusd-${row.id}`, precioUSD > 0 ? fmt_usd(precioUSD) : '—');
-    setCell(`gan-${row.id}`,  ganancia   > 0 ? fmt_ars(ganancia)  : '—');
+    setCell(`vars-${row.id}`,   precioARS     > 0 ? fmt_ars(precioARS)     : '—');
+    setCell(`lista-${row.id}`,  precioLista   > 0 ? fmt_ars(precioLista)   : '—');
+    setCell(`vusd-${row.id}`,   precioListaUSD > 0 ? fmt_usd(precioListaUSD) : '—');
+    setCell(`gan-${row.id}`,    ganancia      > 0 ? fmt_ars(ganancia)      : '—');
+    setCell(`ganusd-${row.id}`, gananciaUSD   > 0 ? fmt_usd(gananciaUSD)   : '—');
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
 
@@ -1015,7 +1029,7 @@ function exportNotes() {
 function copyPrices() {
   const lines = rows.map(row => {
     const nombre  = row.name || '(sin nombre)';
-    const arsEl   = document.getElementById(`vars-${row.id}`);
+    const arsEl   = document.getElementById(`lista-${row.id}`);
     const usdEl   = document.getElementById(`vusd-${row.id}`);
     const ars     = arsEl?.textContent?.trim() || '—';
     const usd     = usdEl?.textContent?.trim() || '—';
