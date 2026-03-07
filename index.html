@@ -216,15 +216,16 @@
     td.bg-sell { background: var(--sell-bg); }
 
     td input[type="text"], td input[type="number"] {
-      width: 100%; min-width: 55px;
+      width: 100%;
       padding: 6px 7px;
       border: 1px solid transparent;
       border-radius: 5px;
       font-size: .88rem; background: transparent; color: var(--text);
       transition: border-color .12s, background .12s;
     }
+    td input[type="text"]   { min-width: 180px; }
+    td input[type="number"] { min-width: 55px; text-align: right; }
     td input:focus { outline: none; border-color: var(--accent); background: #fff; }
-    td input[type="number"] { text-align: right; }
 
 .cell-computed { text-align: right; font-weight: 500; white-space: nowrap; }
     .cell-computed.positive { color: var(--success); }
