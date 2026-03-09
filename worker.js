@@ -99,13 +99,8 @@ async function fetchBinanceUSDT() {
   // Promoted ads have classify === 'promoted'; skip them.
   // Fallback: always skip index 0 (the sponsored slot) if no explicit classify marker.
   const nonPromoted = ads.filter(a => a.adv?.classify !== 'promoted');
-  if (nonPromoted.length > 1) {
-    // Skip the first non-promoted (it occupies the sponsored slot in the UI)
-    price = parseFloat(nonPromoted[1].adv.price);
-  } else if (nonPromoted.length === 1) {
+  if (nonPromoted.length > 0) {
     price = parseFloat(nonPromoted[0].adv.price);
-  } else if (ads.length > 1) {
-    price = parseFloat(ads[1].adv.price);
   } else if (ads.length > 0) {
     price = parseFloat(ads[0].adv.price);
   }

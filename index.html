@@ -259,6 +259,16 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin .7s linear infinite; display: inline-block; }
+
+    /* ── Payment mode toggle ── */
+    .mode-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    .mode-btn {
+      padding: 6px 14px; font-size: .8rem; font-weight: 600;
+      border: none; cursor: pointer; background: transparent;
+      color: var(--muted); transition: background .15s, color .15s;
+    }
+    .mode-btn.active { background: var(--accent); color: #fff; }
+    .table-wrap.mode-usdt .col-brl { display: none; }
   </style>
 </head>
 <body>
@@ -359,6 +369,14 @@
 
       </div>
 
+      <div style="display:flex;align-items:center;gap:10px;margin-top:16px;">
+        <span style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Método pago Fase 1</span>
+        <div class="mode-toggle">
+          <button id="btn-mode-pix" class="mode-btn active" onclick="setPayMode('pix')">PIX (USD oficial)</button>
+          <button id="btn-mode-usdt" class="mode-btn" onclick="setPayMode('usdt')">USDT directo</button>
+        </div>
+      </div>
+
       <div class="rates-bottom">
         <button class="fetch-btn" onclick="fetchAllRates()">
           <svg id="fetch-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -383,16 +401,16 @@
             <span class="lbl">Unidades totales</span>
             <span class="val" id="s-qty">0</span>
           </div>
-          <div class="stat-row">
-            <span class="lbl">BRL a mandar</span>
+          <div class="stat-row" id="s-brl-row">
+            <span class="lbl" id="s-brl-lbl">BRL a mandar</span>
             <span class="val accent" id="s-brl">R$ 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">USD que pagás</span>
+            <span class="lbl" id="s-usd1-lbl">USD que pagás</span>
             <span class="val accent" id="s-usd1">USD 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">Costo en ARS (al oficial)</span>
+            <span class="lbl" id="s-ars-p1-lbl">Costo en ARS (al oficial)</span>
             <span class="val accent" id="s-ars-p1">$ 0</span>
           </div>
         </div>
@@ -484,7 +502,7 @@
         <thead>
           <tr class="phase-headers">
             <th class="ph-input" colspan="4"></th>
-            <th class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
+            <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
             <th class="ph-sell" colspan="7">Precio de venta</th>
             <th class="ph-del"></th>
@@ -494,8 +512,8 @@
             <th class="bg-input">Producto</th>
             <th class="bg-input">Precio USD</th>
             <th class="bg-input">Cantidad</th>
-            <th class="bg-p1">BRL/unid</th>
-            <th class="bg-p1">USD pagás</th>
+            <th class="bg-p1 col-brl">BRL/unid</th>
+            <th class="bg-p1" id="col-usd-head">USD pagás</th>
             <th class="bg-p1">Costo ARS</th>
             <th class="bg-p2">Comisión</th>
             <th class="bg-p2">Envío</th>
@@ -530,8 +548,24 @@
 let rows = [];
 let nextId = 1;
 let catalog = []; // [{ name, price }]
+let payMode = 'pix'; // 'pix' | 'usdt'
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function setPayMode(mode) {
+  payMode = mode;
+  document.getElementById('btn-mode-pix').classList.toggle('active', mode === 'pix');
+  document.getElementById('btn-mode-usdt').classList.toggle('active', mode === 'usdt');
+  document.querySelector('.table-wrap').classList.toggle('mode-usdt', mode === 'usdt');
+  document.getElementById('ph-p1-label').colSpan = mode === 'usdt' ? 2 : 3;
+  document.getElementById('ph-p1-label').textContent =
+    mode === 'pix' ? 'Fase 1 — Costo vía PIX (USD oficial)' : 'Fase 1 — Costo directo en USDT';
+  document.getElementById('col-usd-head').textContent = mode === 'pix' ? 'USD pagás' : 'USDT/unid';
+  document.getElementById('s-brl-row').style.display = mode === 'usdt' ? 'none' : '';
+  document.getElementById('s-usd1-lbl').textContent = mode === 'pix' ? 'USD que pagás' : 'USDT a enviar';
+  document.getElementById('s-ars-p1-lbl').textContent = mode === 'pix' ? 'Costo en ARS (al oficial)' : 'Costo en ARS (al USDT)';
+  recalculate();
+}
 
 // ─────────────────────────────────────────────
 // Catalog import
@@ -663,7 +697,7 @@ function renderTable() {
           oninput="updateField(${row.id},'price',+this.value)" /></td>
       <td><input type="number" value="${row.qty}" min="0" step="1"
           oninput="updateField(${row.id},'qty',+this.value)" /></td>
-      <td class="cell-computed bg-p1" id="brl-${row.id}">—</td>
+      <td class="cell-computed bg-p1 col-brl" id="brl-${row.id}">—</td>
       <td class="cell-computed bg-p1" id="usd-${row.id}">—</td>
       <td class="cell-computed bg-p1" id="ars1-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="com-${row.id}">—</td>
@@ -739,10 +773,16 @@ function recalculate() {
   let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
 
   rows.forEach(row => {
-    // Fase 1: USD → BRL (via PIX service) → ARS (at oficial)
-    const brlUnid  = row.price * pixRate;
-    const usdUnid  = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
-    const costoARS1 = usdUnid * oficial;
+    // Fase 1: depends on payMode
+    let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
+    if (payMode === 'usdt') {
+      usdUnid  = row.price;           // 1 USDT per 1 USD of product price
+      costoARS1 = row.price * usdt;
+    } else {
+      brlUnid   = row.price * pixRate;
+      usdUnid   = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
+      costoARS1 = usdUnid * oficial;
+    }
 
     // Fase 2: envío repartido entre todas las unidades (se paga una sola vez total)
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
@@ -765,7 +805,7 @@ function recalculate() {
     }
 
     // Accumulate
-    totalBRL        += brlUnid   * row.qty;
+    totalBRL        += payMode === 'pix' ? brlUnid * row.qty : 0;
     totalUSD1       += usdUnid   * row.qty;
     totalARS1       += costoARS1 * row.qty;
     totalComisiones += comisionARS * row.qty;
@@ -773,9 +813,9 @@ function recalculate() {
     totalGanancia   += ganancia  * row.qty;
 
     // Update cells
-    setCell(`brl-${row.id}`,  fmt_brl(brlUnid));
-    setCell(`usd-${row.id}`,  pixUsdRate > 0 ? fmt_usd(usdUnid) : '—');
-    setCell(`ars1-${row.id}`, pixUsdRate > 0 ? fmt_ars(costoARS1) : '—');
+    setCell(`brl-${row.id}`,  payMode === 'usdt' ? '—' : fmt_brl(brlUnid));
+    setCell(`usd-${row.id}`,  payMode === 'usdt' ? fmt_usd(usdUnid) : (pixUsdRate > 0 ? fmt_usd(usdUnid) : '—'));
+    setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1) : '—');
     setCell(`com-${row.id}`,  fmt_ars(comisionARS));
     setCell(`env-${row.id}`,  fmt_ars(envioPerUnit));
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
@@ -792,7 +832,7 @@ function recalculate() {
 
   setText('s-qty',        fmt_num(totalUnits));
   setText('s-brl',        fmt_brl(totalBRL));
-  setText('s-usd1',       fmt_usd(totalUSD1));
+  setText('s-usd1',       payMode === 'usdt' ? fmt_usd(totalUSD1) + ' USDT' : fmt_usd(totalUSD1));
   setText('s-ars-p1',     fmt_ars(totalARS1));
   setText('s-comisiones', fmt_ars(totalComisiones));
   setText('s-envio',      fmt_ars(envioTotal));
