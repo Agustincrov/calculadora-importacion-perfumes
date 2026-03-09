@@ -481,11 +481,17 @@
         <input type="file" id="catalog-file" accept=".xls,.xlsx" style="display:none"
           onchange="loadCatalog(this.files[0]); this.value=''" />
         <span id="catalog-status" style="font-size:.72rem;color:var(--muted);align-self:center;"></span>
-        <button class="btn btn-outline" onclick="copyPrices()">
+        <button class="btn btn-outline" onclick="copyPrices('individual')" title="Precio por producto como si el cliente comprara solo ese ítem (envío completo por producto)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
-          Copiar precios
+          Copiar individual
+        </button>
+        <button class="btn btn-outline" onclick="copyPrices('bundle')" title="Precio con envío compartido entre todos los productos (cliente lleva todo)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copiar bundle
         </button>
         <button class="btn btn-success" onclick="exportNotes()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -1066,18 +1072,22 @@ function exportNotes() {
 // ─────────────────────────────────────────────
 // Copy prices to clipboard
 // ─────────────────────────────────────────────
-function copyPrices() {
+function copyPrices(mode = 'individual') {
   const lines = rows.map(row => {
-    const nombre  = row.name || '(sin nombre)';
-    const arsEl   = document.getElementById(`lista-${row.id}`);
-    const usdEl   = document.getElementById(`vusd-${row.id}`);
-    const ars     = arsEl?.textContent?.trim() || '—';
-    const usd     = usdEl?.textContent?.trim() || '—';
+    const nombre = row.name || '(sin nombre)';
+    // individual → precioLista (full shipping per product)
+    // bundle     → precioARS  (shipping split across all products)
+    const arsEl  = mode === 'bundle'
+      ? document.getElementById(`vars-${row.id}`)
+      : document.getElementById(`lista-${row.id}`);
+    const usdEl  = document.getElementById(`vusd-${row.id}`);
+    const ars    = arsEl?.textContent?.trim() || '—';
+    const usd    = usdEl?.textContent?.trim() || '—';
     return `${nombre} — ${ars} / ${usd}`;
   }).join('\n');
 
   navigator.clipboard.writeText(lines).then(() => {
-    const btn = document.querySelector('[onclick="copyPrices()"]');
+    const btn = document.querySelector(`[onclick="copyPrices('${mode}')"]`);
     const orig = btn.innerHTML;
     btn.textContent = '✓ Copiado';
     btn.style.color = 'var(--success)';
