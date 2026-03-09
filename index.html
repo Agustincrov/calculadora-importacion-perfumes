@@ -541,8 +541,9 @@
 
   <div class="note">
     <strong>Nota:</strong>
-    El envío (Fase 2) se divide entre el número de <em>clientes</em> — cada cliente paga una parte fija
-    sin importar cuántas unidades compre. Ajustá el campo <em>Clientes</em> según cuántas personas comparten el envío.
+    El envío (Fase 2) se divide equitativamente entre todas las unidades del pedido.
+    El campo <em>Clientes</em> afecta el <em>precio lista individual</em>: cuánto pagaría un cliente
+    si comprara solo ese producto (su parte del envío = envío total ÷ clientes).
     La comisión (Fase 2) se paga al shipper en USD al tipo <em>USDT</em>.
   </div>
 
@@ -773,8 +774,9 @@ function recalculate() {
   const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
   const comisionARS  = comUSD * usdt;
 
-  // El envío se paga UNA sola vez (por cliente), repartido equitativamente entre todas las unidades
-  const envioPerUnit = totalUnits > 0 ? envioTotal / clientes / totalUnits : 0;
+  // El envío se divide entre todas las unidades del pedido
+  // clientes solo afecta el precio lista individual (costoIndividual), no el costo por unidad de la tabla
+  const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
 
   let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
 
@@ -1007,7 +1009,7 @@ function exportNotes() {
     const brlUnid    = row.price * pixRate;
     const usdUnid    = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
     const costoARS1  = usdUnid * oficial;
-    const envioPerUnit = clientes > 0 && row.qty > 0 ? envioTotal / clientes / row.qty : 0;
+    const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
     const costoTotal = costoARS1 + comisionARS + envioPerUnit;
     let precioARS = 0, precioUSD = 0, ganancia = 0;
     if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
