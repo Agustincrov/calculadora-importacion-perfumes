@@ -265,30 +265,21 @@
       display: inline-flex; align-items: center; justify-content: center;
       width: 13px; height: 13px; border-radius: 50%;
       background: currentColor; opacity: .35;
-      font-size: .6rem; font-weight: 800; cursor: help;
-      position: relative; margin-left: 3px; vertical-align: middle;
-      flex-shrink: 0;
+      font-size: .6rem; font-weight: 900; cursor: help;
+      margin-left: 3px; vertical-align: middle; flex-shrink: 0;
+      color: inherit;
     }
-    .col-tip::after {
-      content: '!';
-      position: absolute; color: #fff; font-size: .6rem; font-weight: 900;
-      pointer-events: none;
-    }
-    .col-tip::before {
-      content: attr(data-tip);
-      position: absolute; bottom: calc(100% + 7px); left: 50%;
-      transform: translateX(-50%);
+    .col-tip::after { content: '!'; color: #fff; font-size: .6rem; pointer-events: none; }
+    .col-tip:hover { opacity: .75; }
+    #col-tooltip {
+      position: fixed; z-index: 9999;
       background: #1e293b; color: #fff;
       padding: 7px 11px; border-radius: 7px;
-      font-size: .72rem; font-weight: 400; line-height: 1.45;
-      width: max-content; max-width: 210px; white-space: normal;
-      text-transform: none; letter-spacing: 0;
-      pointer-events: none; opacity: 0;
-      transition: opacity .15s; z-index: 9000;
+      font-size: .76rem; font-weight: 400; line-height: 1.5;
+      max-width: 220px; white-space: normal;
+      pointer-events: none; display: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,.25);
     }
-    .col-tip:hover { opacity: .75; }
-    .col-tip:hover::before { opacity: 1; }
-    .col-tip.tip-left::before { left: auto; right: 0; transform: none; }
     th { white-space: nowrap; }
 
     /* ── Catalog tags ── */
@@ -375,6 +366,7 @@
 </head>
 <body>
 <div class="autocomplete-list" id="ac-global"></div>
+<div id="col-tooltip"></div>
 <div class="container">
 
   <header>
@@ -1461,6 +1453,24 @@ function copyPrices(mode = 'individual') {
 // ─────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────
+// ── Column tooltips ──
+const _tooltip = document.getElementById('col-tooltip');
+document.querySelectorAll('.col-tip').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    const tip = el.getAttribute('data-tip');
+    if (!tip) return;
+    _tooltip.textContent = tip;
+    _tooltip.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const tw = _tooltip.offsetWidth, th = _tooltip.offsetHeight;
+    let left = r.left + r.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+    _tooltip.style.left = left + 'px';
+    _tooltip.style.top = (r.top - th - 8) + 'px';
+  });
+  el.addEventListener('mouseleave', () => { _tooltip.style.display = 'none'; });
+});
+
 const restoredFromStorage = loadFromStorage();
 renderTabs();
 fetchAllRates();
