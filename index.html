@@ -260,6 +260,37 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin .7s linear infinite; display: inline-block; }
 
+    /* ── Column tooltips ── */
+    .col-tip {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 13px; height: 13px; border-radius: 50%;
+      background: currentColor; opacity: .35;
+      font-size: .6rem; font-weight: 800; cursor: help;
+      position: relative; margin-left: 3px; vertical-align: middle;
+      flex-shrink: 0;
+    }
+    .col-tip::after {
+      content: '!';
+      position: absolute; color: #fff; font-size: .6rem; font-weight: 900;
+      pointer-events: none;
+    }
+    .col-tip::before {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 7px); left: 50%;
+      transform: translateX(-50%);
+      background: #1e293b; color: #fff;
+      padding: 7px 11px; border-radius: 7px;
+      font-size: .72rem; font-weight: 400; line-height: 1.45;
+      width: max-content; max-width: 210px; white-space: normal;
+      text-transform: none; letter-spacing: 0;
+      pointer-events: none; opacity: 0;
+      transition: opacity .15s; z-index: 9000;
+    }
+    .col-tip:hover { opacity: .75; }
+    .col-tip:hover::before { opacity: 1; }
+    .col-tip.tip-left::before { left: auto; right: 0; transform: none; }
+    th { white-space: nowrap; }
+
     /* ── Catalog tags ── */
     .catalog-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .catalog-tag {
@@ -598,22 +629,22 @@
           </tr>
           <tr class="col-headers">
             <th class="bg-input">#</th>
-            <th class="bg-input">Producto</th>
-            <th class="bg-input">Precio USD</th>
-            <th class="bg-input">Cantidad</th>
-            <th class="bg-p1 col-brl">BRL total</th>
-            <th class="bg-p1" id="col-usd-head">USD total</th>
-            <th class="bg-p1">Costo ARS total</th>
-            <th class="bg-p2">Comisión total</th>
-            <th class="bg-p2">Envío total</th>
-            <th class="bg-p2">Costo total</th>
-            <th class="bg-sell">Margen %</th>
-            <th class="bg-sell">Precio ARS (total)</th>
-            <th class="bg-sell">Precio lista (total)</th>
-            <th class="bg-sell">USD lista (total)</th>
-            <th class="bg-sell">Ganancia (total)</th>
-            <th class="bg-sell">Ganancia USD (total)</th>
-            <th class="bg-sell">Margen real</th>
+            <th class="bg-input">Producto <span class="col-tip" data-tip="Nombre del producto. Si cargaste un catálogo, escribí para buscar y autocompletar nombre y precio."></span></th>
+            <th class="bg-input">Precio USD <span class="col-tip" data-tip="Precio en dólares que cobra la tienda por una unidad."></span></th>
+            <th class="bg-input">Cantidad <span class="col-tip" data-tip="Unidades que comprás de este producto. Todos los valores de la fila muestran el total para esta cantidad."></span></th>
+            <th class="bg-p1 col-brl">BRL total <span class="col-tip" data-tip="Total en reales que necesitás enviar a la tienda por esta fila (precio × tipo PIX × cantidad)."></span></th>
+            <th class="bg-p1" id="col-usd-head">USD total <span class="col-tip" data-tip="Total en dólares (o USDT) que enviás al servicio de pago para cubrir los reales pedidos."></span></th>
+            <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
+            <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
+            <th class="bg-p2">Envío total <span class="col-tip" data-tip="Parte del envío que corresponde a estas unidades (envío total ÷ total de unidades × cantidad de esta fila)."></span></th>
+            <th class="bg-p2">Costo total <span class="col-tip" data-tip="Costo real final para esta fila: producto + comisión + envío. Lo que realmente invertís."></span></th>
+            <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
+            <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado, asumiendo que el cliente compra todos los productos (envío compartido)."></span></th>
+            <th class="bg-sell">Precio lista (total) <span class="col-tip" data-tip="Precio si el cliente compra solo este producto. El envío completo del cliente se asigna únicamente a él."></span></th>
+            <th class="bg-sell">USD lista (total) <span class="col-tip tip-left" data-tip="Precio lista expresado en dólares blue. Útil para publicar en grupos o catálogos."></span></th>
+            <th class="bg-sell">Ganancia (total) <span class="col-tip tip-left" data-tip="Lo que ganás en pesos por esta fila después de cubrir todos los costos."></span></th>
+            <th class="bg-sell">Ganancia USD (total) <span class="col-tip tip-left" data-tip="Ganancia expresada en dólares al tipo oficial. Referencia para saber cuánto dólares reales generaste."></span></th>
+            <th class="bg-sell">Margen real <span class="col-tip tip-left" data-tip="Margen efectivo resultante. Verde = 20% o más. Amarillo = entre 10% y 20%. Rojo = menos del 10%."></span></th>
             <th class="bg-del"></th>
           </tr>
         </thead>
