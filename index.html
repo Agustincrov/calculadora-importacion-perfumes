@@ -525,11 +525,11 @@
             <th class="bg-p2">Envío</th>
             <th class="bg-p2">Costo total</th>
             <th class="bg-sell">Margen %</th>
-            <th class="bg-sell">Precio ARS</th>
-            <th class="bg-sell">Precio lista</th>
-            <th class="bg-sell">USD lista</th>
-            <th class="bg-sell">Ganancia</th>
-            <th class="bg-sell">Ganancia USD</th>
+            <th class="bg-sell">Precio ARS (total)</th>
+            <th class="bg-sell">Precio lista (total)</th>
+            <th class="bg-sell">USD lista (total)</th>
+            <th class="bg-sell">Ganancia (total)</th>
+            <th class="bg-sell">Ganancia USD (total)</th>
             <th class="bg-sell">Margen real</th>
             <th class="bg-del"></th>
           </tr>
@@ -827,11 +827,12 @@ function recalculate() {
     setCell(`com-${row.id}`,  fmt_ars(comisionARS));
     setCell(`env-${row.id}`,  fmt_ars(envioPerUnit));
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
-    setCell(`vars-${row.id}`,   precioARS     > 0 ? fmt_ars(precioARS)     : '—');
-    setCell(`lista-${row.id}`,  precioLista   > 0 ? fmt_ars(precioLista)   : '—');
-    setCell(`vusd-${row.id}`,   precioListaUSD > 0 ? fmt_usd(precioListaUSD) : '—');
-    setCell(`gan-${row.id}`,    ganancia      > 0 ? fmt_ars(ganancia)      : '—');
-    setCell(`ganusd-${row.id}`, gananciaUSD   > 0 ? fmt_usd(gananciaUSD)   : '—');
+    const qty = row.qty || 1;
+    setCell(`vars-${row.id}`,   precioARS      > 0 ? fmt_ars(precioARS  * qty) : '—');
+    setCell(`lista-${row.id}`,  precioLista    > 0 ? fmt_ars(precioLista * qty) : '—');
+    setCell(`vusd-${row.id}`,   precioListaUSD > 0 ? fmt_usd(precioListaUSD * qty) : '—');
+    setCell(`gan-${row.id}`,    ganancia       > 0 ? fmt_ars(ganancia    * qty) : '—');
+    setCell(`ganusd-${row.id}`, gananciaUSD    > 0 ? fmt_usd(gananciaUSD * qty) : '—');
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
 
