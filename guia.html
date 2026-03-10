@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guía de uso — Importo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --accent-light: #eff6ff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --success: #16a34a;
+      --radius: 12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-weight: 800; font-size: 1.05rem; color: var(--accent);
+      letter-spacing: -.01em; text-decoration: none;
+    }
+    .nav-cta {
+      background: var(--accent); color: #fff;
+      padding: 8px 20px; border-radius: 8px;
+      font-size: .875rem; font-weight: 600;
+      text-decoration: none;
+      transition: background .15s;
+    }
+    .nav-cta:hover { background: var(--accent-dark); }
+
+    /* ── Page header ── */
+    .page-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+      color: #fff;
+      padding: 56px 24px 64px;
+      text-align: center;
+    }
+    .page-header .label {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.3);
+      padding: 4px 14px; border-radius: 20px;
+      font-size: .75rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .page-header h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800; line-height: 1.15;
+      letter-spacing: -.02em;
+      margin-bottom: 14px;
+    }
+    .page-header .subtitle {
+      font-size: 1.05rem; color: rgba(255,255,255,.82);
+      max-width: 520px; margin: 0 auto;
+    }
+
+    /* ── Layout ── */
+    .content-wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 52px 24px 80px;
+    }
+
+    /* ── Table of contents ── */
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 52px;
+    }
+    .toc-title {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .toc ol {
+      padding-left: 20px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .toc li { font-size: .9rem; }
+    .toc a {
+      color: var(--text); text-decoration: none;
+      transition: color .15s;
+    }
+    .toc a:hover { color: var(--accent); }
+
+    /* ── Section headings ── */
+    .content-wrap h2 {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -.01em;
+      line-height: 1.25;
+      margin-top: 52px;
+      margin-bottom: 16px;
+      padding-left: 16px;
+      border-left: 4px solid var(--accent);
+    }
+    .content-wrap h2:first-of-type { margin-top: 0; }
+
+    .content-wrap h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 28px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    /* ── Body text ── */
+    .content-wrap p {
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    /* ── Lists ── */
+    .content-wrap ul,
+    .content-wrap ol {
+      padding-left: 22px;
+      margin-bottom: 16px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .content-wrap li { color: var(--text); }
+    .content-wrap li strong { color: var(--text); }
+
+    /* ── Tables ── */
+    .table-wrap {
+      overflow-x: auto;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .content-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    .content-wrap thead tr {
+      background: var(--accent-light);
+    }
+    .content-wrap th {
+      text-align: left;
+      padding: 11px 16px;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--accent);
+      border-bottom: 1px solid var(--border);
+    }
+    .content-wrap td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.55;
+    }
+    .content-wrap tbody tr:last-child td { border-bottom: none; }
+    .content-wrap tbody tr:nth-child(even) td { background: var(--bg); }
+
+    /* ── Blockquotes / info boxes ── */
+    .content-wrap blockquote {
+      background: var(--accent-light);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 20px;
+      margin: 20px 0;
+      color: var(--text);
+      font-size: .93rem;
+    }
+    .content-wrap blockquote p { margin-bottom: 0; color: var(--text); }
+
+    /* ── Code ── */
+    .content-wrap code {
+      font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
+      font-size: .83em;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: #0f172a;
+    }
+    .content-wrap pre {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 20px 22px;
+      overflow-x: auto;
+      margin: 16px 0 20px;
+    }
+    .content-wrap pre code {
+      font-size: .84rem;
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: #e2e8f0;
+      line-height: 1.65;
+    }
+
+    /* ── Horizontal rules ── */
+    .content-wrap hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ── Example box ── */
+    .example-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin: 20px 0 24px;
+    }
+    .example-box .example-label {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .1em; color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .example-box ol {
+      padding-left: 20px;
+      margin-bottom: 0;
+    }
+
+    /* ── FAQ ── */
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+    }
+    .faq-item:first-child { padding-top: 0; }
+    .faq-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .faq-q {
+      font-weight: 700;
+      font-size: .97rem;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .faq-a {
+      color: var(--muted);
+      font-size: .93rem;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ── Back to top ── */
+    .back-to-top {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: .82rem; font-weight: 600;
+      color: var(--muted); text-decoration: none;
+      margin-top: 40px;
+      transition: color .15s;
+    }
+    .back-to-top:hover { color: var(--accent); }
+    .back-to-top svg { width: 14px; height: 14px; stroke: currentColor; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--text);
+      color: rgba(255,255,255,.5);
+      text-align: center;
+      padding: 24px;
+      font-size: .8rem;
+    }
+    footer a { color: rgba(255,255,255,.5); text-decoration: none; }
+    footer a:hover { color: rgba(255,255,255,.75); }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .page-header { padding: 40px 20px 48px; }
+      .content-wrap { padding: 40px 20px 60px; }
+      .toc { padding: 20px; }
+      .example-box { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <a href="landing.html" class="nav-logo">Importo</a>
+    <a href="https://calculadora-importacion-perfumes.agustincrovato7.workers.dev" class="nav-cta">Acceder</a>
+  </nav>
+
+  <!-- Page header -->
+  <header class="page-header" id="top">
+    <div class="label">Documentación</div>
+    <h1>Guía de uso</h1>
+    <p class="subtitle">Herramienta para importadores de Ciudad del Este, Paraguay. Calculá el costo real de cada producto y su precio de venta en segundos.</p>
+  </header>
+
+  <!-- Content -->
+  <main class="content-wrap">
+
+    <!-- Table of contents -->
+    <nav class="toc" aria-label="Contenidos">
+      <div class="toc-title">Contenidos</div>
+      <ol>
+        <li><a href="#para-que-sirve">Para qué sirve</a></li>
+        <li><a href="#paso-1">Paso 1 — Tasas y configuración</a></li>
+        <li><a href="#modo-de-pago">Modo de pago</a></li>
+        <li><a href="#paso-2">Paso 2 — Múltiples listas</a></li>
+        <li><a href="#paso-3">Paso 3 — Cargá tus productos</a></li>
+        <li><a href="#paso-4">Paso 4 — Revisá el resumen</a></li>
+        <li><a href="#catalogos">Catálogos de productos</a></li>
+        <li><a href="#copiar-precios">Copiar precios</a></li>
+        <li><a href="#exportar">Exportar resumen</a></li>
+        <li><a href="#ejemplo">Ejemplo rápido</a></li>
+        <li><a href="#faq">Preguntas frecuentes</a></li>
+      </ol>
+    </nav>
+
+    <!-- Para qué sirve -->
+    <h2 id="para-que-sirve">Para qué sirve</h2>
+    <p>Cuando comprás productos en Ciudad del Este, el precio final que pagás depende de varios factores: la tasa del día de la tienda, el servicio que usás para mandar el dinero, el dólar oficial, la comisión del shipper y el envío. Esta calculadora une todo eso automáticamente y te muestra cuánto te costó cada producto y a cuánto tenés que venderlo para ganar lo que querés.</p>
+
+    <hr />
+
+    <!-- Paso 1 -->
+    <h2 id="paso-1">Paso 1 — Tasas y configuración</h2>
+    <p>Al abrir la calculadora, los valores se actualizan solos desde internet. Aun así, podés editarlos manualmente si los datos del día son distintos.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Campo</th>
+            <th>Qué es</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Valor do PIX</strong></td>
+            <td>La tasa que te manda la tienda ese día. Ej: "5,32 valor do pix aquí na loja hoje". Se autocompleta desde Madrid Center.</td>
+          </tr>
+          <tr>
+            <td><strong>Mejor PIX (BRL/USD)</strong></td>
+            <td>El mejor servicio disponible para mandar dólares y que lleguen en reales (Brubank o Astropay vía comparapix.ar). Se completa solo.</td>
+          </tr>
+          <tr>
+            <td><strong>Dólar Oficial</strong></td>
+            <td>Cotización oficial Córdoba (BBVA). Se usa para calcular cuánto te cuestan los productos en pesos y para la comisión del shipper. Se autocompleta.</td>
+          </tr>
+          <tr>
+            <td><strong>Dólar Blue</strong></td>
+            <td>Cotización blue Córdoba. Se autocompleta. Se usa solo para mostrarte el precio de venta equivalente en dólares blue.</td>
+          </tr>
+          <tr>
+            <td><strong>USDT</strong></td>
+            <td>Cotización USDT en Binance P2P. Se autocompleta. Se usa para calcular la comisión del shipper en pesos.</td>
+          </tr>
+          <tr>
+            <td><strong>Comisión/producto</strong></td>
+            <td>Lo que cobra el shipper por producto, en USD. Generalmente $4.</td>
+          </tr>
+          <tr>
+            <td><strong>Envío total</strong></td>
+            <td>El costo total del envío en pesos, que se reparte entre todos los clientes.</td>
+          </tr>
+          <tr>
+            <td><strong>Clientes</strong></td>
+            <td>Cuántas personas comparten el envío. Si sos vos solo, dejalo en 1. Si son 3 amigos comprando juntos, poné 3. Afecta el "precio lista individual".</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <blockquote>
+      <p>El botón <strong>Actualizar cotizaciones</strong> refresca todos los valores desde internet en cualquier momento.</p>
+    </blockquote>
+
+    <hr />
+
+    <!-- Modo de pago -->
+    <h2 id="modo-de-pago">Modo de pago</h2>
+    <p>Arriba de la tabla hay un selector para elegir cómo se paga a la tienda. Elegí el modo antes de cargar los productos.</p>
+
+    <h3>PIX (USD oficial)</h3>
+    <p>Comprás dólares al tipo de cambio oficial usando apps como Brubank o AstroPay. Luego usás un servicio BRLUSD para enviar esos dólares y que lleguen en reales directamente a la tienda. Es el modo por defecto.</p>
+    <p><strong>Cadena de cálculo:</strong></p>
+    <pre><code>precio_usd × valor_pix     = BRL que quiere la tienda
+BRL ÷ mejor_pix            = USD que enviás al servicio
+USD × dólar_oficial        = costo en ARS</code></pre>
+
+    <h3>USDT directo</h3>
+    <p>Mandás USDT directamente a la tienda, sin pasar por la conversión a BRL. Requiere que la tienda acepte cripto. Evita un paso en la cadena y puede resultar más barato dependiendo de la cotización del momento.</p>
+
+    <hr />
+
+    <!-- Paso 2 -->
+    <h2 id="paso-2">Paso 2 — Múltiples listas</h2>
+    <p>Encima de la tabla aparecen pestañas. Cada pestaña es una lista de productos independiente.</p>
+    <ul>
+      <li><strong>Crear lista:</strong> hacé clic en el botón <strong>+</strong> para agregar una pestaña nueva.</li>
+      <li><strong>Renombrar:</strong> doble clic sobre el nombre de la pestaña.</li>
+      <li><strong>Eliminar:</strong> hacé clic en la <strong>×</strong> de la pestaña. Necesitás al menos una lista.</li>
+      <li><strong>Guardado automático:</strong> todas las listas se guardan en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, las listas siguen ahí.</li>
+      <li><strong>Resetear:</strong> el botón de reset limpia los productos de la lista activa sin borrar las demás.</li>
+    </ul>
+    <p>Usá una lista por cliente o por compra para mantener todo organizado.</p>
+
+    <hr />
+
+    <!-- Paso 3 -->
+    <h2 id="paso-3">Paso 3 — Cargá tus productos</h2>
+    <p>Hacé clic en <strong>Agregar producto</strong> para sumar una fila a la tabla. Cada fila representa un producto.</p>
+    <p>Completá los campos editables:</p>
+    <ul>
+      <li><strong>Producto</strong> — El nombre del perfume u artículo. Si cargaste un catálogo, escribí parte del nombre y te aparecen sugerencias para completar nombre y precio automáticamente.</li>
+      <li><strong>Precio USD</strong> — El precio en dólares que te cobra la tienda.</li>
+      <li><strong>Cantidad</strong> — Cuántas unidades de ese producto estás comprando.</li>
+      <li><strong>Margen %</strong> — El margen de ganancia que querés aplicar. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).</li>
+    </ul>
+    <p>Todas las columnas de resultados muestran el valor total (precio × cantidad):</p>
+
+    <h3>Fase 1 — costo del producto (azul)</h3>
+    <ul>
+      <li><strong>BRL total</strong> — Cuántos reales cuesta ese producto en total.</li>
+      <li><strong>USD total</strong> (o <strong>USDT/unid</strong> en modo USDT directo) — Cuántos dólares o USDT enviás en total.</li>
+      <li><strong>Costo ARS total</strong> — Lo que te cuesta en pesos argentinos al dólar oficial.</li>
+    </ul>
+
+    <h3>Fase 2 — gastos del shipper (verde)</h3>
+    <ul>
+      <li><strong>Comisión total</strong> — La comisión del shipper por todas las unidades, en pesos.</li>
+      <li><strong>Envío total</strong> — La parte del envío que le corresponde a ese producto.</li>
+      <li><strong>Costo total</strong> — El costo real final, sumando producto + comisión + envío.</li>
+    </ul>
+
+    <h3>Precio de venta (violeta)</h3>
+    <ul>
+      <li><strong>Precio ARS</strong> — El precio al que tenés que venderlo para lograr el margen que pediste.</li>
+      <li><strong>Precio lista</strong> — Precio con el envío distribuido entre todos los clientes (precio individual para cada comprador).</li>
+      <li><strong>USD lista</strong> — Ese mismo precio expresado en dólares blue (útil para publicar).</li>
+      <li><strong>Ganancia</strong> — Cuánto ganás en pesos después de cubrir todos los costos.</li>
+      <li><strong>Ganancia USD</strong> — La ganancia expresada en dólares blue.</li>
+      <li><strong>Margen real</strong> — El margen real que te queda, con colores: verde (20% o más), amarillo (entre 10% y 20%), rojo (menos del 10%).</li>
+    </ul>
+
+    <hr />
+
+    <!-- Paso 4 -->
+    <h2 id="paso-4">Paso 4 — Revisá el resumen</h2>
+    <p>El panel de resumen muestra el total de la operación:</p>
+    <ul>
+      <li>BRL o USDT a enviar en total.</li>
+      <li>USD pagados en total.</li>
+      <li>Costo ARS Fase 1 (solo producto).</li>
+      <li>Total de comisiones y envío.</li>
+      <li>Costo total de la operación.</li>
+      <li>Precio de venta total y ganancia total.</li>
+      <li>Ganancia en USD blue.</li>
+      <li>ROI — cuánto ganás por cada peso invertido.</li>
+    </ul>
+
+    <hr />
+
+    <!-- Catálogos -->
+    <h2 id="catalogos">Catálogos de productos (opcional)</h2>
+    <p>Si la tienda te manda una planilla Excel con sus productos y precios, podés importarla con el botón <strong>Importar catálogo</strong>. A partir de ahí, al escribir el nombre de un producto en la tabla, te aparecen sugerencias para completar el nombre y el precio automáticamente.</p>
+    <p>Podés importar catálogos de varias tiendas al mismo tiempo. Cada archivo que importás se suma al pool de búsqueda sin reemplazar los anteriores. Cada catálogo cargado aparece como una etiqueta con el nombre del archivo y la cantidad de productos. Para quitar un catálogo, hacé clic en la <strong>×</strong> de su etiqueta.</p>
+
+    <hr />
+
+    <!-- Copiar precios -->
+    <h2 id="copiar-precios">Copiar precios</h2>
+    <p>Hay dos modos para copiar los precios al portapapeles:</p>
+    <ul>
+      <li><strong>Copiar individual</strong> — Cada producto lleva el costo completo del envío cargado a él. Usalo cuando le estás cotizando un solo artículo a un cliente.</li>
+      <li><strong>Copiar bundle</strong> — El envío se divide entre todos los productos de la lista. Usalo cuando el cliente se lleva todo junto.</li>
+    </ul>
+
+    <hr />
+
+    <!-- Exportar -->
+    <h2 id="exportar">Exportar resumen</h2>
+    <p><strong>Exportar resumen</strong> descarga un archivo de texto con todos los datos de la compra: tasas del día, detalle por producto y totales. Ideal para guardar como registro o compartir por WhatsApp.</p>
+
+    <hr />
+
+    <!-- Ejemplo rápido -->
+    <h2 id="ejemplo">Ejemplo rápido</h2>
+    <p>Querés comprar un perfume que cuesta <strong>USD 170</strong>, la tienda te manda que el valor do PIX es <strong>5,32</strong>, el dólar oficial está en <strong>$1.395</strong>, la comisión es <strong>$4 USD</strong> y el envío total es <strong>$17.000</strong> entre <strong>3 clientes</strong>.</p>
+
+    <div class="example-box">
+      <div class="example-label">Pasos</div>
+      <ol>
+        <li>Verificá que "Valor do PIX" diga 5,32 (se autocompleta desde Madrid Center).</li>
+        <li>Cargá el producto con precio 170 y cantidad 1.</li>
+        <li>Poné 3 en "Clientes".</li>
+        <li>Elegí un margen del 30%.</li>
+      </ol>
+    </div>
+
+    <p>La calculadora te muestra al instante el costo real, el precio de venta sugerido y cuánto ganás por unidad.</p>
+
+    <hr />
+
+    <!-- FAQ -->
+    <h2 id="faq">Preguntas frecuentes</h2>
+
+    <div class="faq-item">
+      <p class="faq-q">Tengo que instalar algo?</p>
+      <p class="faq-a">No. La calculadora funciona directo desde el navegador, sin instalación ni registro.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Funciona en el celular?</p>
+      <p class="faq-a">Sí, aunque se ve mejor en computadora por la cantidad de columnas en la tabla.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Los datos se guardan?</p>
+      <p class="faq-a">Sí, las listas de productos se guardan automáticamente en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, tus listas siguen ahí. Las cotizaciones no se guardan — se vuelven a buscar al abrir.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Con qué frecuencia se actualizan las cotizaciones?</p>
+      <p class="faq-a">Cada vez que abrís la calculadora o apretás "Actualizar cotizaciones". No se actualizan solas mientras la tenés abierta.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Puedo tener listas para distintos clientes?</p>
+      <p class="faq-a">Sí. Usá el botón <strong>+</strong> para crear una pestaña por cliente o por compra. Todas se guardan automáticamente.</p>
+    </div>
+
+    <div class="faq-item">
+      <p class="faq-q">Puedo usar los catálogos de varias tiendas a la vez?</p>
+      <p class="faq-a">Sí. Cada vez que importás un archivo Excel se agrega al pool de búsqueda. Podés tener varios catálogos activos al mismo tiempo y la búsqueda de productos los recorre todos.</p>
+    </div>
+
+    <a href="#top" class="back-to-top">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="18 15 12 9 6 15"/>
+      </svg>
+      Volver al inicio
+    </a>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2026 Importo · Para importadores argentinos · <a href="landing.html">Volver al inicio</a></p>
+  </footer>
+
+</body>
+</html>
