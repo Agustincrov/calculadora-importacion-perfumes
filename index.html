@@ -260,6 +260,21 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin .7s linear infinite; display: inline-block; }
 
+    /* ── Catalog tags ── */
+    .catalog-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .catalog-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      background: var(--p1-head); color: var(--p1-text);
+      font-size: .72rem; font-weight: 700;
+    }
+    .catalog-tag-close {
+      cursor: pointer; font-size: .9rem; line-height: 1;
+      opacity: .6; border: none; background: none;
+      color: inherit; padding: 0;
+    }
+    .catalog-tag-close:hover { opacity: 1; }
+
     /* ── List tabs ── */
     .lists-tabs {
       display: flex; align-items: center; gap: 6px;
@@ -536,7 +551,7 @@
         </button>
         <input type="file" id="catalog-file" accept=".xls,.xlsx" style="display:none"
           onchange="loadCatalog(this.files[0]); this.value=''" />
-        <span id="catalog-status" style="font-size:.72rem;color:var(--muted);align-self:center;"></span>
+        <div id="catalog-tags" class="catalog-tags"></div>
         <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="3 6 5 6 21 6"/>
@@ -622,7 +637,8 @@
 // ─────────────────────────────────────────────
 let rows = [];
 let nextId = 1;
-let catalog = []; // [{ name, price }]
+let catalogs = []; // [{ name, items: [{name, price}] }]
+let catalog  = []; // flat merged list — rebuilt from catalogs
 let payMode = 'pix'; // 'pix' | 'usdt'
 
 // ── Multi-list state ──
@@ -673,15 +689,11 @@ function loadCatalog(file) {
     const wb     = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
     const sheet  = wb.Sheets[wb.SheetNames[0]];
     const rows2d = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    if (rows2d.length < 2) {
-      document.getElementById('catalog-status').textContent = 'Archivo vacío o sin datos.';
-      return;
-    }
+    if (rows2d.length < 2) return;
 
     const nameKw  = ['descripcion','description','producto','product','nombre','name','articulo','item'];
     const priceKw = ['precio','price','usd','costo','cost','valor'];
 
-    // Scan first 10 rows to find the actual header row
     let headerRow = -1, nameCol = -1, priceCol = -1;
     for (let i = 0; i < Math.min(10, rows2d.length); i++) {
       const hdrs = rows2d[i].map(h => String(h ?? '').toLowerCase().trim());
@@ -689,31 +701,60 @@ function loadCatalog(file) {
       const pc = hdrs.findIndex(h => priceKw.some(k => h.includes(k)));
       if (nc >= 0 && pc >= 0) { headerRow = i; nameCol = nc; priceCol = pc; break; }
     }
-    // Fallback: assume col B = description, col C = price (AMS catalog layout)
     if (headerRow < 0) { headerRow = 0; nameCol = 1; priceCol = 2; }
 
-    const loaded = [];
+    const items = [];
     for (let i = headerRow + 1; i < rows2d.length; i++) {
       const row   = rows2d[i];
       const name  = String(row[nameCol]  ?? '').trim();
       const price = parsePrice(row[priceCol]);
-      const nl = name.toLowerCase();
-      if (name && !isNaN(price) && price > 0) loaded.push({ name, price });
+      if (name && !isNaN(price) && price > 0) items.push({ name, price });
     }
-
-    // Testers first, then perfumes
-    loaded.sort((a, b) => {
+    items.sort((a, b) => {
       const at = a.name.toLowerCase().startsWith('tester');
       const bt = b.name.toLowerCase().startsWith('tester');
       return (bt ? 1 : 0) - (at ? 1 : 0);
     });
-    catalog = loaded;
-    updateCatalogDatalist();
-    document.getElementById('catalog-status').textContent =
-      catalog.length > 0 ? `${catalog.length} productos cargados` : 'Sin productos válidos';
+
+    // Strip extension for display name
+    const label = file.name.replace(/\.[^.]+$/, '');
+    // Replace if same filename, otherwise add
+    const existing = catalogs.findIndex(c => c.name === label);
+    if (existing >= 0) catalogs[existing].items = items;
+    else catalogs.push({ name: label, items });
+
+    rebuildCatalog();
     renderTable();
   };
   reader.readAsArrayBuffer(file);
+}
+
+function rebuildCatalog() {
+  // Merge all catalogs, deduplicate by name (last one wins)
+  const map = new Map();
+  for (const cat of catalogs) {
+    for (const item of cat.items) map.set(item.name, item);
+  }
+  catalog = Array.from(map.values());
+  renderCatalogTags();
+}
+
+function removeCatalog(name) {
+  catalogs = catalogs.filter(c => c.name !== name);
+  rebuildCatalog();
+  renderTable();
+}
+
+function renderCatalogTags() {
+  const el = document.getElementById('catalog-tags');
+  if (!el) return;
+  if (catalogs.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = catalogs.map(c =>
+    `<span class="catalog-tag">
+      ${esc(c.name)} <span style="opacity:.7">(${c.items.length})</span>
+      <button class="catalog-tag-close" onclick="removeCatalog('${esc(c.name)}')" title="Quitar catálogo">×</button>
+    </span>`
+  ).join('');
 }
 
 function updateCatalogDatalist() {} // no-op — replaced by custom dropdown
