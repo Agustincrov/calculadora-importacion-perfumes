@@ -601,11 +601,11 @@
             <th class="bg-input">Producto</th>
             <th class="bg-input">Precio USD</th>
             <th class="bg-input">Cantidad</th>
-            <th class="bg-p1 col-brl">BRL/unid</th>
-            <th class="bg-p1" id="col-usd-head">USD pagás</th>
-            <th class="bg-p1">Costo ARS</th>
-            <th class="bg-p2">Comisión</th>
-            <th class="bg-p2">Envío</th>
+            <th class="bg-p1 col-brl">BRL total</th>
+            <th class="bg-p1" id="col-usd-head">USD total</th>
+            <th class="bg-p1">Costo ARS total</th>
+            <th class="bg-p2">Comisión total</th>
+            <th class="bg-p2">Envío total</th>
             <th class="bg-p2">Costo total</th>
             <th class="bg-sell">Margen %</th>
             <th class="bg-sell">Precio ARS (total)</th>
@@ -1027,13 +1027,13 @@ function recalculate() {
     totalGanancia   += ganancia  * row.qty;
 
     // Update cells
-    setCell(`brl-${row.id}`,  payMode === 'usdt' ? '—' : fmt_brl(brlUnid));
-    setCell(`usd-${row.id}`,  payMode === 'usdt' ? fmt_usd(usdUnid) : (pixUsdRate > 0 ? fmt_usd(usdUnid) : '—'));
-    setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1) : '—');
-    setCell(`com-${row.id}`,  fmt_ars(comisionARS));
-    setCell(`env-${row.id}`,  fmt_ars(envioPerUnit));
-    setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal) : '—');
     const qty = row.qty || 1;
+    setCell(`brl-${row.id}`,  payMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
+    setCell(`usd-${row.id}`,  payMode === 'usdt' ? fmt_usd(usdUnid * qty) : (pixUsdRate > 0 ? fmt_usd(usdUnid * qty) : '—'));
+    setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');
+    setCell(`com-${row.id}`,  fmt_ars(comisionARS * qty));
+    setCell(`env-${row.id}`,  fmt_ars(envioPerUnit * qty));
+    setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal * qty) : '—');
     setCell(`vars-${row.id}`,   precioARS      > 0 ? fmt_ars(precioARS  * qty) : '—');
     setCell(`lista-${row.id}`,  precioLista    > 0 ? fmt_ars(precioLista * qty) : '—');
     setCell(`vusd-${row.id}`,   precioListaUSD > 0 ? fmt_usd(precioListaUSD * qty) : '—');
