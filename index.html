@@ -260,6 +260,34 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spin { animation: spin .7s linear infinite; display: inline-block; }
 
+    /* ── List tabs ── */
+    .lists-tabs {
+      display: flex; align-items: center; gap: 6px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 18px; padding-bottom: 0;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border: 1px solid var(--border); border-bottom: none;
+      border-radius: 6px 6px 0 0;
+      background: var(--bg); color: var(--muted);
+      font-size: .82rem; font-weight: 600;
+      cursor: pointer; position: relative; bottom: -2px;
+      transition: background .12s, color .12s;
+    }
+    .tab-btn.active { background: var(--card); color: var(--text); border-bottom-color: var(--card); }
+    .tab-btn:not(.active):hover { background: #f1f5f9; }
+    .tab-close { color: var(--muted); line-height: 1; padding: 1px 2px; border-radius: 3px; font-size: 1rem; }
+    .tab-close:hover { color: var(--danger); }
+    .tab-add-btn {
+      padding: 5px 11px; border: 1px dashed var(--border); border-radius: 6px;
+      background: transparent; color: var(--muted); font-size: 1.1rem;
+      cursor: pointer; transition: border-color .12s, color .12s; margin-bottom: 2px;
+    }
+    .tab-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
     /* ── Autocomplete dropdown ── */
     .autocomplete-list {
       position: fixed;
@@ -509,6 +537,13 @@
         <input type="file" id="catalog-file" accept=".xls,.xlsx" style="display:none"
           onchange="loadCatalog(this.files[0]); this.value=''" />
         <span id="catalog-status" style="font-size:.72rem;color:var(--muted);align-self:center;"></span>
+        <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+          Reset
+        </button>
         <button class="btn btn-outline" onclick="copyPrices('individual')" title="Precio por producto como si el cliente comprara solo ese ítem (envío completo por producto)">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -529,6 +564,11 @@
           Exportar resumen
         </button>
       </div>
+    </div>
+
+    <div class="lists-tabs">
+      <div class="tabs-bar" id="tabs-bar"></div>
+      <button class="tab-add-btn" onclick="addList()" title="Nueva lista">+</button>
     </div>
 
     <div class="table-wrap">
@@ -584,6 +624,11 @@ let rows = [];
 let nextId = 1;
 let catalog = []; // [{ name, price }]
 let payMode = 'pix'; // 'pix' | 'usdt'
+
+// ── Multi-list state ──
+let lists = [{ id: 1, name: 'Lista 1', rows: [], nextId: 1 }];
+let currentListId = 1;
+let nextListId = 2;
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
@@ -799,7 +844,8 @@ function addRow(data = {}) {
 }
 
 function deleteRow(id) {
-  rows = rows.filter(r => r.id !== id);
+  const idx = rows.findIndex(r => r.id === id);
+  if (idx >= 0) rows.splice(idx, 1);
   renderTable();
   recalculate();
 }
@@ -970,6 +1016,7 @@ function recalculate() {
   setText('s-ganancia-usd', oficial > 0 ? fmt_usd(totalGanancia / oficial) : 'USD 0');
   const roi = totalCostoReal > 0 ? totalGanancia / totalCostoReal * 100 : 0;
   setText('s-roi', roi.toFixed(1) + '%');
+  debouncedSave();
 }
 
 function setCell(id, text) {
@@ -994,6 +1041,121 @@ function fmt_ars(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
 function fmt_brl(n) { return 'R$ ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmt_usd(n) { return 'USD ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmt_num(n) { return Number(n).toLocaleString('es-AR'); }
+
+// ─────────────────────────────────────────────
+// Multi-list management
+// ─────────────────────────────────────────────
+function getCurrentList() {
+  return lists.find(l => l.id === currentListId);
+}
+
+function saveCurrentList() {
+  const cur = getCurrentList();
+  if (cur) { cur.rows = rows; cur.nextId = nextId; }
+}
+
+function renderTabs() {
+  const bar = document.getElementById('tabs-bar');
+  if (!bar) return;
+  bar.innerHTML = lists.map(l => `
+    <button class="tab-btn ${l.id === currentListId ? 'active' : ''}"
+      onclick="switchList(${l.id})"
+      ondblclick="renameList(${l.id})" title="Doble clic para renombrar">
+      ${esc(l.name)}
+      ${lists.length > 1
+        ? `<span class="tab-close" onclick="event.stopPropagation();deleteList(${l.id})" title="Eliminar lista">×</span>`
+        : ''}
+    </button>`).join('');
+}
+
+function switchList(id) {
+  if (id === currentListId) return;
+  saveCurrentList();
+  currentListId = id;
+  const list = getCurrentList();
+  rows = list.rows;
+  nextId = list.nextId;
+  renderTabs();
+  renderTable();
+  recalculate();
+}
+
+function addList() {
+  saveCurrentList();
+  const id = nextListId++;
+  const newRows = [];
+  lists.push({ id, name: `Lista ${id}`, rows: newRows, nextId: 1 });
+  currentListId = id;
+  rows = newRows;
+  nextId = 1;
+  renderTabs();
+  renderTable();
+  addRow(); addRow(); addRow();
+}
+
+function deleteList(id) {
+  if (lists.length <= 1) return;
+  lists = lists.filter(l => l.id !== id);
+  if (currentListId === id) {
+    const list = lists[0];
+    currentListId = list.id;
+    rows = list.rows;
+    nextId = list.nextId;
+  }
+  renderTabs();
+  renderTable();
+  recalculate();
+  persistSave();
+}
+
+function renameList(id) {
+  const list = lists.find(l => l.id === id);
+  if (!list) return;
+  const name = prompt('Nombre de la lista:', list.name);
+  if (name && name.trim()) {
+    list.name = name.trim();
+    renderTabs();
+    persistSave();
+  }
+}
+
+function resetCurrentList() {
+  if (!confirm('¿Borrar todos los productos de esta lista?')) return;
+  rows.length = 0;
+  nextId = 1;
+  renderTable();
+  recalculate();
+  addRow(); addRow(); addRow();
+}
+
+// ── localStorage persistence ──
+let saveTimer = null;
+function debouncedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistSave, 600);
+}
+function persistSave() {
+  saveCurrentList();
+  try {
+    localStorage.setItem('importo-lists', JSON.stringify({ lists, currentListId, nextListId }));
+  } catch(e) {}
+}
+function loadFromStorage() {
+  try {
+    const data = JSON.parse(localStorage.getItem('importo-lists'));
+    if (data && Array.isArray(data.lists) && data.lists.length > 0) {
+      lists = data.lists;
+      currentListId = data.currentListId;
+      nextListId = data.nextListId;
+      const cur = lists.find(l => l.id === currentListId) || lists[0];
+      currentListId = cur.id;
+      rows = cur.rows;
+      nextId = cur.nextId;
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
 
 // ─────────────────────────────────────────────
 // Worker base URL
@@ -1227,10 +1389,15 @@ function copyPrices(mode = 'individual') {
 // ─────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────
+const restoredFromStorage = loadFromStorage();
+renderTabs();
 fetchAllRates();
-addRow();
-addRow();
-addRow();
+if (!restoredFromStorage || rows.length === 0) {
+  addRow(); addRow(); addRow();
+} else {
+  renderTable();
+  recalculate();
+}
 </script>
 </body>
 </html>
