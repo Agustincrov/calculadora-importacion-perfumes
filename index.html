@@ -262,9 +262,8 @@
 
     /* ── Autocomplete dropdown ── */
     .autocomplete-list {
-      position: absolute;
-      top: calc(100% + 2px); left: 0;
-      z-index: 1000;
+      position: fixed;
+      z-index: 9999;
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -272,7 +271,6 @@
       max-height: 300px;
       overflow-y: auto;
       min-width: 340px;
-      width: max-content;
       display: none;
     }
     .autocomplete-list.open { display: block; }
@@ -302,7 +300,7 @@
   </style>
 </head>
 <body>
-<datalist id="catalog-datalist"></datalist>
+<div class="autocomplete-list" id="ac-global"></div>
 <div class="container">
 
   <header>
@@ -676,8 +674,9 @@ function loadCatalog(file) {
 function updateCatalogDatalist() {} // no-op — replaced by custom dropdown
 
 // ── Autocomplete state ──
-const acMatches = {}; // rowId → current match array
-const acActiveIdx = {}; // rowId → highlighted index
+let acCurrentRowId = null;
+const acMatches = {};
+const acActiveIdx = {};
 
 function onNameInput(rowId, value) {
   const row = rows.find(r => r.id === rowId);
@@ -698,7 +697,7 @@ function onNameInput(rowId, value) {
     row.price = item.price;
     const priceInput = document.querySelector(`#row-${rowId} td:nth-child(3) input`);
     if (priceInput) priceInput.value = item.price;
-    closeDropdown(rowId);
+    closeDropdown();
   }
 
   recalculate();
@@ -707,13 +706,33 @@ function onNameInput(rowId, value) {
 function showDropdown(rowId, matches) {
   acMatches[rowId] = matches;
   acActiveIdx[rowId] = -1;
-  const el = document.getElementById(`ac-${rowId}`);
+  acCurrentRowId = rowId;
+
+  const el = document.getElementById('ac-global');
   if (!el) return;
   if (matches.length === 0) { el.classList.remove('open'); return; }
+
   el.innerHTML = matches.map((c, i) =>
     `<div class="autocomplete-item" data-idx="${i}"
       onmousedown="selectAcItem(${rowId}, ${i})">${esc(c.name)}</div>`
   ).join('');
+
+  // Position: anchor to the input, flip upward if near bottom of viewport
+  const input = document.querySelector(`#row-${rowId} td:nth-child(2) input`);
+  if (input) {
+    const rect = input.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    el.style.left = rect.left + 'px';
+    el.style.minWidth = Math.max(340, rect.width) + 'px';
+    if (spaceBelow < 220) {
+      el.style.top = '';
+      el.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+    } else {
+      el.style.bottom = '';
+      el.style.top = (rect.bottom + 4) + 'px';
+    }
+  }
+
   el.classList.add('open');
 }
 
@@ -730,13 +749,13 @@ function selectAcItem(rowId, idx) {
       tr.querySelector('td:nth-child(3) input').value = item.price;
     }
   }
-  closeDropdown(rowId);
+  closeDropdown();
   recalculate();
 }
 
 function onNameKeydown(e, rowId) {
-  const el = document.getElementById(`ac-${rowId}`);
-  if (!el || !el.classList.contains('open')) return;
+  const el = document.getElementById('ac-global');
+  if (!el || !el.classList.contains('open') || acCurrentRowId !== rowId) return;
   const items = el.querySelectorAll('.autocomplete-item');
   let idx = acActiveIdx[rowId] ?? -1;
 
@@ -751,23 +770,23 @@ function onNameKeydown(e, rowId) {
     selectAcItem(rowId, idx);
     return;
   } else if (e.key === 'Escape') {
-    closeDropdown(rowId);
+    closeDropdown();
     return;
   } else { return; }
 
   acActiveIdx[rowId] = idx;
-  items.forEach((el, i) => el.classList.toggle('ac-active', i === idx));
+  items.forEach((item, i) => item.classList.toggle('ac-active', i === idx));
   items[idx]?.scrollIntoView({ block: 'nearest' });
 }
 
-function closeDropdown(rowId) {
-  const el = document.getElementById(`ac-${rowId}`);
+function closeDropdown() {
+  const el = document.getElementById('ac-global');
   if (el) el.classList.remove('open');
-  acActiveIdx[rowId] = -1;
+  acCurrentRowId = null;
 }
 
 function scheduleCloseDropdown(rowId) {
-  setTimeout(() => closeDropdown(rowId), 160);
+  setTimeout(() => { if (acCurrentRowId === rowId) closeDropdown(); }, 160);
 }
 
 // ─────────────────────────────────────────────
@@ -793,13 +812,12 @@ function renderTable() {
     tr.id = `row-${row.id}`;
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;">${idx + 1}</td>
-      <td style="position:relative;">
+      <td>
         <input type="text" value="${esc(row.name)}"
           placeholder="${catalog.length > 0 ? 'Buscar producto…' : 'Nombre…'}"
           oninput="onNameInput(${row.id}, this.value)"
           onkeydown="onNameKeydown(event, ${row.id})"
           onblur="scheduleCloseDropdown(${row.id})" />
-        <div class="autocomplete-list" id="ac-${row.id}"></div>
       </td>
       <td><input type="number" value="${row.price}" min="0" step="0.01"
           oninput="updateField(${row.id},'price',+this.value)" /></td>
