@@ -392,7 +392,7 @@
       <div class="rates-grid">
 
         <!-- Valor do PIX -->
-        <div class="rate-item">
+        <div class="rate-item" id="ri-pix">
           <label>Valor do PIX <span class="pill pill-p1">FASE 1</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">R$/USD</span>
@@ -403,7 +403,7 @@
         </div>
 
         <!-- USD → BRL (auto-fetch, manual fallback) -->
-        <div class="rate-item">
+        <div class="rate-item" id="ri-pix-usd">
           <label>Mejor PIX (BRL/USD) <span class="pill pill-p1">FASE 1</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">R$</span>
@@ -415,7 +415,7 @@
         </div>
 
         <!-- BRL → ARS (auto-fetch from comparapix BRLARS) -->
-        <div class="rate-item">
+        <div class="rate-item" id="ri-brl-ars">
           <label>PIX en $ARS (ARS/BRL) <span class="pill pill-p1">FASE 1</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
@@ -427,7 +427,7 @@
         </div>
 
         <!-- Dólar Oficial -->
-        <div class="rate-item">
+        <div class="rate-item" id="ri-oficial">
           <label>Dólar Oficial (ARS) <span class="pill pill-p1">FASE 1</span><span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
@@ -436,7 +436,7 @@
         </div>
 
         <!-- Dólar Blue -->
-        <div class="rate-item">
+        <div class="rate-item" id="ri-blue">
           <label>Dólar Blue (ARS)</label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
@@ -445,7 +445,7 @@
         </div>
 
         <!-- USDT -->
-        <div class="rate-item">
+        <div class="rate-item" id="ri-usdt">
           <label>USDT (ARS) <span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
@@ -537,7 +537,7 @@
         <div>
           <div class="sum-section-label p2">Fase 2 — Gastos al shipper</div>
           <div class="stat-row">
-            <span class="lbl">Comisiones (USD al USDT)</span>
+            <span class="lbl" id="s-comisiones-lbl">Comisiones (USD al USDT)</span>
             <span class="val" id="s-comisiones">$ 0</span>
           </div>
           <div class="stat-row">
@@ -694,15 +694,28 @@ let nextListId = 2;
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
+// Which rate items to show per mode
+const RATE_VISIBILITY = {
+  pix:  ['ri-pix','ri-pix-usd','ri-oficial','ri-blue','ri-usdt'],
+  usdt: ['ri-blue','ri-usdt'],
+  ars:  ['ri-pix','ri-brl-ars','ri-blue'],
+};
+
 function setPayMode(mode) {
   payMode = mode;
   document.getElementById('btn-mode-pix').classList.toggle('active', mode === 'pix');
   document.getElementById('btn-mode-usdt').classList.toggle('active', mode === 'usdt');
   document.getElementById('btn-mode-ars').classList.toggle('active', mode === 'ars');
+
+  // Show/hide rate items
+  const visible = new Set(RATE_VISIBILITY[mode] || []);
+  ['ri-pix','ri-pix-usd','ri-brl-ars','ri-oficial','ri-blue','ri-usdt'].forEach(id => {
+    document.getElementById(id).style.display = visible.has(id) ? '' : 'none';
+  });
+
   const tw = document.querySelector('.table-wrap');
   tw.classList.toggle('mode-usdt', mode === 'usdt');
   tw.classList.toggle('mode-ars',  mode === 'ars');
-  // Phase 1 colspan: USDT hides BRL col (→2), ARS hides USD col (→2), PIX shows all (→3)
   document.getElementById('ph-p1-label').colSpan = (mode === 'usdt' || mode === 'ars') ? 2 : 3;
   document.getElementById('ph-p1-label').textContent =
     mode === 'pix'  ? 'Fase 1 — Costo vía PIX (USD oficial)' :
@@ -716,6 +729,8 @@ function setPayMode(mode) {
     mode === 'pix'  ? 'Costo en ARS (al oficial)' :
     mode === 'usdt' ? 'Costo en ARS (al USDT)' :
                      'Costo en ARS (directo en $)';
+  document.getElementById('s-comisiones-lbl').textContent =
+    mode === 'ars' ? 'Comisiones (USD al blue)' : 'Comisiones (USD al USDT)';
   recalculate();
 }
 
@@ -1034,7 +1049,7 @@ function recalculate() {
 
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
   const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
-  const comisionARS  = comUSD * usdt;
+  const comisionARS  = payMode === 'ars' ? comUSD * blue : comUSD * usdt;
 
   // El envío se divide entre todas las unidades del pedido
   // clientes solo afecta el precio lista individual (costoIndividual), no el costo por unidad de la tabla
