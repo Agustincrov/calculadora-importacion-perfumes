@@ -414,16 +414,16 @@
           <div id="pix-usd-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
         </div>
 
-        <!-- ARS → BRL (auto-fetch from comparapix ARSBRL) -->
+        <!-- BRL → ARS (auto-fetch from comparapix BRLARS) -->
         <div class="rate-item">
-          <label>Mejor PIX en $ARS (BRL/ARS) <span class="pill pill-p1">FASE 1</span></label>
+          <label>PIX en $ARS (ARS/BRL) <span class="pill pill-p1">FASE 1</span></label>
           <div class="rate-input-wrap">
-            <span class="prefix">R$</span>
-            <input type="number" id="r-ars-brl" value="0" step="0.00001"
-              style="padding-left:36px" placeholder="auto"
-              title="BRL que recibís por cada peso ARS que mandás. Se completa desde comparapix.ar (modo pesos)." />
+            <span class="prefix">$</span>
+            <input type="number" id="r-brl-ars" value="0" step="0.01"
+              placeholder="auto"
+              title="Pesos que pagás por cada real. Ej: 280.06. Se completa desde comparapix.ar (modo pesos)." />
           </div>
-          <div id="ars-brl-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
+          <div id="brl-ars-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
         </div>
 
         <!-- Dólar Oficial -->
@@ -1042,7 +1042,7 @@ function recalculate() {
 
   let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
 
-  const arsBrlRate = getRate('r-ars-brl'); // BRL per ARS (from comparapix ARSBRL)
+  const brlArsRate = getRate('r-brl-ars'); // ARS per BRL (from comparapix BRLARS)
 
   rows.forEach(row => {
     // Fase 1: depends on payMode
@@ -1052,8 +1052,8 @@ function recalculate() {
       costoARS1 = row.price * usdt;
     } else if (payMode === 'ars') {
       brlUnid   = row.price * pixRate;
-      // Pay directly in ARS: ars_cost = brl_needed / (brl_per_ars)
-      costoARS1 = arsBrlRate > 0 ? brlUnid / arsBrlRate : 0;
+      // Pay directly in ARS: ars_cost = brl_needed × (ars_per_brl)
+      costoARS1 = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
     } else {
       brlUnid   = row.price * pixRate;
       usdUnid   = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
@@ -1336,35 +1336,35 @@ async function fetchAllRates() {
       document.getElementById('pix-usd-provider').textContent = 'Sin datos — ingresá el valor manualmente';
     }
 
-    // Best ARSBRL rate (for "Pesos (ARS)" mode) — highest buy = most BRL per ARS = best
-    let bestArsBrl = 0, bestArsName = '';
+    // Best BRLARS rate (for "Pesos (ARS)" mode) — lowest buy = least ARS per BRL = cheapest
+    let bestBrlArs = Infinity, bestBrlArsName = '';
     for (const [name, info] of Object.entries(data)) {
-      const q = info.quotes?.find(q => q.symbol === 'ARSBRL');
-      if (q && q.buy > 0 && q.buy > bestArsBrl) {
-        bestArsBrl = q.buy;
-        bestArsName = name;
+      const q = info.quotes?.find(q => q.symbol === 'BRLARS');
+      if (q && q.buy > 0 && q.buy < bestBrlArs) {
+        bestBrlArs = q.buy;
+        bestBrlArsName = name;
       }
     }
-    if (bestArsBrl > 0) {
-      document.getElementById('r-ars-brl').value              = bestArsBrl.toFixed(6);
-      document.getElementById('ars-brl-provider').textContent = `Mejor: ${bestArsName} · ${bestArsBrl.toFixed(5)} BRL/ARS · comparapix.ar`;
-      msgs.push(`ARS→BRL: ${bestArsName} @ ${bestArsBrl.toFixed(5)}`);
+    if (bestBrlArs < Infinity) {
+      document.getElementById('r-brl-ars').value              = bestBrlArs.toFixed(2);
+      document.getElementById('brl-ars-provider').textContent = `Mejor: ${bestBrlArsName} · $${bestBrlArs.toFixed(2)} ARS/BRL · comparapix.ar`;
+      msgs.push(`BRL→ARS: ${bestBrlArsName} @ $${bestBrlArs.toFixed(2)}`);
     } else {
-      // Derive from pixUsdRate / blue (service route: ARS→USDC at blue rate→BRL at BRLUSD rate)
+      // Derive: blue / pixUsdRate (service route: ARS→USDC at blue rate→BRL at BRLUSD rate)
       const pixUsdVal = parseFloat(document.getElementById('r-pix-usd').value) || 0;
       const blueVal   = parseFloat(document.getElementById('r-blue').value)    || 0;
       if (pixUsdVal > 0 && blueVal > 0) {
-        const derived = pixUsdVal / blueVal;
-        document.getElementById('r-ars-brl').value              = derived.toFixed(6);
-        document.getElementById('ars-brl-provider').textContent = `Est. PIX÷Blue: ${derived.toFixed(5)} BRL/ARS · ingresá el real si tenés`;
-        msgs.push(`ARS→BRL est: ${derived.toFixed(5)}`);
+        const derived = blueVal / pixUsdVal;
+        document.getElementById('r-brl-ars').value              = derived.toFixed(2);
+        document.getElementById('brl-ars-provider').textContent = `Est. Blue÷PIX: $${derived.toFixed(2)} ARS/BRL · ingresá el real si tenés`;
+        msgs.push(`BRL→ARS est: $${derived.toFixed(2)}`);
       } else {
-        document.getElementById('ars-brl-provider').textContent = 'Sin datos — ingresá el valor manualmente';
+        document.getElementById('brl-ars-provider').textContent = 'Sin datos — ingresá el valor manualmente';
       }
     }
   } else {
     document.getElementById('pix-usd-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
-    document.getElementById('ars-brl-provider').textContent  = '✗ No se pudo obtener — ingresá manualmente';
+    document.getElementById('brl-ars-provider').textContent  = '✗ No se pudo obtener — ingresá manualmente';
   }
 
   // ── Binance P2P — USDT ──
