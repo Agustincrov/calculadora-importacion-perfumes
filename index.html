@@ -1350,7 +1350,17 @@ async function fetchAllRates() {
       document.getElementById('ars-brl-provider').textContent = `Mejor: ${bestArsName} · ${bestArsBrl.toFixed(5)} BRL/ARS · comparapix.ar`;
       msgs.push(`ARS→BRL: ${bestArsName} @ ${bestArsBrl.toFixed(5)}`);
     } else {
-      document.getElementById('ars-brl-provider').textContent = 'Sin datos — ingresá el valor manualmente';
+      // Derive from pixUsdRate / blue (service route: ARS→USDC at blue rate→BRL at BRLUSD rate)
+      const pixUsdVal = parseFloat(document.getElementById('r-pix-usd').value) || 0;
+      const blueVal   = parseFloat(document.getElementById('r-blue').value)    || 0;
+      if (pixUsdVal > 0 && blueVal > 0) {
+        const derived = pixUsdVal / blueVal;
+        document.getElementById('r-ars-brl').value              = derived.toFixed(6);
+        document.getElementById('ars-brl-provider').textContent = `Est. PIX÷Blue: ${derived.toFixed(5)} BRL/ARS · ingresá el real si tenés`;
+        msgs.push(`ARS→BRL est: ${derived.toFixed(5)}`);
+      } else {
+        document.getElementById('ars-brl-provider').textContent = 'Sin datos — ingresá el valor manualmente';
+      }
     }
   } else {
     document.getElementById('pix-usd-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
