@@ -698,7 +698,7 @@ function getRate(id) { return parseFloat(document.getElementById(id).value) || 0
 const RATE_VISIBILITY = {
   pix:  ['ri-pix','ri-pix-usd','ri-oficial','ri-blue','ri-usdt'],
   usdt: ['ri-blue','ri-usdt'],
-  ars:  ['ri-pix','ri-brl-ars','ri-blue'],
+  ars:  ['ri-pix','ri-brl-ars','ri-blue','ri-usdt'],
 };
 
 function setPayMode(mode) {
@@ -729,8 +729,7 @@ function setPayMode(mode) {
     mode === 'pix'  ? 'Costo en ARS (al oficial)' :
     mode === 'usdt' ? 'Costo en ARS (al USDT)' :
                      'Costo en ARS (directo en $)';
-  document.getElementById('s-comisiones-lbl').textContent =
-    mode === 'ars' ? 'Comisiones (USD al blue)' : 'Comisiones (USD al USDT)';
+  document.getElementById('s-comisiones-lbl').textContent = 'Comisiones (USD al USDT)';
   recalculate();
 }
 
@@ -1049,7 +1048,7 @@ function recalculate() {
 
   const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
   const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
-  const comisionARS  = payMode === 'ars' ? comUSD * blue : comUSD * usdt;
+  const comisionARS  = comUSD * usdt;
 
   // El envío se divide entre todas las unidades del pedido
   // clientes solo afecta el precio lista individual (costoIndividual), no el costo por unidad de la tabla
