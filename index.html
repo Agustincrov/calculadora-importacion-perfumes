@@ -248,6 +248,37 @@
     }
     .del-btn:hover { color: var(--danger); }
 
+    /* ── Compare card ── */
+    #compare-card {
+      position: fixed; z-index: 9998;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 28px rgba(0,0,0,.14);
+      min-width: 250px;
+      padding: 12px 10px 8px;
+      display: none;
+    }
+    .compare-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px; border-radius: 7px;
+      cursor: pointer; gap: 10px;
+      transition: background .1s;
+    }
+    .compare-row:hover { background: var(--accent-light); }
+    .compare-row.active { background: var(--accent-light); }
+    .compare-cost { font-weight: 700; font-size: .88rem; white-space: nowrap; }
+    .compare-row.cheapest .compare-cost { color: var(--success); }
+
+    .compare-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: .8rem; padding: 2px 4px; border-radius: 4px;
+      color: #94a3b8; line-height: 1;
+      transition: color .12s, background .12s;
+      display: block; margin: 3px auto 0;
+    }
+    .compare-btn:hover { color: var(--accent); background: var(--accent-light); }
+
     .tipo-btn {
       font-size: .63rem; font-weight: 800;
       padding: 2px 7px; border-radius: 10px;
@@ -379,6 +410,7 @@
 <body>
 <div class="autocomplete-list" id="ac-global"></div>
 <div id="col-tooltip"></div>
+<div id="compare-card" onmouseenter="cancelHideCompareCard()" onmouseleave="hideCompareCard()"></div>
 <div class="container">
 
   <header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -497,13 +529,10 @@
 
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;margin-top:16px;">
-        <span style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Método pago Fase 1</span>
-        <div class="mode-toggle">
-          <button id="btn-mode-pix" class="mode-btn active" onclick="setPayMode('pix')">PIX (USD oficial)</button>
-          <button id="btn-mode-usdt" class="mode-btn" onclick="setPayMode('usdt')">USDT directo</button>
-          <button id="btn-mode-ars" class="mode-btn" onclick="setPayMode('ars')">Pesos (ARS)</button>
-        </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;">
+        <span style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Modo activo</span>
+        <span id="active-mode-label" style="font-size:.8rem;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--accent-light);color:var(--accent);border:1px solid #bfdbfe;">PIX (USD oficial)</span>
+        <span style="font-size:.72rem;color:var(--muted);">— pasá el cursor sobre ⚖ en cualquier fila para comparar y cambiar</span>
       </div>
 
       <div class="rates-bottom">
@@ -725,9 +754,9 @@ const RATE_VISIBILITY = {
 
 function setPayMode(mode) {
   payMode = mode;
-  document.getElementById('btn-mode-pix').classList.toggle('active', mode === 'pix');
-  document.getElementById('btn-mode-usdt').classList.toggle('active', mode === 'usdt');
-  document.getElementById('btn-mode-ars').classList.toggle('active', mode === 'ars');
+  const modeLabels = { pix: 'PIX (USD oficial)', usdt: 'USDT directo', ars: 'Pesos (ARS)' };
+  const labelEl = document.getElementById('active-mode-label');
+  if (labelEl) labelEl.textContent = modeLabels[mode] || mode;
 
   // Show/hide rate items
   const visible = new Set(RATE_VISIBILITY[mode] || []);
@@ -1001,7 +1030,12 @@ function renderTable() {
     if (isStock) tr.classList.add('stock-row');
     const ganVal = row.gananciaUSDOverride != null ? row.gananciaUSDOverride.toFixed(2) : '';
     tr.innerHTML = `
-      <td style="color:var(--muted);font-size:.72rem;text-align:center;">${idx + 1}</td>
+      <td style="color:var(--muted);font-size:.72rem;text-align:center;vertical-align:middle;">
+        ${idx + 1}
+        <button class="compare-btn" title="Comparar modos de pago"
+          onmouseenter="showCompareCard(${row.id}, this)"
+          onmouseleave="hideCompareCard()">⚖</button>
+      </td>
       <td style="text-align:center;white-space:nowrap;">
         <button class="tipo-btn ${isStock ? 'tipo-stock' : 'tipo-cli'}" onclick="toggleTipo(${row.id})" title="Cambiar tipo">
           ${isStock ? 'STOCK' : 'CLI'}
@@ -1109,6 +1143,112 @@ function updateClientDatalist() {
   let dl = document.getElementById('client-names-list');
   if (!dl) { dl = document.createElement('datalist'); dl.id = 'client-names-list'; document.body.appendChild(dl); }
   dl.innerHTML = knownClients.map(n => `<option value="${esc(n)}">`).join('');
+}
+
+// ─────────────────────────────────────────────
+// Payment mode compare card
+// ─────────────────────────────────────────────
+let _compareHideTimer = null;
+
+function computeAllModeCosts(row) {
+  const pixRate    = getRate('r-pix');
+  const pixUsdRate = getRate('r-pix-usd');
+  const oficial    = getRate('r-oficial');
+  const usdt       = getRate('r-usdt');
+  const brlArsRate = getRate('r-brl-ars');
+  const comUSD     = getRate('r-comision');
+  const envioTotal = getRate('r-envio');
+  const comisionARS = comUSD * usdt;
+
+  const isStock = row.tipo === 'stock';
+  const totalClienteUnits = rows.filter(r => r.tipo !== 'stock').reduce((s, r) => s + r.qty, 0);
+  const envioPerUnit = isStock ? 0 : (totalClienteUnits > 0 ? envioTotal / totalClienteUnits : 0);
+
+  const brlUnid = row.price * pixRate;
+
+  const usdPix  = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
+  const ars1Pix = usdPix * oficial;
+  const costoPix = ars1Pix > 0 ? ars1Pix + comisionARS + envioPerUnit : 0;
+
+  const ars1Usdt  = row.price * usdt;
+  const costoUsdt = ars1Usdt + comisionARS + envioPerUnit;
+
+  const ars1Ars  = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
+  const costoArs = ars1Ars > 0 ? ars1Ars + comisionARS + envioPerUnit : 0;
+
+  return { pix: costoPix, usdt: costoUsdt, ars: costoArs };
+}
+
+function showCompareCard(rowId, iconEl) {
+  cancelHideCompareCard();
+  const row = rows.find(r => r.id === rowId);
+  if (!row) return;
+
+  const costs = computeAllModeCosts(row);
+  const validCosts = Object.values(costs).filter(v => v > 0);
+  const minCost = validCosts.length ? Math.min(...validCosts) : 0;
+
+  const modes = [
+    { key: 'pix',  label: 'PIX (USD oficial)' },
+    { key: 'usdt', label: 'USDT directo' },
+    { key: 'ars',  label: 'Pesos (ARS)' },
+  ];
+
+  const card = document.getElementById('compare-card');
+  card.innerHTML = `
+    <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;padding:0 6px;">
+      Costo/unid — elegí el método
+    </div>
+    ${modes.map(({ key, label }) => {
+      const cost     = costs[key];
+      const isActive   = key === payMode;
+      const isCheapest = cost > 0 && cost === minCost && validCosts.length > 1;
+      return `
+        <div class="compare-row ${isActive ? 'active' : ''} ${isCheapest ? 'cheapest' : ''}"
+          onclick="setPayMode('${key}');hideCompareCard(true)">
+          <span style="display:flex;align-items:center;gap:7px;">
+            <span style="width:12px;text-align:center;color:var(--accent);font-weight:800;">
+              ${isActive ? '✓' : ''}
+            </span>
+            <span style="font-size:.83rem;">${label}</span>
+          </span>
+          <span class="compare-cost">
+            ${cost > 0 ? fmt_ars(cost) : '<span style="color:var(--muted)">—</span>'}
+            ${isCheapest ? '<span style="color:var(--success);margin-left:3px;font-size:.8rem;">★</span>' : ''}
+          </span>
+        </div>`;
+    }).join('')}
+  `;
+
+  card.style.display = 'block';
+  const rect   = iconEl.getBoundingClientRect();
+  const cardW  = card.offsetWidth || 260;
+  const cardH  = card.offsetHeight || 140;
+  let left = rect.left + rect.width / 2 - cardW / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - cardW - 8));
+  const spaceBelow = window.innerHeight - rect.bottom;
+  if (spaceBelow < cardH + 12) {
+    card.style.top    = '';
+    card.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+  } else {
+    card.style.bottom = '';
+    card.style.top    = (rect.bottom + 6) + 'px';
+  }
+  card.style.left = left + 'px';
+}
+
+function hideCompareCard(immediate = false) {
+  if (immediate) {
+    document.getElementById('compare-card').style.display = 'none';
+    return;
+  }
+  _compareHideTimer = setTimeout(() => {
+    document.getElementById('compare-card').style.display = 'none';
+  }, 160);
+}
+
+function cancelHideCompareCard() {
+  clearTimeout(_compareHideTimer);
 }
 
 // ─────────────────────────────────────────────
