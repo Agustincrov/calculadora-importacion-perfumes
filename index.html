@@ -248,6 +248,17 @@
     }
     .del-btn:hover { color: var(--danger); }
 
+    .tipo-btn {
+      font-size: .63rem; font-weight: 800;
+      padding: 2px 7px; border-radius: 10px;
+      border: none; cursor: pointer;
+      transition: background .12s;
+      white-space: nowrap; letter-spacing: .04em;
+    }
+    .tipo-cli   { background: #dbeafe; color: #1d4ed8; }
+    .tipo-stock { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+    tr.stock-row td.bg-sell { opacity: .7; }
+
     .note {
       margin-top: 20px;
       padding: 12px 16px;
@@ -473,14 +484,15 @@
           </div>
         </div>
 
-        <!-- Clientes -->
+        <!-- Clientes (auto-derivado de nombres en filas CLI) -->
         <div class="rate-item">
           <label>Clientes <span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">#</span>
-            <input type="number" id="r-clientes" value="1" min="1" step="1" style="padding-left:28px"
-              title="Número de clientes que comparten el envío. El costo de envío se divide por igual entre clientes." />
+            <input type="number" id="r-clientes" value="1" min="1" step="1" style="padding-left:28px;background:#f8fafc;color:var(--muted);" readonly
+              title="Se calcula automáticamente a partir de los nombres de cliente ingresados en las filas CLI." />
           </div>
+          <div style="font-size:.68rem;color:var(--muted);margin-top:3px;" id="clientes-hint">Auto — ingresá nombres en las filas</div>
         </div>
 
       </div>
@@ -555,21 +567,27 @@
             <span class="val accent" id="s-costo-total">$ 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">Venta total (ARS)</span>
+            <span class="lbl">Venta clientes (ARS)</span>
             <span class="val purple" id="s-venta">$ 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">Ganancia real</span>
+            <span class="lbl">Ganancia clientes</span>
             <span class="val success" id="s-ganancia">$ 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">Ganancia (USD oficial)</span>
+            <span class="lbl">Ganancia clientes (USD)</span>
             <span class="val success" id="s-ganancia-usd">USD 0</span>
           </div>
           <div class="stat-row">
             <span class="lbl">ROI</span>
             <span class="val warn" id="s-roi">0%</span>
           </div>
+        </div>
+
+        <div id="s-clients-section" style="display:none">
+          <hr class="divider" />
+          <div class="sum-section-label" style="background:#e0e7ff;color:#3730a3">Por cliente</div>
+          <div id="s-clients-breakdown"></div>
         </div>
 
       </div>
@@ -636,7 +654,7 @@
       <table>
         <thead>
           <tr class="phase-headers">
-            <th class="ph-input" colspan="4"></th>
+            <th class="ph-input" colspan="6"></th>
             <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
             <th class="ph-sell" colspan="7">Precio de venta</th>
@@ -644,6 +662,8 @@
           </tr>
           <tr class="col-headers">
             <th class="bg-input">#</th>
+            <th class="bg-input">Tipo <span class="col-tip" data-tip="CLI = producto para un cliente (paga el envío). STOCK = para vos, sin envío asignado."></span></th>
+            <th class="bg-input">Cliente <span class="col-tip" data-tip="Nombre del cliente. Se usa para dividir el envío automáticamente entre distintos clientes."></span></th>
             <th class="bg-input">Producto <span class="col-tip" data-tip="Nombre del producto. Si cargaste un catálogo, escribí para buscar y autocompletar nombre y precio."></span></th>
             <th class="bg-input">Precio USD <span class="col-tip" data-tip="Precio en dólares que cobra la tienda por una unidad."></span></th>
             <th class="bg-input">Cantidad <span class="col-tip" data-tip="Unidades que comprás de este producto. Todos los valores de la fila muestran el total para esta cantidad."></span></th>
@@ -651,14 +671,14 @@
             <th class="bg-p1 col-usd" id="col-usd-head">USD total <span class="col-tip" data-tip="Total en dólares (o USDT) que enviás al servicio de pago para cubrir los reales pedidos."></span></th>
             <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
             <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
-            <th class="bg-p2">Envío total <span class="col-tip" data-tip="Parte del envío que corresponde a estas unidades (envío total ÷ total de unidades × cantidad de esta fila)."></span></th>
+            <th class="bg-p2">Envío total <span class="col-tip" data-tip="Envío asignado a esta fila. Solo filas CLI reciben envío, dividido entre unidades de clientes."></span></th>
             <th class="bg-p2">Costo total <span class="col-tip" data-tip="Costo real final para esta fila: producto + comisión + envío. Lo que realmente invertís."></span></th>
             <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
             <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado, asumiendo que el cliente compra todos los productos (envío compartido)."></span></th>
             <th class="bg-sell">Precio lista (total) <span class="col-tip" data-tip="Precio si el cliente compra solo este producto. El envío completo del cliente se asigna únicamente a él."></span></th>
             <th class="bg-sell">USD lista (total) <span class="col-tip tip-left" data-tip="Precio lista expresado en dólares blue. Útil para publicar en grupos o catálogos."></span></th>
             <th class="bg-sell">Ganancia (total) <span class="col-tip tip-left" data-tip="Lo que ganás en pesos por esta fila después de cubrir todos los costos."></span></th>
-            <th class="bg-sell">Ganancia USD (total) <span class="col-tip tip-left" data-tip="Ganancia expresada en dólares al tipo oficial. Referencia para saber cuánto dólares reales generaste."></span></th>
+            <th class="bg-sell">Gan. USD/unid <span class="col-tip tip-left" data-tip="Ganancia por unidad en dólares. Podés escribir directamente el valor deseado y el margen se recalcula solo."></span></th>
             <th class="bg-sell">Margen real <span class="col-tip tip-left" data-tip="Margen efectivo resultante. Verde = 20% o más. Amarillo = entre 10% y 20%. Rojo = menos del 10%."></span></th>
             <th class="bg-del"></th>
           </tr>
@@ -670,10 +690,11 @@
 
   <div class="note">
     <strong>Nota:</strong>
-    El envío (Fase 2) se divide equitativamente entre todas las unidades del pedido.
-    El campo <em>Clientes</em> afecta el <em>precio lista individual</em>: cuánto pagaría un cliente
-    si comprara solo ese producto (su parte del envío = envío total ÷ clientes).
-    La comisión (Fase 2) se paga al shipper en USD al tipo <em>USDT</em>.
+    Las filas <em>CLI</em> son para clientes y absorben el envío completo (dividido entre las unidades de filas CLI solamente).
+    Las filas <em>STOCK</em> son para tu inventario y tienen envío $0.
+    El número de <em>Clientes</em> se calcula automáticamente por nombres distintos ingresados en filas CLI.
+    Podés escribir directamente en <em>Gan. USD/unid</em> para fijar tu ganancia y ver el margen resultante.
+    La comisión se paga al shipper en USD al tipo <em>USDT</em> para todas las filas.
   </div>
 
 </div>
@@ -686,6 +707,7 @@ let nextId = 1;
 let catalogs = []; // [{ name, items: [{name, price}] }]
 let catalog  = []; // flat merged list — rebuilt from catalogs
 let payMode = 'pix'; // 'pix' | 'usdt' | 'ars'
+let knownClients = []; // persisted list of known client names
 
 // ── Multi-list state ──
 let lists = [{ id: 1, name: 'Lista 1', rows: [], nextId: 1 }];
@@ -851,7 +873,7 @@ function onNameInput(rowId, value) {
   const item = catalog.find(c => c.name === value);
   if (item) {
     row.price = item.price;
-    const priceInput = document.querySelector(`#row-${rowId} td:nth-child(3) input`);
+    const priceInput = document.getElementById(`price-${rowId}`);
     if (priceInput) priceInput.value = item.price;
     closeDropdown();
   }
@@ -874,7 +896,7 @@ function showDropdown(rowId, matches) {
   ).join('');
 
   // Position: anchor to the input, flip upward if near bottom of viewport
-  const input = document.querySelector(`#row-${rowId} td:nth-child(2) input`);
+  const input = document.getElementById(`name-${rowId}`);
   if (input) {
     const rect = input.getBoundingClientRect();
     const spaceBelow = window.innerHeight - rect.bottom;
@@ -899,11 +921,10 @@ function selectAcItem(rowId, idx) {
   if (row) {
     row.name = item.name;
     row.price = item.price;
-    const tr = document.getElementById(`row-${rowId}`);
-    if (tr) {
-      tr.querySelector('td:nth-child(2) input').value = item.name;
-      tr.querySelector('td:nth-child(3) input').value = item.price;
-    }
+    const nameInput  = document.getElementById(`name-${rowId}`);
+    const priceInput = document.getElementById(`price-${rowId}`);
+    if (nameInput)  nameInput.value  = item.name;
+    if (priceInput) priceInput.value = item.price;
   }
   closeDropdown();
   recalculate();
@@ -949,7 +970,16 @@ function scheduleCloseDropdown(rowId) {
 // Row management
 // ─────────────────────────────────────────────
 function addRow(data = {}) {
-  rows.push({ id: nextId++, name: data.name ?? '', price: data.price ?? 0, qty: data.qty ?? 1, margin: data.margin ?? 30 });
+  rows.push({
+    id: nextId++,
+    name: data.name ?? '',
+    price: data.price ?? 0,
+    qty: data.qty ?? 1,
+    margin: data.margin ?? 30,
+    tipo: data.tipo ?? 'cliente',
+    cliente: data.cliente ?? '',
+    gananciaUSDOverride: data.gananciaUSDOverride ?? null,
+  });
   renderTable();
   recalculate();
 }
@@ -967,16 +997,33 @@ function renderTable() {
   rows.forEach((row, idx) => {
     const tr = document.createElement('tr');
     tr.id = `row-${row.id}`;
+    const isStock = row.tipo === 'stock';
+    if (isStock) tr.classList.add('stock-row');
+    const ganVal = row.gananciaUSDOverride != null ? row.gananciaUSDOverride.toFixed(2) : '';
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;">${idx + 1}</td>
+      <td style="text-align:center;white-space:nowrap;">
+        <button class="tipo-btn ${isStock ? 'tipo-stock' : 'tipo-cli'}" onclick="toggleTipo(${row.id})" title="Cambiar tipo">
+          ${isStock ? 'STOCK' : 'CLI'}
+        </button>
+      </td>
       <td>
-        <input type="text" value="${esc(row.name)}"
+        ${isStock
+          ? `<span style="color:var(--muted);font-size:.78rem;padding:6px 4px;display:block;">—</span>`
+          : `<input type="text" id="cliente-${row.id}" value="${esc(row.cliente ?? '')}"
+              list="client-names-list" placeholder="Cliente…" style="min-width:90px"
+              oninput="onClienteInput(${row.id}, this.value)"
+              onblur="onClienteBlur(${row.id}, this.value)" />`
+        }
+      </td>
+      <td>
+        <input type="text" id="name-${row.id}" value="${esc(row.name)}"
           placeholder="${catalog.length > 0 ? 'Buscar producto…' : 'Nombre…'}"
           oninput="onNameInput(${row.id}, this.value)"
           onkeydown="onNameKeydown(event, ${row.id})"
           onblur="scheduleCloseDropdown(${row.id})" />
       </td>
-      <td><input type="number" value="${row.price}" min="0" step="0.01"
+      <td><input type="number" id="price-${row.id}" value="${row.price}" min="0" step="0.01"
           oninput="updateField(${row.id},'price',+this.value)" /></td>
       <td><input type="number" value="${row.qty}" min="0" step="1"
           oninput="updateField(${row.id},'qty',+this.value)" /></td>
@@ -986,13 +1033,20 @@ function renderTable() {
       <td class="cell-computed bg-p2" id="com-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="env-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="tot-${row.id}">—</td>
-      <td class="bg-sell"><input type="number" value="${row.margin}" min="0" max="99" step="1"
+      <td class="bg-sell"><input type="number" id="margin-${row.id}" value="${row.margin}" min="0" max="99" step="0.5"
           oninput="updateField(${row.id},'margin',+this.value)" /></td>
       <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="lista-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="vusd-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="gan-${row.id}">—</td>
-      <td class="cell-computed bg-sell" id="ganusd-${row.id}">—</td>
+      <td class="bg-sell" style="padding:4px 6px;">
+        <input type="number" id="ganusd-${row.id}" value="${ganVal}"
+          min="0" step="0.5" placeholder="auto"
+          style="min-width:58px;width:100%;text-align:right;padding:6px 5px;border:1px solid transparent;border-radius:5px;font-size:.88rem;background:transparent;color:var(--text);transition:border-color .12s,background .12s;"
+          oninput="onGananciaUSD(${row.id}, this.value)"
+          onfocus="this.style.borderColor='var(--accent)';this.style.background='#fff'"
+          onblur="this.style.borderColor='transparent';this.style.background='transparent'" />
+      </td>
       <td class="bg-sell" id="mreal-${row.id}" style="text-align:right;">—</td>
       <td>
         <button class="del-btn" onclick="deleteRow(${row.id})" title="Eliminar">
@@ -1011,10 +1065,51 @@ function renderTable() {
 
 function updateField(id, field, value) {
   const row = rows.find(r => r.id === id);
-  if (row) { row[field] = value; recalculate(); }
+  if (row) {
+    row[field] = value;
+    if (field === 'margin') row.gananciaUSDOverride = null; // margin takes priority
+    recalculate();
+  }
 }
 
 function esc(str) { return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function toggleTipo(id) {
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+  row.tipo = row.tipo === 'stock' ? 'cliente' : 'stock';
+  if (row.tipo === 'stock') row.cliente = ''; // clear client name when switching to stock
+  renderTable();
+  recalculate();
+}
+
+function onGananciaUSD(id, value) {
+  const row = rows.find(r => r.id === id);
+  if (!row) return;
+  const v = parseFloat(value);
+  row.gananciaUSDOverride = (v > 0) ? v : null;
+  recalculate();
+}
+
+function onClienteInput(rowId, value) {
+  const row = rows.find(r => r.id === rowId);
+  if (row) { row.cliente = value; recalculate(); }
+}
+
+function onClienteBlur(rowId, value) {
+  const name = value.trim();
+  if (name && !knownClients.some(n => n.toLowerCase() === name.toLowerCase())) {
+    knownClients.push(name);
+    updateClientDatalist();
+    persistSave();
+  }
+}
+
+function updateClientDatalist() {
+  let dl = document.getElementById('client-names-list');
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'client-names-list'; document.body.appendChild(dl); }
+  dl.innerHTML = knownClients.map(n => `<option value="${esc(n)}">`).join('');
+}
 
 // ─────────────────────────────────────────────
 // Calculations
@@ -1038,35 +1133,52 @@ function esc(str) { return String(str).replace(/"/g, '&quot;').replace(/</g, '&l
 //   margen_real           = ganancia / precio_venta_ars
 // ─────────────────────────────────────────────
 function recalculate() {
-  const pixRate    = getRate('r-pix');      // store rate: BRL per USD (valor do pix)
-  const pixUsdRate = getRate('r-pix-usd'); // service rate: BRL per USD (comparapix BRLUSD)
-  const oficial    = getRate('r-oficial');  // ARS per USD oficial
-  const blue       = getRate('r-blue');     // ARS per USD blue
-  const usdt       = getRate('r-usdt');     // ARS per USDT (used for commission)
+  const pixRate    = getRate('r-pix');
+  const pixUsdRate = getRate('r-pix-usd');
+  const oficial    = getRate('r-oficial');
+  const blue       = getRate('r-blue');
+  const usdt       = getRate('r-usdt');
   const comUSD     = getRate('r-comision');
   const envioTotal = getRate('r-envio');
+  const brlArsRate = getRate('r-brl-ars');
 
-  const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
-  const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
-  const comisionARS  = comUSD * usdt;
+  const totalUnits        = rows.reduce((s, r) => s + r.qty, 0);
+  const totalClienteUnits = rows.filter(r => r.tipo !== 'stock').reduce((s, r) => s + r.qty, 0);
+  const comisionARS       = comUSD * usdt;
 
-  // El envío se divide entre todas las unidades del pedido
-  // clientes solo afecta el precio lista individual (costoIndividual), no el costo por unidad de la tabla
-  const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
+  // Auto-derive clientes from distinct non-empty client names in CLI rows
+  const clienteNameSet = new Set(
+    rows.filter(r => r.tipo !== 'stock' && (r.cliente ?? '').trim())
+        .map(r => r.cliente.trim().toLowerCase())
+  );
+  const clientes = clienteNameSet.size > 0 ? clienteNameSet.size : 1;
 
-  let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0, totalVenta = 0, totalGanancia = 0;
+  // Update r-clientes display
+  const clientesEl = document.getElementById('r-clientes');
+  if (clientesEl) clientesEl.value = clientes;
+  const clientesHint = document.getElementById('clientes-hint');
+  if (clientesHint) {
+    clientesHint.textContent = clienteNameSet.size > 0
+      ? `Auto: ${[...clienteNameSet].map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(', ')}`
+      : 'Auto — ingresá nombres en las filas CLI';
+  }
 
-  const brlArsRate = getRate('r-brl-ars'); // ARS per BRL (from comparapix BRLARS)
+  let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0;
+  let totalVentaCliente = 0, totalGananciaCliente = 0;
+
+  // Per-client accumulators for summary breakdown
+  const clientStats = {}; // name → { qty, costo, venta, ganancia }
 
   rows.forEach(row => {
-    // Fase 1: depends on payMode
+    const isStock = row.tipo === 'stock';
+
+    // Fase 1
     let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
     if (payMode === 'usdt') {
-      usdUnid  = row.price;           // 1 USDT per 1 USD of product price
+      usdUnid   = row.price;
       costoARS1 = row.price * usdt;
     } else if (payMode === 'ars') {
       brlUnid   = row.price * pixRate;
-      // Pay directly in ARS: ars_cost = brl_needed × (ars_per_brl)
       costoARS1 = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
     } else {
       brlUnid   = row.price * pixRate;
@@ -1074,66 +1186,123 @@ function recalculate() {
       costoARS1 = usdUnid * oficial;
     }
 
-    // Fase 2: envío repartido entre todas las unidades (se paga una sola vez total)
-    const costoTotal = costoARS1 + comisionARS + envioPerUnit;
+    // Fase 2: shipping only allocated to CLI rows
+    const envioPerUnit = isStock ? 0 : (totalClienteUnits > 0 ? envioTotal / totalClienteUnits : 0);
+    const costoTotal   = costoARS1 + comisionARS + envioPerUnit;
 
-    // Precio lista: costo con envío completo (como si el cliente comprara solo ese producto)
-    const costoIndividual = costoARS1 + comisionARS + (envioTotal / clientes);
+    // Precio lista: per-client individual (only for CLI rows)
+    const costoIndividual = !isStock ? (costoARS1 + comisionARS + (envioTotal / clientes)) : 0;
 
-    // Selling price
-    let precioARS = 0, precioUSD = 0, ganancia = 0, gananciaUSD = 0, margenReal = 0;
+    // Selling price — bidirectional: gananciaUSD ↔ margin
+    let precioARS = 0, ganancia = 0, gananciaUSD = 0, margenReal = 0;
     let precioLista = 0, precioListaUSD = 0;
-    if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
-      precioARS  = costoTotal / (1 - row.margin / 100);
-      ganancia   = precioARS - costoTotal;
+
+    if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0 && costoTotal > 0) {
+      // User set gananciaUSD → back-calculate margin
+      gananciaUSD = row.gananciaUSDOverride;
+      ganancia    = gananciaUSD * blue;
+      precioARS   = costoTotal + ganancia;
+      margenReal  = ganancia / precioARS;
+      row.margin  = parseFloat((margenReal * 100).toFixed(1));
+      const mInput = document.getElementById(`margin-${row.id}`);
+      if (mInput && document.activeElement !== mInput) mInput.value = row.margin;
+    } else if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
+      // Margin set → calculate precio and ganancia
+      precioARS   = costoTotal / (1 - row.margin / 100);
+      ganancia    = precioARS - costoTotal;
       gananciaUSD = blue > 0 ? ganancia / blue : 0;
-      margenReal = ganancia / precioARS;
-    }
-    if (row.margin > 0 && row.margin < 100 && costoIndividual > 0) {
-      precioLista    = costoIndividual / (1 - row.margin / 100);
-      precioListaUSD = blue > 0 ? precioLista / blue : 0;
+      margenReal  = ganancia / precioARS;
     }
 
-    // Accumulate
+    // Sync gananciaUSD input when margin is driving
+    const gInput = document.getElementById(`ganusd-${row.id}`);
+    if (gInput && document.activeElement !== gInput) {
+      gInput.value = gananciaUSD > 0 ? gananciaUSD.toFixed(2) : '';
+    }
+
+    // Precio lista — only for CLI rows
+    if (!isStock && costoIndividual > 0) {
+      if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0) {
+        precioLista    = costoIndividual + row.gananciaUSDOverride * blue;
+      } else if (row.margin > 0 && row.margin < 100) {
+        precioLista    = costoIndividual / (1 - row.margin / 100);
+      }
+      precioListaUSD = blue > 0 && precioLista > 0 ? precioLista / blue : 0;
+    }
+
+    // Accumulate totals
     totalBRL        += payMode !== 'usdt' ? brlUnid * row.qty : 0;
     totalUSD1       += usdUnid   * row.qty;
     totalARS1       += costoARS1 * row.qty;
     totalComisiones += comisionARS * row.qty;
-    totalVenta      += precioARS * row.qty;
-    totalGanancia   += ganancia  * row.qty;
+    if (!isStock) {
+      totalVentaCliente    += precioARS * row.qty;
+      totalGananciaCliente += ganancia  * row.qty;
+
+      // Per-client stats
+      const cname = (row.cliente ?? '').trim() || '(sin nombre)';
+      if (!clientStats[cname]) clientStats[cname] = { qty: 0, costo: 0, venta: 0, ganancia: 0 };
+      clientStats[cname].qty      += row.qty;
+      clientStats[cname].costo    += costoTotal * row.qty;
+      clientStats[cname].venta    += precioARS  * row.qty;
+      clientStats[cname].ganancia += ganancia   * row.qty;
+    }
 
     // Update cells
     const qty = row.qty || 1;
     setCell(`brl-${row.id}`,  payMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
     setCell(`usd-${row.id}`,  payMode === 'usdt' ? fmt_usd(usdUnid * qty) : (pixUsdRate > 0 ? fmt_usd(usdUnid * qty) : '—'));
-    // 'ars' mode: usd cell is hidden via CSS col-usd
     setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');
     setCell(`com-${row.id}`,  fmt_ars(comisionARS * qty));
-    setCell(`env-${row.id}`,  fmt_ars(envioPerUnit * qty));
+    setCell(`env-${row.id}`,  isStock ? '$ 0' : fmt_ars(envioPerUnit * qty));
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal * qty) : '—');
-    setCell(`vars-${row.id}`,   precioARS      > 0 ? fmt_ars(precioARS  * qty) : '—');
-    setCell(`lista-${row.id}`,  precioLista    > 0 ? fmt_ars(precioLista * qty) : '—');
-    setCell(`vusd-${row.id}`,   precioListaUSD > 0 ? fmt_usd(precioListaUSD * qty) : '—');
-    setCell(`gan-${row.id}`,    ganancia       > 0 ? fmt_ars(ganancia    * qty) : '—');
-    setCell(`ganusd-${row.id}`, gananciaUSD    > 0 ? fmt_usd(gananciaUSD * qty) : '—');
+    setCell(`vars-${row.id}`,  precioARS     > 0 ? fmt_ars(precioARS    * qty) : '—');
+    setCell(`lista-${row.id}`, (!isStock && precioLista    > 0) ? fmt_ars(precioLista    * qty) : '—');
+    setCell(`vusd-${row.id}`,  (!isStock && precioListaUSD > 0) ? fmt_usd(precioListaUSD * qty) : '—');
+    setCell(`gan-${row.id}`,   ganancia > 0 ? fmt_ars(ganancia * qty) : '—');
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
 
   // Summary
   const totalCostoReal = totalARS1 + totalComisiones + envioTotal;
 
-  setText('s-qty',        fmt_num(totalUnits));
-  setText('s-brl',        fmt_brl(totalBRL));
-  setText('s-usd1',       payMode === 'usdt' ? fmt_usd(totalUSD1) + ' USDT' : payMode === 'ars' ? '—' : fmt_usd(totalUSD1));
-  setText('s-ars-p1',     fmt_ars(totalARS1));
-  setText('s-comisiones', fmt_ars(totalComisiones));
-  setText('s-envio',      fmt_ars(envioTotal));
-  setText('s-costo-total',fmt_ars(totalCostoReal));
-  setText('s-venta',      fmt_ars(totalVenta));
-  setText('s-ganancia',     fmt_ars(totalGanancia));
-  setText('s-ganancia-usd', oficial > 0 ? fmt_usd(totalGanancia / oficial) : 'USD 0');
-  const roi = totalCostoReal > 0 ? totalGanancia / totalCostoReal * 100 : 0;
+  setText('s-qty',          fmt_num(totalUnits));
+  setText('s-brl',          fmt_brl(totalBRL));
+  setText('s-usd1',         payMode === 'usdt' ? fmt_usd(totalUSD1) + ' USDT' : payMode === 'ars' ? '—' : fmt_usd(totalUSD1));
+  setText('s-ars-p1',       fmt_ars(totalARS1));
+  setText('s-comisiones',   fmt_ars(totalComisiones));
+  setText('s-envio',        fmt_ars(envioTotal));
+  setText('s-costo-total',  fmt_ars(totalCostoReal));
+  setText('s-venta',        fmt_ars(totalVentaCliente));
+  setText('s-ganancia',     fmt_ars(totalGananciaCliente));
+  setText('s-ganancia-usd', oficial > 0 ? fmt_usd(totalGananciaCliente / oficial) : 'USD 0');
+  const roi = totalCostoReal > 0 ? totalGananciaCliente / totalCostoReal * 100 : 0;
   setText('s-roi', roi.toFixed(1) + '%');
+
+  // Per-client breakdown
+  const clientNames = Object.keys(clientStats);
+  const section = document.getElementById('s-clients-section');
+  const breakdown = document.getElementById('s-clients-breakdown');
+  if (clientNames.length > 1 && section && breakdown) {
+    section.style.display = '';
+    breakdown.innerHTML = clientNames.map(name => `
+      <div class="stat-row" style="margin-bottom:8px;">
+        <span class="lbl" style="font-weight:600;color:var(--text)">${esc(name)}</span>
+        <span></span>
+      </div>
+      <div class="stat-row" style="padding-left:10px;">
+        <span class="lbl">${clientStats[name].qty} und · Costo</span>
+        <span class="val accent" style="font-size:.88rem">${fmt_ars(clientStats[name].costo)}</span>
+      </div>
+      <div class="stat-row" style="padding-left:10px;margin-bottom:10px;">
+        <span class="lbl">Venta · Ganancia</span>
+        <span class="val success" style="font-size:.88rem">${fmt_ars(clientStats[name].venta)} · ${fmt_ars(clientStats[name].ganancia)}</span>
+      </div>
+    `).join('');
+  } else if (section) {
+    section.style.display = 'none';
+  }
+
   debouncedSave();
 }
 
@@ -1256,6 +1425,7 @@ function persistSave() {
   saveCurrentList();
   try {
     localStorage.setItem('importo-lists', JSON.stringify({ lists, currentListId, nextListId }));
+    localStorage.setItem('importo-clients', JSON.stringify(knownClients));
   } catch(e) {}
 }
 function loadFromStorage() {
@@ -1269,6 +1439,11 @@ function loadFromStorage() {
       currentListId = cur.id;
       rows = cur.rows;
       nextId = cur.nextId;
+      // Load known clients
+      try {
+        const saved = JSON.parse(localStorage.getItem('importo-clients'));
+        if (Array.isArray(saved)) knownClients = saved;
+      } catch(e) {}
       return true;
     }
   } catch(e) {}
@@ -1528,7 +1703,7 @@ function copyPrices(mode = 'individual') {
 // ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
-['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt','r-comision','r-envio','r-clientes'].forEach(id => {
+['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt','r-comision','r-envio'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalculate);
 });
 
@@ -1554,6 +1729,7 @@ document.querySelectorAll('.col-tip').forEach(el => {
 });
 
 const restoredFromStorage = loadFromStorage();
+updateClientDatalist();
 renderTabs();
 fetchAllRates();
 if (!restoredFromStorage || rows.length === 0) {
