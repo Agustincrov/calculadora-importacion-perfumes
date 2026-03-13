@@ -529,10 +529,8 @@
 
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;">
-        <span style="font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;">Modo activo</span>
-        <span id="active-mode-label" style="font-size:.8rem;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--accent-light);color:var(--accent);border:1px solid #bfdbfe;">PIX (USD oficial)</span>
-        <span style="font-size:.72rem;color:var(--muted);">— pasá el cursor sobre ⚖ en cualquier fila para comparar y cambiar</span>
+      <div style="margin-top:14px;font-size:.75rem;color:var(--muted);">
+        El método de pago se elige <strong>por fila</strong> — pasá el cursor sobre el botón de modo (<strong>PIX / USDT / ARS</strong>) en cada fila para comparar costos y cambiar.
       </div>
 
       <div class="rates-bottom">
@@ -559,16 +557,16 @@
             <span class="lbl">Unidades totales</span>
             <span class="val" id="s-qty">0</span>
           </div>
-          <div class="stat-row" id="s-brl-row">
-            <span class="lbl" id="s-brl-lbl">BRL a mandar</span>
+          <div class="stat-row">
+            <span class="lbl">BRL a mandar</span>
             <span class="val accent" id="s-brl">R$ 0</span>
           </div>
-          <div class="stat-row" id="s-usd1-row">
-            <span class="lbl" id="s-usd1-lbl">USD que pagás</span>
+          <div class="stat-row">
+            <span class="lbl">USD / USDT total</span>
             <span class="val accent" id="s-usd1">USD 0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl" id="s-ars-p1-lbl">Costo en ARS (al oficial)</span>
+            <span class="lbl">Costo en ARS</span>
             <span class="val accent" id="s-ars-p1">$ 0</span>
           </div>
         </div>
@@ -578,7 +576,7 @@
         <div>
           <div class="sum-section-label p2">Fase 2 — Gastos al shipper</div>
           <div class="stat-row">
-            <span class="lbl" id="s-comisiones-lbl">Comisiones (USD al USDT)</span>
+            <span class="lbl">Comisiones (USD al USDT)</span>
             <span class="val" id="s-comisiones">$ 0</span>
           </div>
           <div class="stat-row">
@@ -684,7 +682,7 @@
         <thead>
           <tr class="phase-headers">
             <th class="ph-input" colspan="6"></th>
-            <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo vía PIX (USD oficial)</th>
+            <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo producto</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
             <th class="ph-sell" colspan="7">Precio de venta</th>
             <th class="ph-del"></th>
@@ -697,7 +695,7 @@
             <th class="bg-input">Precio USD <span class="col-tip" data-tip="Precio en dólares que cobra la tienda por una unidad."></span></th>
             <th class="bg-input">Cantidad <span class="col-tip" data-tip="Unidades que comprás de este producto. Todos los valores de la fila muestran el total para esta cantidad."></span></th>
             <th class="bg-p1 col-brl">BRL total <span class="col-tip" data-tip="Total en reales que necesitás enviar a la tienda por esta fila (precio × tipo PIX × cantidad)."></span></th>
-            <th class="bg-p1 col-usd" id="col-usd-head">USD total <span class="col-tip" data-tip="Total en dólares (o USDT) que enviás al servicio de pago para cubrir los reales pedidos."></span></th>
+            <th class="bg-p1 col-usd" id="col-usd-head">USD / USDT total <span class="col-tip" data-tip="Total en dólares o USDT que enviás al servicio de pago (depende del método elegido por fila)."></span></th>
             <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
             <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
             <th class="bg-p2">Envío total <span class="col-tip" data-tip="Envío asignado a esta fila. Solo filas CLI reciben envío, dividido entre unidades de clientes."></span></th>
@@ -735,7 +733,7 @@ let rows = [];
 let nextId = 1;
 let catalogs = []; // [{ name, items: [{name, price}] }]
 let catalog  = []; // flat merged list — rebuilt from catalogs
-let payMode = 'pix'; // 'pix' | 'usdt' | 'ars'
+// payMode removed — each row now has its own row.modo
 let knownClients = []; // persisted list of known client names
 
 // ── Multi-list state ──
@@ -745,43 +743,18 @@ let nextListId = 2;
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
-// Which rate items to show per mode
-const RATE_VISIBILITY = {
-  pix:  ['ri-pix','ri-pix-usd','ri-oficial','ri-blue','ri-usdt'],
-  usdt: ['ri-blue','ri-usdt'],
-  ars:  ['ri-pix','ri-brl-ars','ri-blue','ri-usdt'],
-};
+const MODE_LABELS = { pix: 'PIX', usdt: 'USDT', ars: 'ARS' };
+const MODE_LABELS_FULL = { pix: 'PIX (USD oficial)', usdt: 'USDT directo', ars: 'Pesos (ARS)' };
 
-function setPayMode(mode) {
-  payMode = mode;
-  const modeLabels = { pix: 'PIX (USD oficial)', usdt: 'USDT directo', ars: 'Pesos (ARS)' };
-  const labelEl = document.getElementById('active-mode-label');
-  if (labelEl) labelEl.textContent = modeLabels[mode] || mode;
-
-  // Show/hide rate items
-  const visible = new Set(RATE_VISIBILITY[mode] || []);
-  ['ri-pix','ri-pix-usd','ri-brl-ars','ri-oficial','ri-blue','ri-usdt'].forEach(id => {
-    document.getElementById(id).style.display = visible.has(id) ? '' : 'none';
-  });
-
-  const tw = document.querySelector('.table-wrap');
-  tw.classList.toggle('mode-usdt', mode === 'usdt');
-  tw.classList.toggle('mode-ars',  mode === 'ars');
-  document.getElementById('ph-p1-label').colSpan = (mode === 'usdt' || mode === 'ars') ? 2 : 3;
-  document.getElementById('ph-p1-label').textContent =
-    mode === 'pix'  ? 'Fase 1 — Costo vía PIX (USD oficial)' :
-    mode === 'usdt' ? 'Fase 1 — Costo directo en USDT' :
-                     'Fase 1 — Costo vía PIX en Pesos (ARS)';
-  document.getElementById('col-usd-head').textContent = mode === 'usdt' ? 'USDT/unid' : 'USD pagás';
-  document.getElementById('s-brl-row').style.display   = mode === 'usdt' ? 'none' : '';
-  document.getElementById('s-usd1-row').style.display  = mode === 'ars'  ? 'none' : '';
-  document.getElementById('s-usd1-lbl').textContent    = mode === 'usdt' ? 'USDT a enviar' : 'USD que pagás';
-  document.getElementById('s-ars-p1-lbl').textContent  =
-    mode === 'pix'  ? 'Costo en ARS (al oficial)' :
-    mode === 'usdt' ? 'Costo en ARS (al USDT)' :
-                     'Costo en ARS (directo en $)';
-  document.getElementById('s-comisiones-lbl').textContent = 'Comisiones (USD al USDT)';
+function setRowMode(rowId, mode) {
+  const row = rows.find(r => r.id === rowId);
+  if (!row) return;
+  row.modo = mode;
+  // Update the compare button label for this row
+  const btn = document.querySelector(`#row-${rowId} .compare-btn`);
+  if (btn) btn.textContent = MODE_LABELS[mode] || mode;
   recalculate();
+  hideCompareCard(true);
 }
 
 // ─────────────────────────────────────────────
@@ -1007,6 +980,7 @@ function addRow(data = {}) {
     margin: data.margin ?? 30,
     tipo: data.tipo ?? 'cliente',
     cliente: data.cliente ?? '',
+    modo: data.modo ?? 'pix',
     gananciaUSDOverride: data.gananciaUSDOverride ?? null,
   });
   renderTable();
@@ -1032,9 +1006,9 @@ function renderTable() {
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;vertical-align:middle;">
         ${idx + 1}
-        <button class="compare-btn" title="Comparar modos de pago"
+        <button class="compare-btn" title="Comparar modos de pago — elegí el más barato"
           onmouseenter="showCompareCard(${row.id}, this)"
-          onmouseleave="hideCompareCard()">⚖</button>
+          onmouseleave="hideCompareCard()">${MODE_LABELS[row.modo] || 'PIX'}</button>
       </td>
       <td style="text-align:center;white-space:nowrap;">
         <button class="tipo-btn ${isStock ? 'tipo-stock' : 'tipo-cli'}" onclick="toggleTipo(${row.id})" title="Cambiar tipo">
@@ -1184,6 +1158,7 @@ function showCompareCard(rowId, iconEl) {
   const row = rows.find(r => r.id === rowId);
   if (!row) return;
 
+  const rowMode = row.modo || 'pix';
   const costs = computeAllModeCosts(row);
   const validCosts = Object.values(costs).filter(v => v > 0);
   const minCost = validCosts.length ? Math.min(...validCosts) : 0;
@@ -1200,12 +1175,12 @@ function showCompareCard(rowId, iconEl) {
       Costo/unid — elegí el método
     </div>
     ${modes.map(({ key, label }) => {
-      const cost     = costs[key];
-      const isActive   = key === payMode;
+      const cost       = costs[key];
+      const isActive   = key === rowMode;
       const isCheapest = cost > 0 && cost === minCost && validCosts.length > 1;
       return `
         <div class="compare-row ${isActive ? 'active' : ''} ${isCheapest ? 'cheapest' : ''}"
-          onclick="setPayMode('${key}');hideCompareCard(true)">
+          onclick="setRowMode(${rowId},'${key}')">
           <span style="display:flex;align-items:center;gap:7px;">
             <span style="width:12px;text-align:center;color:var(--accent);font-weight:800;">
               ${isActive ? '✓' : ''}
@@ -1311,13 +1286,14 @@ function recalculate() {
 
   rows.forEach(row => {
     const isStock = row.tipo === 'stock';
+    const rowMode = row.modo || 'pix';
 
     // Fase 1
     let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
-    if (payMode === 'usdt') {
+    if (rowMode === 'usdt') {
       usdUnid   = row.price;
       costoARS1 = row.price * usdt;
-    } else if (payMode === 'ars') {
+    } else if (rowMode === 'ars') {
       brlUnid   = row.price * pixRate;
       costoARS1 = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
     } else {
@@ -1371,7 +1347,7 @@ function recalculate() {
     }
 
     // Accumulate totals
-    totalBRL        += payMode !== 'usdt' ? brlUnid * row.qty : 0;
+    totalBRL        += rowMode !== 'usdt' ? brlUnid * row.qty : 0;
     totalUSD1       += usdUnid   * row.qty;
     totalARS1       += costoARS1 * row.qty;
     totalComisiones += comisionARS * row.qty;
@@ -1390,8 +1366,8 @@ function recalculate() {
 
     // Update cells
     const qty = row.qty || 1;
-    setCell(`brl-${row.id}`,  payMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
-    setCell(`usd-${row.id}`,  payMode === 'usdt' ? fmt_usd(usdUnid * qty) : (pixUsdRate > 0 ? fmt_usd(usdUnid * qty) : '—'));
+    setCell(`brl-${row.id}`,  rowMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
+    setCell(`usd-${row.id}`,  rowMode === 'ars'  ? '—' : (usdUnid > 0 ? fmt_usd(usdUnid * qty) : '—'));
     setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');
     setCell(`com-${row.id}`,  fmt_ars(comisionARS * qty));
     setCell(`env-${row.id}`,  isStock ? '$ 0' : fmt_ars(envioPerUnit * qty));
@@ -1408,7 +1384,7 @@ function recalculate() {
 
   setText('s-qty',          fmt_num(totalUnits));
   setText('s-brl',          fmt_brl(totalBRL));
-  setText('s-usd1',         payMode === 'usdt' ? fmt_usd(totalUSD1) + ' USDT' : payMode === 'ars' ? '—' : fmt_usd(totalUSD1));
+  setText('s-usd1',         fmt_usd(totalUSD1));
   setText('s-ars-p1',       fmt_ars(totalARS1));
   setText('s-comisiones',   fmt_ars(totalComisiones));
   setText('s-envio',        fmt_ars(envioTotal));
