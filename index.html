@@ -1642,8 +1642,10 @@ async function fetchAllRates() {
     }
 
     // Best BRLARS rate (for "Pesos (ARS)" mode) — lowest buy = least ARS per BRL = cheapest
+    const BRLARS_BLOCKED = ['real-tarjeta-mep'];
     let bestBrlArs = Infinity, bestBrlArsName = '';
     for (const [name, info] of Object.entries(data)) {
+      if (BRLARS_BLOCKED.includes(name)) continue;
       const q = info.quotes?.find(q => q.symbol === 'BRLARS');
       if (q && q.buy > 0 && q.buy < bestBrlArs) {
         bestBrlArs = q.buy;
