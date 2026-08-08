@@ -18,6 +18,20 @@ docs/mensaje-promocional.txt
 # Dependencies
 node_modules/
 
+# Wrangler local cache/logs
+.wrangler/
+
 # Environment variables
 .env
 .env.local
+
+# Local business data (catalogs, purchase exports — not project source)
+*.xlsx
+*.xls
+compra_*.txt
+
+# Windows alternate data stream markers
+*:Zone.Identifier
+
+# Claude Code local settings
+.claude/

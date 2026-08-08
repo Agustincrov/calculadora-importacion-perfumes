@@ -1,5 +1,6 @@
 // Cloudflare Worker — comparapi-proxy
-// Handles: comparapix, Binance P2P USDT, dólar blue Córdoba + oficial (infodolar.com Córdoba), PIX rate (madridcenterimportados.com — SPA, always null)
+// Handles: comparapix, USDT/ARS (via CriptoYa), dólar blue Córdoba (infodolar.com),
+// dólar oficial (via dolarapi.com), PIX rate — valor do PIX (madridcenterimportados.com BFF)
 //
 // Deploy: paste this into the Cloudflare Worker dashboard at
 // https://dash.cloudflare.com → Workers & Pages → comparapi-proxy → Edit Code
@@ -48,17 +49,17 @@ async function proxyComparapix() {
   return jsonResp(data);
 }
 
-// ── PIX rate — Madrid Center API ─────────────────────────────────
-// Returns the daily R$/USD rate. Field moeda2 = valor do PIX (e.g. 5.38).
-// Response: [{"id":304,"datcam":"...","moeda1":1.0,"moeda2":5.38,...}]
+// ── PIX rate — Madrid Center BFF ─────────────────────────────────
+// Madrid Center migrated off the old api-key'd `app.madridcenterimportados.com/v1/cambio`
+// to an internal BFF with no auth. Same response shape, moeda2 = valor do PIX (e.g. 5.20).
+// Response: [{"id":458,"datcam":"...","moeda1":1.0,"moeda2":5.20,...}]
 async function fetchPixRate() {
-  const r = await fetch('https://app.madridcenterimportados.com/v1/cambio', {
+  const r = await fetch('https://madridcenterimportados.com/bff/main/api/v3/cambio', {
     headers: {
       'accept': 'application/json',
       'origin': 'https://www.madridcenterimportados.com',
       'referer': 'https://www.madridcenterimportados.com/',
       'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
-      'x-api-key': 'madrid_x78BZI-kpnzZf6JZCHdeJ9XEusvYLSqwLYsEhGPGGdA',
     },
   });
   const data = await r.json();
@@ -66,45 +67,17 @@ async function fetchPixRate() {
   return jsonResp({ price });
 }
 
-// ── Binance P2P — USDT/ARS sell price ────────────────────────────
-// Returns the first non-promoted listing (skip index 0 which is typically the sponsored ad)
+// ── USDT/ARS — via dolarapi.com "dólar cripto" ────────────────────
+// Binance's p2p.binance.com blocks Cloudflare Worker traffic with an HTML
+// anti-bot challenge. CriptoYa (the next choice) also blocks Worker-to-Worker
+// traffic (its Cloudflare WAF returns error 1106). dolarapi.com has no such
+// block and its "cripto" casa is the standard USDT/ARS-equivalent rate.
 async function fetchBinanceUSDT() {
-  const r = await fetch('https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    },
-    body: JSON.stringify({
-      fiat: 'ARS',
-      page: 1,
-      rows: 5,
-      tradeType: 'SELL',
-      asset: 'USDT',
-      countries: [],
-      proMerchantAds: false,
-      shieldMerchantAds: false,
-      filterType: 'all',
-      periods: [],
-      additionalKycVerifyFilter: 0,
-      publisherType: null,
-      payTypes: [],
-      classifies: ['mass', 'profession', 'fiat_merchant', 'crypto_merchant'],
-    }),
+  const r = await fetch('https://dolarapi.com/v1/dolares/cripto', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
   });
   const data = await r.json();
-  const ads = (data.data || []).filter(a => a.adv?.price);
-
-  let price = null;
-  // Promoted ads have classify === 'promoted'; skip them.
-  // Fallback: always skip index 0 (the sponsored slot) if no explicit classify marker.
-  const nonPromoted = ads.filter(a => a.adv?.classify !== 'promoted');
-  if (nonPromoted.length > 0) {
-    price = parseFloat(nonPromoted[0].adv.price);
-  } else if (ads.length > 0) {
-    price = parseFloat(ads[0].adv.price);
-  }
-
+  const price = typeof data?.venta === 'number' ? data.venta : null;
   return jsonResp({ price });
 }
 
@@ -136,19 +109,13 @@ async function fetchDolarBlue() {
 }
 
 async function fetchDolarOficial() {
-  // BBVA Argentina — Vue SSR page (data-v-* attrs = Vue scoped styles, content IS in HTML)
-  // Row: <td> Dolares </td><td> $&nbsp;1.390,00 </td><td> $&nbsp;1.440,00 </td>
-  // 2nd td = compra, 3rd td = venta
-  const r = await fetch('https://www.bbva.com.ar/personas/productos/inversiones/cotizacion-moneda-extranjera.html', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'es-AR,es;q=0.9',
-    },
+  // BBVA's cotización page stopped server-rendering the rate table (now client-fetched),
+  // so scraping it no longer works. dolarapi.com is a public, purpose-built API for this.
+  const r = await fetch('https://dolarapi.com/v1/dolares/oficial', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
   });
-  const html = await r.text();
-  const m = html.match(/>\s*Dolares\s*<\/td>[\s\S]{0,300}?\$&nbsp;[\d.,]+[\s\S]{0,300}?\$&nbsp;([\d.,]+)/i);
-  return jsonResp({ price: m ? parseArNum(m[1]) : null });
+  const data = await r.json();
+  return jsonResp({ price: typeof data?.venta === 'number' ? data.venta : null });
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
