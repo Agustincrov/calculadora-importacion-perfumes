@@ -3,7 +3,7 @@
 A web-based calculator that computes the real landed cost of imported goods and suggests a selling price based on a target margin. Built for product importers who buy in Ciudad del Este, Paraguay and sell in Argentina — adaptable to any country's exchange rates and fee structures.
 
 **Live →** [calculadora-importacion-perfumes.agustincrovato7.workers.dev](https://calculadora-importacion-perfumes.agustincrovato7.workers.dev)
-**Landing →** [agustincrov.github.io/calculadora-importacion-perfumes/docs/landing.html](https://agustincrov.github.io/calculadora-importacion-perfumes/docs/landing.html)
+**Landing →** [agustincrov.github.io/calculadora-importacion-perfumes/landing.html](https://agustincrov.github.io/calculadora-importacion-perfumes/landing.html)
 
 ---
 

@@ -180,7 +180,9 @@ async function handlePublishCatalog(req) {
 
   return jsonResp({
     ok: true,
-    url: `https://${GITHUB_OWNER.toLowerCase()}.github.io/${GITHUB_REPO}/${CATALOG_PATH}`,
+    // GitHub Pages sirve desde /docs como raíz del sitio — NO se antepone "docs/" a la URL pública,
+    // aunque el archivo viva en ese path dentro del repo (por eso no reusamos CATALOG_PATH acá).
+    url: `https://${GITHUB_OWNER.toLowerCase()}.github.io/${GITHUB_REPO}/catalogo.html`,
   });
 }
 
