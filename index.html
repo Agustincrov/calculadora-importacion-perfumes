@@ -2334,11 +2334,13 @@ function plJaccard(a, b) {
 }
 
 function detectFuzzyDuplicates(items) {
+  // Ojo: NO se restringe a pares entre distintas listas — un mismo proveedor puede tener
+  // el mismo producto cargado dos veces con formato distinto dentro de su propia planilla
+  // (ej. "ERBA GOLD EDP 100ML" y "ERBA GOLD U 100ML EDP"), no solo al mezclar varias listas.
   const pairs = [];
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
       const a = items[i], b = items[j];
-      if (a.sourceLabel === b.sourceLabel) continue; // only flag cross-source
       const na = plNormalizeCore(a.name), nb = plNormalizeCore(b.name);
       if (na.ml !== nb.ml) continue; // never suggest merging different sizes
       const sim = plJaccard(plTokenSet(na.core), plTokenSet(nb.core));
@@ -2350,7 +2352,7 @@ function detectFuzzyDuplicates(items) {
     }
   }
   pairs.sort((x, y) => y.sim - x.sim);
-  return pairs.slice(0, 40);
+  return pairs.slice(0, 150);
 }
 
 // ── Costing ──
