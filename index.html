@@ -841,11 +841,17 @@
         <h2>3. Revisión final</h2>
         <div class="btn-group">
           <span id="pl-summary" style="font-size:.8rem;color:var(--muted);align-self:center;"></span>
-          <button class="btn btn-outline" onclick="exportPlSearchablePage()" title="Archivo único con buscador — se lo mandás al cliente y lo abre en el navegador del celu, sin necesidad de Excel">
+          <button class="btn btn-outline" id="pl-publish-btn" onclick="publishCatalogAuto()" title="Sube catalogo.html directo a tu GitHub Pages — sin tocar archivos ni git a mano">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            Publicar catálogo
+          </button>
+          <button class="btn btn-outline" onclick="exportPlSearchablePage()" title="Descarga el archivo en vez de publicarlo — para revisar antes o subirlo a mano">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            Exportar página buscable
+            Descargar página buscable
           </button>
           <button class="btn btn-success" onclick="exportPlExcel()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -860,11 +866,30 @@
         style="width:100%;max-width:340px;padding:8px 12px;margin-bottom:14px;
                border:1px solid var(--border);border-radius:6px;font-size:.85rem;" />
 
+      <div id="pl-publish-result" style="font-size:.8rem;margin-bottom:10px;min-height:1.2em;"></div>
+
+      <details style="margin-bottom:14px;">
+        <summary style="font-size:.76rem;color:var(--muted);cursor:pointer;">
+          🔑 Configurar publicación automática (una sola vez) — <span id="pl-publish-secret-status"></span>
+        </summary>
+        <div style="margin-top:10px;font-size:.78rem;color:var(--muted);line-height:1.5;">
+          Publica <code>catalogo.html</code> directo en tu GitHub Pages sin tocar archivos ni git — el link para tus
+          clientes es siempre <strong>agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html</strong>.
+          Necesita que tu Cloudflare Worker (<code>comparapi-proxy</code>) tenga configuradas dos variables secretas
+          (Settings → Variables): <code>GITHUB_TOKEN</code> (fine-grained PAT, permiso de escritura solo en este repo)
+          y <code>PUBLISH_SECRET</code> (cualquier clave larga random — pegá la misma acá abajo).
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input type="password" id="pl-publish-secret" placeholder="Pegar PUBLISH_SECRET…"
+            style="flex:1;max-width:280px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;" />
+          <button class="btn btn-outline" onclick="savePublishSecretFromInput()">Guardar</button>
+        </div>
+      </details>
+
       <div style="font-size:.76rem;color:var(--muted);margin:-6px 0 14px;line-height:1.5;">
-        💡 "Exportar página buscable" siempre descarga <code>catalogo.html</code> (mismo nombre) — reemplazá ese archivo
-        en la carpeta del repo, <code>git add catalogo.html && git commit -m "catálogo" && git push</code>, y compartí
-        siempre el mismo link con tus clientes:
-        <strong>agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html</strong>
+        💡 Si preferís hacerlo a mano: "Descargar página buscable" siempre descarga <code>catalogo.html</code>
+        (mismo nombre) — reemplazá ese archivo en la carpeta del repo,
+        <code>git add catalogo.html && git commit -m "catálogo" && git push</code>, y compartí el mismo link de arriba.
         — así en WhatsApp les abre directo en el navegador (a diferencia de mandar el archivo suelto, que en iPhone no siempre abre bien).
       </div>
       <div class="table-wrap">
@@ -2674,11 +2699,11 @@ function exportPlExcel() {
 
 // Archivo único (sin hosting) con buscador en vivo — se lo mandás al cliente como cualquier
 // archivo por WhatsApp y lo abre en el navegador del celu, sin necesitar Excel.
-function exportPlSearchablePage() {
+function buildCatalogHtml() {
   const sorted = [...plItems]
     .filter(it => !it.excluded)
     .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
-  if (sorted.length === 0) { alert('No hay productos para exportar.'); return; }
+  if (sorted.length === 0) return null;
 
   const data = sorted.map(it => ({
     brand: it.brand || 'Sin categoría',
@@ -2755,6 +2780,13 @@ render('');
 </body>
 </html>`;
 
+  return html;
+}
+
+function exportPlSearchablePage() {
+  const html = buildCatalogHtml();
+  if (!html) { alert('No hay productos para exportar.'); return; }
+
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
@@ -2762,6 +2794,71 @@ render('');
   a.download = 'catalogo.html'; // nombre fijo a propósito: reemplaza el mismo archivo en el repo cada vez
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// ── Publicación automática (vía Cloudflare Worker → GitHub) ──
+function getPublishSecret() {
+  return localStorage.getItem('importo-publish-secret') || '';
+}
+
+function savePublishSecretFromInput() {
+  const input = document.getElementById('pl-publish-secret');
+  const val = input.value.trim();
+  if (!val) return;
+  localStorage.setItem('importo-publish-secret', val);
+  input.value = '';
+  renderPublishSecretStatus();
+}
+
+function clearPublishSecret() {
+  localStorage.removeItem('importo-publish-secret');
+  renderPublishSecretStatus();
+}
+
+function renderPublishSecretStatus() {
+  const el = document.getElementById('pl-publish-secret-status');
+  if (!el) return;
+  const has = !!getPublishSecret();
+  el.innerHTML = has
+    ? '✓ Clave configurada <button class="del-btn" style="display:inline;" onclick="clearPublishSecret()" title="Olvidar clave">✕</button>'
+    : 'Todavía no configuraste la clave de publicación.';
+}
+
+async function publishCatalogAuto() {
+  const html = buildCatalogHtml();
+  if (!html) { alert('No hay productos para exportar.'); return; }
+
+  const secret = getPublishSecret();
+  if (!secret) {
+    alert('Primero configurá la clave de publicación (abajo del botón "Publicar catálogo").');
+    return;
+  }
+
+  const btn = document.getElementById('pl-publish-btn');
+  const statusEl = document.getElementById('pl-publish-result');
+  const origLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Publicando…';
+  statusEl.textContent = '';
+  statusEl.style.color = '';
+
+  try {
+    const resp = await fetch(`${WORKER}/publish-catalog`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Publish-Secret': secret },
+      body: JSON.stringify({ html }),
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+    statusEl.innerHTML = `✓ Publicado — <a href="${data.url}" target="_blank">${data.url}</a>`;
+    statusEl.style.color = 'var(--success)';
+  } catch (e) {
+    statusEl.textContent = `✗ No se pudo publicar: ${e.message}`;
+    statusEl.style.color = 'var(--danger)';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origLabel;
+  }
 }
 
 ['pl-modo', 'pl-envio-unid', 'pl-round-step'].forEach(id => {
@@ -2772,6 +2869,7 @@ render('');
 
 renderPlTiers();
 renderPlBrandTags();
+renderPublishSecretStatus();
 
 // ─────────────────────────────────────────────
 // Export plain text notes

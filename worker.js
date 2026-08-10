@@ -8,6 +8,7 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Publish-Secret',
   'Content-Type': 'application/json',
 };
 
@@ -26,6 +27,7 @@ async function handle(req) {
     if (path === '/binance-usdt')  return await fetchBinanceUSDT();
     if (path === '/dolar-blue')    return await fetchDolarBlue();
     if (path === '/dolar-oficial') return await fetchDolarOficial();
+    if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
   } catch (e) {
     return jsonResp({ error: e.message }, 500);
@@ -118,8 +120,79 @@ async function fetchDolarOficial() {
   return jsonResp({ price: typeof data?.venta === 'number' ? data.venta : null });
 }
 
+// ── Publicar catalogo.html en GitHub Pages ─────────────────────────
+// Requiere dos "Environment Variables" (tipo Secret) configuradas en el dashboard
+// del Worker (Settings → Variables):
+//   GITHUB_TOKEN    — fine-grained PAT, permiso "Contents: Read and write" SOLO
+//                      en el repo calculadora-importacion-perfumes, nada más.
+//   PUBLISH_SECRET  — cualquier string random largo, el mismo que se pega una vez
+//                      en la app (Generador de listas → Publicar catálogo).
+// El token nunca sale del Worker — el navegador solo manda el HTML + el secreto compartido.
+const GITHUB_OWNER = 'Agustincrov';
+const GITHUB_REPO  = 'calculadora-importacion-perfumes';
+const CATALOG_PATH = 'catalogo.html';
+
+async function handlePublishCatalog(req) {
+  const secret = req.headers.get('X-Publish-Secret');
+  if (!secret || !PUBLISH_SECRET || secret !== PUBLISH_SECRET) {
+    return jsonResp({ error: 'unauthorized' }, 401);
+  }
+
+  let body;
+  try { body = await req.json(); } catch { return jsonResp({ error: 'invalid json' }, 400); }
+  const html = body?.html;
+  if (typeof html !== 'string' || html.length === 0) {
+    return jsonResp({ error: 'missing html' }, 400);
+  }
+  if (html.length > 3_000_000) {
+    return jsonResp({ error: 'archivo demasiado grande' }, 413);
+  }
+
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${CATALOG_PATH}`;
+  const ghHeaders = {
+    'Authorization': `Bearer ${GITHUB_TOKEN}`,
+    'User-Agent': 'importo-catalog-publisher',
+    'Accept': 'application/vnd.github+json',
+  };
+
+  // 1. Sha del archivo actual (si existe) — GitHub lo exige para actualizar, no para crear.
+  let sha;
+  const getResp = await fetch(apiUrl, { headers: ghHeaders });
+  if (getResp.ok) {
+    sha = (await getResp.json()).sha;
+  } else if (getResp.status !== 404) {
+    return jsonResp({ error: 'no se pudo leer el archivo actual', detail: await getResp.text() }, 502);
+  }
+
+  // 2. Crear/actualizar el archivo
+  const putResp = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: `Actualizar catálogo — ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
+      content: utf8ToBase64(html),
+      ...(sha ? { sha } : {}),
+    }),
+  });
+  if (!putResp.ok) {
+    return jsonResp({ error: 'no se pudo pushear a GitHub', detail: await putResp.text() }, 502);
+  }
+
+  return jsonResp({
+    ok: true,
+    url: `https://${GITHUB_OWNER.toLowerCase()}.github.io/${GITHUB_REPO}/${CATALOG_PATH}`,
+  });
+}
+
 // ── Helpers ───────────────────────────────────────────────────────
 function parseArNum(s) {
   // "1.430,00" → 1430.00
   return parseFloat(String(s).replace(/\./g, '').replace(',', '.'));
+}
+
+function utf8ToBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
 }
