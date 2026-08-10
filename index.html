@@ -2352,7 +2352,7 @@ function detectFuzzyDuplicates(items) {
     }
   }
   pairs.sort((x, y) => y.sim - x.sim);
-  return pairs.slice(0, 150);
+  return pairs;
 }
 
 // ── Costing ──
