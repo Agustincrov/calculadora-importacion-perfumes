@@ -427,6 +427,12 @@
     </a>
   </header>
 
+  <div class="lists-tabs" style="margin-bottom:20px;">
+    <button class="tab-btn active" id="vtab-calc" onclick="switchView('calc')">Calculadora</button>
+    <button class="tab-btn" id="vtab-pricelist" onclick="switchView('pricelist')">Generador de listas</button>
+  </div>
+
+  <div id="view-calc">
   <div class="top-grid">
 
     <!-- ── Rates card ── -->
@@ -723,8 +729,162 @@
     Podés escribir directamente en <em>Gan. USD/unid</em> para fijar tu ganancia y ver el margen resultante.
     La comisión se paga al shipper en USD al tipo <em>USDT</em> para todas las filas.
   </div>
+  </div><!-- /view-calc -->
 
-</div>
+  <div id="view-pricelist" style="display:none">
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">1. Importar listas de proveedor</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
+        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪) o subí uno o más Excel/Numbers.
+        Podés importar varias listas — si un mismo producto aparece repetido, se resuelve automáticamente al generar la lista.
+      </div>
+
+      <textarea id="pl-paste-text" placeholder="Pegá acá el texto completo de la lista del proveedor…"
+        style="width:100%;min-height:110px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+               font-size:.82rem;font-family:inherit;resize:vertical;color:var(--text);background:var(--bg);"></textarea>
+
+      <div class="btn-group" style="margin-top:10px;">
+        <button class="btn btn-outline" onclick="importPastedText()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Procesar texto pegado
+        </button>
+        <button class="btn btn-outline" onclick="document.getElementById('pl-file').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          Importar Excel/Numbers
+        </button>
+        <input type="file" id="pl-file" accept=".xls,.xlsx" multiple style="display:none"
+          onchange="importPlExcel(this.files); this.value=''" />
+      </div>
+
+      <div id="pl-source-tags" class="catalog-tags"></div>
+
+      <hr class="divider" style="margin-top:16px;" />
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
+        Marcas conocidas <span class="col-tip" data-tip="La marca se detecta buscando estos nombres dentro del nombre del producto — no depende del formato del mensaje. Si falta una, agregala acá o corregila directo en la tabla de revisión."></span>
+      </div>
+      <div id="pl-brand-tags" class="catalog-tags" style="margin-top:0;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="pl-brand-input" placeholder="Agregar marca (ej: L'Occitane)…"
+          style="flex:1;max-width:280px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomBrandFromInput();}" />
+        <button class="btn btn-outline" onclick="addCustomBrandFromInput()">Agregar</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">2. Configuración de precios</div>
+
+      <div class="rates-grid" style="margin-bottom:16px;">
+        <div class="rate-item">
+          <label>Modo de pago</label>
+          <select id="pl-modo" style="width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:6px;
+                  font-size:.9rem;font-weight:600;background:var(--bg);color:var(--text);">
+            <option value="pix">PIX (USD oficial)</option>
+            <option value="usdt">USDT directo</option>
+            <option value="ars">Pesos (ARS)</option>
+          </select>
+        </div>
+        <div class="rate-item">
+          <label>Envío estimado / unidad <span class="col-tip" data-tip="Como esta lista no tiene un pedido real, no se puede dividir el envío por cantidad de clientes. Poné una estimación por unidad."></span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="pl-envio-unid" value="12000" step="100" />
+          </div>
+        </div>
+        <div class="rate-item">
+          <label>Redondeo (siempre hacia arriba)</label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="pl-round-step" value="100" step="10" min="1" />
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
+        Tramos de margen según costo original (USD del proveedor)
+      </div>
+      <div id="pl-tiers"></div>
+
+      <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:.85rem;cursor:pointer;">
+        <input type="checkbox" id="pl-exclude-arabic" checked style="width:16px;height:16px;" />
+        Excluir automáticamente marcas árabes/de Medio Oriente
+        <span class="col-tip" data-tip="Lattafa, Afnan, Ajmal, Al Haramain y otras marcas del golfo que suelen venir mezcladas con las occidentales en listas de proveedores. Desmarcá esto si para este proveedor sí las querés incluir."></span>
+      </label>
+
+      <div class="btn-group" style="margin-top:16px;">
+        <button class="btn btn-success" onclick="generatePriceList()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Generar lista de precios
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="pl-fuzzy-card" style="margin-bottom:20px;display:none;">
+      <div class="card-title">Posibles duplicados a revisar</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:12px;">
+        Estos pares se parecen pero no coinciden exactamente (distinto formato entre proveedores). Elegí si son el mismo producto o no — no se fusionan solos.
+      </div>
+      <div id="pl-fuzzy-list"></div>
+    </div>
+
+    <div class="card" id="pl-result-card" style="padding:20px 24px;display:none;">
+      <div class="products-header">
+        <h2>3. Revisión final</h2>
+        <div class="btn-group">
+          <span id="pl-summary" style="font-size:.8rem;color:var(--muted);align-self:center;"></span>
+          <button class="btn btn-outline" onclick="exportPlSearchablePage()" title="Archivo único con buscador — se lo mandás al cliente y lo abre en el navegador del celu, sin necesidad de Excel">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Exportar página buscable
+          </button>
+          <button class="btn btn-success" onclick="exportPlExcel()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Exportar Excel
+          </button>
+        </div>
+      </div>
+      <input type="text" id="pl-search" placeholder="Buscar por marca o producto…" oninput="renderPlTable()"
+        style="width:100%;max-width:340px;padding:8px 12px;margin-bottom:14px;
+               border:1px solid var(--border);border-radius:6px;font-size:.85rem;" />
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr class="col-headers">
+              <th class="bg-input">Marca</th>
+              <th class="bg-input">Producto</th>
+              <th class="bg-input">Origen</th>
+              <th class="bg-p1">Costo USD</th>
+              <th class="bg-p2">Costo total ARS</th>
+              <th class="bg-sell">Margen</th>
+              <th class="bg-sell">Precio final ARS</th>
+              <th class="bg-del"></th>
+            </tr>
+          </thead>
+          <tbody id="pl-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px;">
+        <a href="#" id="pl-excluded-toggle" onclick="togglePlExcluded();return false;"
+           style="font-size:.78rem;color:var(--muted);display:none;"></a>
+      </div>
+    </div>
+
+  </div><!-- /view-pricelist -->
+
+</div><!-- /container -->
 <script>
 // ─────────────────────────────────────────────
 // State
@@ -742,6 +902,14 @@ let currentListId = 1;
 let nextListId = 2;
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+// ── View switcher (Calculadora / Generador de listas) ──
+function switchView(view) {
+  document.getElementById('view-calc').style.display       = view === 'calc' ? '' : 'none';
+  document.getElementById('view-pricelist').style.display  = view === 'pricelist' ? '' : 'none';
+  document.getElementById('vtab-calc').classList.toggle('active', view === 'calc');
+  document.getElementById('vtab-pricelist').classList.toggle('active', view === 'pricelist');
+}
 
 const MODE_LABELS = { pix: 'PIX', usdt: 'USDT', ars: 'ARS' };
 const MODE_LABELS_FULL = { pix: 'PIX (USD oficial)', usdt: 'USDT directo', ars: 'Pesos (ARS)' };
@@ -1707,6 +1875,895 @@ async function fetchAllRates() {
 
   recalculate();
 }
+
+// ─────────────────────────────────────────────
+// Price list generator (Generador de listas)
+// ─────────────────────────────────────────────
+let plSources     = []; // [{ id, name, items: [{name, brand, price}] }]
+let plNextSourceId = 1;
+let plTiers = [
+  { max: 60,  margin: 32 },
+  { max: 100, margin: 24 },
+  { max: 150, margin: 22 },
+  { max: 300, margin: 20 },
+  { max: 500, margin: 10 },
+  { max: null, margin: 20 }
+];
+let plItems      = []; // working items after "Generar"
+let plFuzzyPairs = [];
+let plShowExcluded = false;
+let plAutoExcludedArabic = 0;
+let plAutoExcludedCategory = 0;
+
+// ── Known brands (detected directly from the product name, not from message structure) ──
+// Each entry: [nombre a mostrar, ...alias con los que aparece dentro del nombre del producto]
+const KNOWN_BRANDS = [
+  ['12 Parfumeurs Francais'], ['Acqua di Sardegna'], ['Alexandre J'], ['Alfred Ritchy'],
+  ['Arabian Oud'], ['Atelier Rebul'], ['Bois 1920'], ['Bond No 9', 'BOND NO 9'],
+  ['Bvlgari', 'BVL'], ['Byredo'], ['Chabaud Maison de Parfum'], ['Christian Dior', 'CHRISTIAN DIOR', 'DIOR'],
+  ['Clive Christian'], ['Creed'], ['Diptyque'], ['Essential Parfums'], ['Fragrance du Bois'],
+  ['Frederic Malle'], ['Giorgio Armani', 'ARMANI'], ['Gritti'], ['Haute Fragrance Company', 'HFC'],
+  ['Initio'], ['Jo Malone'], ['Jo Milano'], ['Juliette Has a Gun'], ['Kajal'], ['Kilian'],
+  ['Le Labo'], ['Maison Crivelli'], ['Maison Margiela'], ['Mancera Paris', 'MANCERA'],
+  ['Matiere Premiere'], ['Memo Paris', 'MEMO'], ['Mizensir'], ['Montale'], ['New Notes'], ['Nishane'],
+  ['Ormonde Jayne'], ['Paradis des Sens'], ['Parfums de Marly', 'MARLY'], ['Roja'], ['Scentologia'],
+  ['Sospiro'], ['Stephane Humbert Lucas 777', 'STEPHANE HUMBERT LUCAS', 'STEPHANE HUMBERT'],
+  ['Thameen'], ['The House of Oud', 'THOO HOUSE', 'THOO'],
+  ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford'], ['Vertus'], ['Vilhelm'], ['Xerjoff'],
+  ['Kayali'], ['Abercrombie & Fitch', 'ABERCROMBIE & FITCH', 'ABERCROMBIE FITCH', 'ABERCROMBIE'], ['Amouage'],
+  ['Argos'], ['Ariana Grande', 'ARIANA G'], ['BDK Parfums', 'BDK'], ['Boadicea the Victorious', 'BOADICEA'],
+  ['Born to Stand Out'], ['Cartier'], ['Chopard'], ['Coach'], ['Dumont'],
+  ['Goldfield & Banks', 'GOLDFIELD & BANKS', 'GOLDFIELD BANKS'],
+  ['Karl Lagerfeld'], ['Lorenzo Pazzaglia'], ['Louis Vuitton'],
+  ['Maison Francis Kurkdjian', 'MAISON FRANCIS KURKDJIAN', 'MFK'],
+  ['Mercedes-Benz', 'MERCEDES BENZ'], ['New Brand', 'NEW BRAND'],
+  ['Rosendo Mateus', 'ROSENDO MATUE', 'ROSENDO MATEUS'], ['Salvatore Ferragamo', 'SAL FERRAG'],
+  ['Victorinox Swiss Army', 'SWISS ARMY'],
+  ['Van Cleef & Arpels', 'VAN CLEEF & ARPELS', 'VAN CLEEF ARPELS'],
+  ['Animale'], ['Antonio Banderas', 'ANTONIO'], ['Azzaro'], ['Billie Eilish'], ['Britney Spears', 'BRITNEY'], ['Burberry'],
+  ['Cacharel'], ['Calvin Klein', 'CK'], ['Carolina Herrera', 'CAROLINA'], ['Chanel'], ['Chloe'], ['Clinique'],
+  ['Davidoff'], ['Diesel'], ['Dolce&Gabbana', 'DOLCE&GABBANA', 'DOLCE & GABBANA', 'D&G', 'DOLCE GAB'],
+  ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV'], ['Ferrari'], ['Giorgio Beverly Hills'],
+  ['Givenchy', 'GIV'], ['Gres'], ['Gucci'], ['Guerlain'], ['Halloween', 'HALLOWEN'], ['Hermes Paris', 'HERMES'],
+  ['Hugo Boss'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G'],
+  ['Jimmy Choo'], ['Joop'], ['Juicy Couture'], ['Kenzo'], ['Lacoste'], ['Lancome'], ['Lomani'],
+  ['Marc Jacobs'], ['Marina de Bourbon', 'MARINA'], ['Michael Kors'], ['Montblanc', 'MONT BLANC'], ['Moschino'],
+  ['Narciso Rodriguez'], ['Nina Ricci', 'NINA'], ['Paco Rabanne', 'PACO'], ['Paloma Picasso'], ['Prada'],
+  ['Ralph Lauren', 'RALPH L'], ['Sabrina Carpenter', 'SAB CARPENTER'], ['Sarah Jessica Parker'], ['Shakira'],
+  ['Thierry Mugler', 'T MUGLER'],
+  ['Tiffany & Co'], ['Tommy Hilfiger', 'TOMMY'], ['Valentino'], ['Versace'],
+  ['Viktor&Rolf', 'VIKTOR&ROLF', 'VIKTOR & ROLF', 'VIKTOR ROLF'], ['Yves Saint Laurent', 'YVES SAINT LAURENT', 'YSL'],
+
+  // Agregadas por el proveedor "VARIOS" (2026-08-10) — marcas occidentales/de diseñador no árabes
+  ['Agatha Paris', 'AGATHA'], ['Agua Brava'], ['Alviero Martini'], ['Arrogance'],
+  ['Arsenal'], ['Axis'], ['Benetton', 'UNITED COLORS OF BENETTON'], ['Blauer'], ['Blumarine'],
+  ['Cuba Paris', 'CUBA'], ['Elodie Roy'], ['Enrico Coveri'], ['Escentric Molecules', 'ESCENTRIC'],
+  ['Faconnable'], ['Fragluxe'], ['Fred Hayman', "FRED HAYMAN'S"], ['Furla'], ['Gisada'], ['J.Arthe', 'J ARTHE'],
+  ['Jacomo'], ['Jaguar'], ['Jennifer Lopez', 'JENNIFER L'], ['Kate Spade'], ['Katy Perry'],
+  ['La Rive'], ['Lanvin'], ['Ted Lapidus', 'LAPIDUS'], ['Loewe'], ['Lonkoom'], ['Lotto'],
+  ['Mandarina Duck'], ['Mauboussin'], ['Max & Co'], ['Moncler'], ['Nadia Ferreira'],
+  ['Nazareno Gabrielli', 'NAZARENO'], ['One Direction'], ['Pascal Morabito'], ['Perry Ellis'],
+  ['Pino Silvestre'], ['Pitbull'], ['Porsche Design'], ['Puccini'], ['Reebok'],
+  ['Salvador Dali', 'SAL DALI'], ['Skil'], ['Sorvella'], ['Stella Dustin'],
+  ['Ulric de Varens', 'UDV'], ["Women'Secret", 'WOMEN ST'],
+  ['Police'], ['Paris Bleu'], ['David Beckham'], ['Pepe Jeans'], ['Bharara'],
+  ['Oscar de la Renta', 'OSCAR DL'], ['Tous'], ['Trussardi'], ['Replay'], ['Rochas'],
+  ['Escada'], ['Cool & Cool', 'COOL&COOL'], ['Brut'], ['Nautica'], ['Paris Hilton'],
+  ['Victorio & Lucchino', 'VICTORIO &', 'VICTORIO&LUCCHINO'],
+
+  // Marcas árabes/de Medio Oriente detectadas en el proveedor "VARIOS" — se agregan para que
+  // se etiqueten bien, y están en EXCLUDED_BRANDS más abajo para sacarlas de la lista generada.
+  ['Adyan'], ['Afnan'], ['Ajmal'], ["Al A'raaf", "AL A'RAAF", 'AL ARAAF'], ['Al Haramain'],
+  ['Al Wataniah'], ['Armaf'], ['Dar Al Ward', 'DAR EL WARD', 'DAR AL WARD'], ['Lattafa'],
+  ['Maison Alhambra'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
+  ['Rayhaan'], ['Sahari'],
+  // Confianza media (revisar) — sí se agregan para detectarlas, pero confirmá si van también excluidas
+  ['Borouj'], ['Mawwal'], ['French Avenue'], ['Zirconia'], ['Arqus'], ['Bespoke'], ['Marina Royal'], ['Amaran']
+];
+
+// Marcas que se excluyen automáticamente de la lista generada (perfumes árabes/de Medio Oriente
+// que el proveedor mezcla con las occidentales). Usa el nombre canónico (primer elemento del entry).
+const EXCLUDED_BRANDS = new Set([
+  'Adyan', 'Afnan', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Armaf',
+  'Dar Al Ward', 'Lattafa', 'Maison Alhambra', 'Maryaj', 'Nasma', 'Nejma',
+  'Orientica', 'Rasasi', 'Rayhaan', 'Sahari'
+]);
+
+// Categorías que no son perfume y aparecen mezcladas en algunos proveedores (ej. "VARIOS" 2026-08-10):
+// extensiones/productos de cabello ("C "), maquillaje MAC, productos infantiles con licencia, envases vacíos.
+// Esto se excluye siempre, sin toggle — no depende de marca, es directamente otro rubro.
+const NON_PERFUME_PATTERNS = [
+  /^C\s/i,        // ej. "C STELLA DUSTIN ACOND ALL HAIR...", "C JOICO...", "C KERASTASE..." — cabello
+  /^MAC\s/i,      // maquillaje MAC Cosmetics
+  /^(KIT\s)?INFANTIL\b/i, // productos infantiles con licencia (Disney, Batman, etc.), sueltos o en kit
+  /^FRASCO\b/i,   // envases/frascos vacíos, no es un producto terminado
+];
+
+function plIsNonPerfumeCategory(name) {
+  const s = String(name).trim();
+  return NON_PERFUME_PATTERNS.some(re => re.test(s));
+}
+
+let customBrands = [];
+try { customBrands = JSON.parse(localStorage.getItem('importo-custom-brands') || '[]'); } catch { customBrands = []; }
+
+function saveCustomBrands() {
+  localStorage.setItem('importo-custom-brands', JSON.stringify(customBrands));
+}
+
+// Memoria de duplicados: una vez que confirmás o descartás un par ("es el mismo" / "son distintos"),
+// se guarda por nombre normalizado y no se vuelve a preguntar en futuras generaciones.
+let plDuplicateDecisions = {};
+try { plDuplicateDecisions = JSON.parse(localStorage.getItem('importo-duplicate-decisions') || '{}'); } catch { plDuplicateDecisions = {}; }
+
+function saveDuplicateDecisions() {
+  localStorage.setItem('importo-duplicate-decisions', JSON.stringify(plDuplicateDecisions));
+}
+
+function plDuplicateKey(nameA, nameB) {
+  const ca = plNormalizeCore(nameA).core;
+  const cb = plNormalizeCore(nameB).core;
+  return [ca, cb].sort().join('::');
+}
+
+function plMergeDuplicate(idA, idB) {
+  const a = plItems.find(x => x.id === idA);
+  const b = plItems.find(x => x.id === idB);
+  if (!a || !b) return; // uno de los dos ya se sacó por otra fusión
+  const [cheap, exp] = a.priceUsd <= b.priceUsd ? [a, b] : [b, a];
+  cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
+  cheap.multiSource = true;
+  plItems = plItems.filter(x => x.id !== exp.id);
+}
+
+// Limpieza única: sacar marcas guardadas de sesiones anteriores que ahora ya están cubiertas
+// por la lista conocida (evita duplicados tipo "Hermes" vs "Hermes Paris").
+{
+  const before = customBrands.length;
+  customBrands = customBrands.filter(b => !detectKnownBrand(` ${b} `));
+  if (customBrands.length !== before) saveCustomBrands();
+}
+
+function detectKnownBrand(name) {
+  // separadores como "P.MARCA", "CAIXA/AMASADA", "BASADO/INITIO" no llevan espacio —
+  // hay que partirlos antes de buscar, si no la marca nunca calza aunque esté en la lista.
+  const norm = ' ' + String(name).toUpperCase()
+    .replace(/[’']/g, "'")
+    .replace(/[.\/,_()\-]/g, ' ')
+    .replace(/\s+/g, ' ').trim() + ' ';
+  let best = null, bestLen = 0;
+  for (const entry of KNOWN_BRANDS) {
+    const label = entry[0];
+    const candidates = [label.toUpperCase(), ...entry.slice(1)];
+    for (const cand of candidates) {
+      const c = ' ' + cand.toUpperCase() + ' ';
+      if (cand.length > bestLen && norm.includes(c)) { best = label; bestLen = cand.length; }
+    }
+  }
+  for (const label of customBrands) {
+    const c = ' ' + label.toUpperCase() + ' ';
+    if (label.length > bestLen && norm.includes(c)) { best = label; bestLen = label.length; }
+  }
+  return best;
+}
+
+function addCustomBrand(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return;
+  // Si ya está cubierta (por nombre completo o alias, ej. "Hermes" ya cae bajo "Hermes Paris"),
+  // no la agregamos de nuevo — evita terminar con dos marcas para lo mismo.
+  if (detectKnownBrand(` ${clean} `)) return;
+  if (customBrands.some(b => b.toLowerCase() === clean.toLowerCase())) return;
+  customBrands.push(clean);
+  saveCustomBrands();
+  renderPlBrandTags();
+}
+
+function removeCustomBrand(name) {
+  customBrands = customBrands.filter(b => b !== name);
+  saveCustomBrands();
+  renderPlBrandTags();
+}
+
+function renderPlBrandTags() {
+  const el = document.getElementById('pl-brand-tags');
+  if (!el) return;
+  el.innerHTML = customBrands.map(b => `
+    <span class="catalog-tag">
+      ${esc(b)}
+      <button class="catalog-tag-close" onclick="removeCustomBrand('${esc(b)}')" title="Quitar">×</button>
+    </span>`).join('') || '<span style="font-size:.75rem;color:var(--muted);">Ninguna agregada todavía — se suman solas cuando corregís una marca en la tabla de revisión.</span>';
+}
+
+function addCustomBrandFromInput() {
+  const input = document.getElementById('pl-brand-input');
+  addCustomBrand(input.value);
+  input.value = '';
+}
+
+// ── Parsing: pasted WhatsApp-style text ──
+function plParsePriceFromText(str) {
+  const nums = [...str.matchAll(/\$\s*([\d.,]+)/g)].map(m => parsePrice(m[1]));
+  const valid = nums.filter(n => !isNaN(n) && n > 0);
+  if (valid.length === 0) return NaN;
+  return valid[valid.length - 1]; // last $ amount = effective price (handles ~old~ -> new discount pattern)
+}
+
+function parsePastedList(text) {
+  const lines = text.split('\n');
+  let currentBrand = '';
+  const items = [];
+  const itemRe   = /^[▪•]\s*\*(.+?)\*\s*-\s*(.+)$/;
+  const headerRe = /^\*(.+)\*$/;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    const im = line.match(itemRe);
+    if (im) {
+      const name  = im[1].trim();
+      const price = plParsePriceFromText(im[2]);
+      if (name && !isNaN(price) && price > 0) {
+        const brand = detectKnownBrand(name) || currentBrand;
+        items.push({ name, brand, price });
+      }
+      continue;
+    }
+    const hm = line.match(headerRe);
+    if (hm) {
+      currentBrand = hm[1].replace(/[💧💨⭐🇵🇾🔥➡️]/g, '').trim();
+    }
+  }
+  return items;
+}
+
+function importPastedText() {
+  const ta = document.getElementById('pl-paste-text');
+  const text = ta.value;
+  if (!text.trim()) return;
+  const items = parsePastedList(text);
+  if (items.length === 0) {
+    alert('No se encontraron productos en el texto pegado. Revisá que tenga el formato con viñetas ▪ y precios $.');
+    return;
+  }
+  plSources.push({ id: plNextSourceId++, name: `Texto pegado (${items.length})`, items });
+  ta.value = '';
+  renderPlSourceTags();
+}
+
+// ── Parsing: Excel/Numbers ──
+function parseExcelPriceList(rows2d) {
+  if (rows2d.length < 2) return [];
+  const nameKw  = ['descripcion','description','producto','product','nombre','name','articulo','item'];
+  const priceKw = ['precio','price','usd','costo','cost','valor'];
+  const brandKw = ['marca','brand','categoria','category'];
+
+  let headerRow = -1, nameCol = -1, priceCol = -1, brandCol = -1;
+  for (let i = 0; i < Math.min(10, rows2d.length); i++) {
+    const hdrs = rows2d[i].map(h => String(h ?? '').toLowerCase().trim());
+    const nc = hdrs.findIndex(h => nameKw.some(k => h.includes(k)));
+    const pc = hdrs.findIndex(h => priceKw.some(k => h.includes(k)));
+    const bc = hdrs.findIndex(h => brandKw.some(k => h.includes(k)));
+    if (nc >= 0 && pc >= 0) { headerRow = i; nameCol = nc; priceCol = pc; brandCol = bc; break; }
+  }
+  if (headerRow < 0) { headerRow = 0; nameCol = 1; priceCol = 2; }
+
+  const items = [];
+  for (let i = headerRow + 1; i < rows2d.length; i++) {
+    const row   = rows2d[i];
+    const name    = String(row[nameCol] ?? '').trim();
+    const price   = parsePrice(row[priceCol]);
+    const colBrand = brandCol >= 0 ? String(row[brandCol] ?? '').trim() : '';
+    const brand   = detectKnownBrand(name) || colBrand;
+    if (name && !isNaN(price) && price > 0) items.push({ name, brand, price });
+  }
+  return items;
+}
+
+function importPlExcel(fileList) {
+  Array.from(fileList).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb     = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+      const sheet  = wb.Sheets[wb.SheetNames[0]];
+      const rows2d = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const items  = parseExcelPriceList(rows2d);
+      const label  = file.name.replace(/\.[^.]+$/, '');
+      plSources.push({ id: plNextSourceId++, name: label, items });
+      renderPlSourceTags();
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function removePlSource(id) {
+  plSources = plSources.filter(s => s.id !== id);
+  renderPlSourceTags();
+}
+
+function renderPlSourceTags() {
+  const el = document.getElementById('pl-source-tags');
+  if (!el) return;
+  el.innerHTML = plSources.map(s => `
+    <span class="catalog-tag">
+      ${esc(s.name)} <span style="opacity:.7">(${s.items.length})</span>
+      <button class="catalog-tag-close" onclick="removePlSource(${s.id})" title="Quitar">×</button>
+    </span>`).join('');
+}
+
+// ── Margin tiers UI ──
+function renderPlTiers() {
+  const el = document.getElementById('pl-tiers');
+  if (!el) return;
+  el.innerHTML = plTiers.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+      <span style="font-size:.8rem;color:var(--muted);min-width:150px;">Costo original hasta</span>
+      ${t.max == null
+        ? '<span style="font-size:.82rem;font-weight:700;min-width:70px;">∞ (resto)</span>'
+        : `<input type="number" value="${t.max}" min="0" step="1"
+             style="width:80px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;"
+             oninput="updatePlTier(${i},'max',+this.value)" />`}
+      <span style="font-size:.8rem;color:var(--muted);">USD → margen</span>
+      <input type="number" value="${t.margin}" min="0" max="95" step="0.5"
+        style="width:64px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;"
+        oninput="updatePlTier(${i},'margin',+this.value)" />%
+      ${t.max != null
+        ? `<button class="del-btn" onclick="removePlTier(${i})" title="Quitar tramo">
+             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+           </button>`
+        : ''}
+    </div>`).join('') +
+    `<button class="btn btn-outline" style="margin-top:2px;" onclick="addPlTier()">+ Agregar tramo</button>`;
+}
+
+function updatePlTier(i, field, val) {
+  if (!plTiers[i]) return;
+  plTiers[i][field] = val;
+  if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
+}
+
+function addPlTier() {
+  plTiers.splice(Math.max(0, plTiers.length - 1), 0, { max: 100, margin: 30 });
+  renderPlTiers();
+}
+
+function removePlTier(i) {
+  if (plTiers.length <= 1) return;
+  plTiers.splice(i, 1);
+  renderPlTiers();
+}
+
+function marginForPriceUsd(priceUsd) {
+  const finite = plTiers.filter(t => t.max != null).sort((a, b) => a.max - b.max);
+  for (const t of finite) if (priceUsd <= t.max) return t.margin;
+  const catchAll = plTiers.find(t => t.max == null);
+  return catchAll ? catchAll.margin : (finite.length ? finite[finite.length - 1].margin : 30);
+}
+
+// ── Normalization & matching ──
+const PL_SIZE_RE     = /(\d+(?:[.,]\d+)?)\s*ML\b/i;
+// NOTE: TESTER, CX/FEIA/AMASSADA (caja dañada) y S/T·C/T NO se incluyen acá a propósito —
+// son variantes con precio/valor distinto y nunca deben tratarse como el mismo producto.
+const PL_PREFIX_WORDS = new Set([
+  'PERF','UNI','FEM','MASC','KIT','NOVO'
+]);
+
+function plNormalizeCore(name) {
+  let s = String(name).toUpperCase();
+  s = s.replace(/[’'".()\/]/g, ' ');
+  s = s.replace(/~[^~]*~|➡️|🔥|⭐|💧|💨/g, ' ');
+  const sizeMatch = s.match(PL_SIZE_RE);
+  const ml = sizeMatch ? parseFloat(sizeMatch[1].replace(',', '.')) : null;
+  s = s.replace(PL_SIZE_RE, ' ');
+  s = s.replace(/\bEXDP\b|\bEXTDP\b|\bEXTRAIT DE PARFUM\b|\bPARFUM\b/g, 'EDP');
+  s = s.replace(/[^A-Z0-9 ]/g, ' ');
+  const tokens = s.split(/\s+/).filter(t => t && !PL_PREFIX_WORDS.has(t));
+  const core = tokens.slice().sort().join(' ');
+  return { core, ml };
+}
+
+function plItemKey(item) {
+  const { core, ml } = plNormalizeCore(item.name);
+  return `${core}__${ml ?? 'NA'}`;
+}
+
+function plTokenSet(core) { return new Set(core.split(' ').filter(Boolean)); }
+
+function plJaccard(a, b) {
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter++;
+  const union = new Set([...a, ...b]).size;
+  return union === 0 ? 0 : inter / union;
+}
+
+function detectFuzzyDuplicates(items) {
+  const pairs = [];
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const a = items[i], b = items[j];
+      if (a.sourceLabel === b.sourceLabel) continue; // only flag cross-source
+      const na = plNormalizeCore(a.name), nb = plNormalizeCore(b.name);
+      if (na.ml !== nb.ml) continue; // never suggest merging different sizes
+      const sim = plJaccard(plTokenSet(na.core), plTokenSet(nb.core));
+      if (sim >= 0.55 && sim < 1) {
+        const decision = plDuplicateDecisions[plDuplicateKey(a.name, b.name)];
+        if (decision === 'different') continue; // ya dijiste que no son el mismo — no se vuelve a preguntar
+        pairs.push({ a: a.id, b: b.id, sim, resolved: false, remembered: decision === 'same' });
+      }
+    }
+  }
+  pairs.sort((x, y) => y.sim - x.sim);
+  return pairs.slice(0, 40);
+}
+
+// ── Costing ──
+function plComputeCostTotal(priceUsd, mode, rates, envioUnid) {
+  const { pixRate, pixUsdRate, oficial, usdt, brlArsRate, comUSD } = rates;
+  let costoARS1 = 0;
+  if (mode === 'usdt') {
+    costoARS1 = priceUsd * usdt;
+  } else if (mode === 'ars') {
+    const brlUnid = priceUsd * pixRate;
+    costoARS1 = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
+  } else {
+    const brlUnid = priceUsd * pixRate;
+    const usdUnid = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
+    costoARS1 = usdUnid * oficial;
+  }
+  const comisionARS = comUSD * usdt;
+  return costoARS1 + comisionARS + envioUnid;
+}
+
+function plFinalPrice(costTotal, marginPct, roundStep) {
+  if (costTotal <= 0) return 0;
+  if (marginPct <= 0 || marginPct >= 100) return Math.ceil(costTotal / roundStep) * roundStep;
+  const raw = costTotal / (1 - marginPct / 100);
+  return Math.ceil(raw / roundStep) * roundStep;
+}
+
+function plGetConfig() {
+  return {
+    mode: document.getElementById('pl-modo').value,
+    envioUnid: parseFloat(document.getElementById('pl-envio-unid').value) || 0,
+    roundStep: parseFloat(document.getElementById('pl-round-step').value) || 1,
+    rates: {
+      pixRate:    getRate('r-pix'),
+      pixUsdRate: getRate('r-pix-usd'),
+      oficial:    getRate('r-oficial'),
+      usdt:       getRate('r-usdt'),
+      brlArsRate: getRate('r-brl-ars'),
+      comUSD:     getRate('r-comision')
+    }
+  };
+}
+
+function recomputePlPricing() {
+  const cfg = plGetConfig();
+  plItems.forEach(it => {
+    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.mode, cfg.rates, cfg.envioUnid);
+    it.marginPct   = marginForPriceUsd(it.priceUsd);
+    it.finalPriceArs = plFinalPrice(it.costTotal, it.marginPct, cfg.roundStep);
+  });
+}
+
+// ── Generate pipeline ──
+function generatePriceList() {
+  const all = [];
+  plSources.forEach(src => src.items.forEach(it => all.push({ ...it, sourceLabel: src.name })));
+  if (all.length === 0) {
+    alert('Importá al menos una lista de proveedor primero.');
+    return;
+  }
+
+  const groups = new Map();
+  all.forEach(it => {
+    const key = plItemKey(it);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
+  });
+
+  const excludeArabicEnabled = document.getElementById('pl-exclude-arabic')?.checked ?? true;
+
+  plItems = [];
+  let idc = 1, autoExcludedArabic = 0, autoExcludedCategory = 0;
+  for (const arr of groups.values()) {
+    arr.sort((a, b) => a.price - b.price);
+    const cheapest = arr[0];
+    const brand = cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
+    const isNonPerfume = plIsNonPerfumeCategory(cheapest.name);
+    const isArabic = excludeArabicEnabled && EXCLUDED_BRANDS.has(brand);
+    if (isNonPerfume) autoExcludedCategory++;
+    else if (isArabic) autoExcludedArabic++;
+    plItems.push({
+      id: idc++,
+      name: cheapest.name,
+      brand,
+      priceUsd: cheapest.price,
+      sourceLabel: cheapest.sourceLabel,
+      alternates: arr.slice(1).map(a => ({ source: a.sourceLabel, price: a.price })),
+      multiSource: arr.length > 1,
+      excluded: isNonPerfume || isArabic,
+      autoExcludedReason: isNonPerfume ? 'category' : (isArabic ? 'arabic' : null),
+      manualPrice: null
+    });
+  }
+
+  plAutoExcludedArabic = autoExcludedArabic;
+  plAutoExcludedCategory = autoExcludedCategory;
+  plFuzzyPairs = detectFuzzyDuplicates(plItems);
+
+  // Los pares que ya confirmaste como "el mismo producto" en otra sesión se fusionan solos,
+  // sin volver a preguntar.
+  plFuzzyPairs.filter(p => p.remembered).forEach(p => plMergeDuplicate(p.a, p.b));
+  plFuzzyPairs = plFuzzyPairs.filter(p => !p.remembered);
+
+  recomputePlPricing();
+
+  document.getElementById('pl-result-card').style.display = '';
+  renderPlFuzzyPanel();
+  renderPlTable();
+}
+
+// ── Fuzzy review panel ──
+function renderPlFuzzyPanel() {
+  const card = document.getElementById('pl-fuzzy-card');
+  const list = document.getElementById('pl-fuzzy-list');
+  const pending = plFuzzyPairs.filter(p => !p.resolved);
+  if (pending.length === 0) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  list.innerHTML = pending.map(p => {
+    const idx = plFuzzyPairs.indexOf(p);
+    const a = plItems.find(x => x.id === p.a);
+    const b = plItems.find(x => x.id === p.b);
+    if (!a || !b) return '';
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;
+                   padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <div style="font-size:.82rem;line-height:1.5;">
+          <div><strong>${esc(a.name)}</strong> — USD ${a.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(a.sourceLabel)})</span></div>
+          <div><strong>${esc(b.name)}</strong> — USD ${b.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(b.sourceLabel)})</span></div>
+        </div>
+        <div class="btn-group" style="flex-shrink:0;">
+          <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, true)">Es el mismo</button>
+          <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, false)">Son distintos</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function resolvePlFuzzyPair(idx, sameProduct) {
+  const pair = plFuzzyPairs[idx];
+  if (!pair || pair.resolved) return;
+  pair.resolved = true;
+
+  const a = plItems.find(x => x.id === pair.a);
+  const b = plItems.find(x => x.id === pair.b);
+  if (a && b) {
+    plDuplicateDecisions[plDuplicateKey(a.name, b.name)] = sameProduct ? 'same' : 'different';
+    saveDuplicateDecisions();
+  }
+
+  if (sameProduct) {
+    plMergeDuplicate(pair.a, pair.b);
+    recomputePlPricing();
+  }
+  renderPlFuzzyPanel();
+  renderPlTable();
+}
+
+// ── Main review table ──
+function togglePlExcluded() {
+  plShowExcluded = !plShowExcluded;
+  renderPlTable();
+}
+
+// Nombre para mostrar/exportar: sin el código de tipo genérico ("P." / "PERF") ni la marca repetida
+// (ya tiene su propia columna). El nombre original (it.name) no se toca — sigue usándose para el matching.
+const PL_NAME_NOISE_TOKENS = new Set([
+  'EDP','EDT','EDC','PARFUM','EXTRAIT','ML','UNI','FEM','MASC','TESTER','KIT',
+  'F','M','U','CX','FEIA','AMASSADA','S','T','C','NOVO'
+]);
+
+// Portugués -> Español — solo palabras verificadas contra listas reales para evitar falsos positivos
+// (ej. "NOVA" se descartó a propósito: es parte del nombre real de "Angel Nova" de Mugler, no un marcador).
+const PT_TO_ES_DICT = [
+  [/\bCAIXA\b/gi, 'Caja'],
+  [/\bAMASSADA\b/gi, 'Abollada'],
+  [/\bAMASADA\b/gi, 'Abollada'],
+  [/\bFEIA\b/gi, 'Dañada'],
+  [/\bFEMININO\b/gi, 'Femenino'],
+  [/\bNOVO\b/gi, 'Nuevo'],
+];
+
+function plTranslatePt(text) {
+  let s = text;
+  for (const [re, repl] of PT_TO_ES_DICT) s = s.replace(re, repl);
+  return s;
+}
+
+// Nombres de fragancia donde la palabra de la marca es parte inseparable del nombre real
+// (no una repetición redundante del proveedor) — si aparecen, no le tocamos la marca al nombre.
+// Se amplía a mano cuando aparezcan más casos así.
+const PL_PROTECTED_NAMES = [
+  'TOMMY GIRL', 'TOMMY NOW', 'TOMMY FOREVER',
+];
+
+function plCleanName(name, brand) {
+  const base = plTranslatePt(
+    String(name)
+      .replace(/^\s*(?:PERF|P)\b\.?\s*/i, '')
+      .replace(/\(\s*\d+\s*\)/g, ' ') // código interno del proveedor, ej "(3572)" — no aporta nada al cliente
+      .replace(/\b(?:UNI|MASC|FEM)\b/gi, ' ') // código de género — tampoco aporta
+      .replace(/\s+/g, ' ').trim()
+  );
+  if (!brand) return base;
+
+  const isProtected = PL_PROTECTED_NAMES.some(p =>
+    new RegExp('\\b' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(base)
+  );
+  if (isProtected) return base;
+
+  const kb = KNOWN_BRANDS.find(e => e[0] === brand);
+  const candidates = kb ? [kb[0], ...kb.slice(1)] : [brand];
+  let stripped = base;
+  for (const cand of candidates) {
+    const escaped  = cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const flexible = escaped.replace(/\s+/g, '[\\s./,_()-]+');
+    // Solo la PRIMERA aparición — si la marca se repite (ej. "CHANEL BLEU DE CHANEL"), la segunda
+    // suele ser parte del nombre real de la fragancia, no una repetición redundante.
+    stripped = stripped.replace(new RegExp('\\b' + flexible + '\\b', 'i'), ' ');
+  }
+  stripped = stripped
+    .replace(/\(\s*\)/g, ' ')
+    .replace(/([A-Z0-9])[/-]+(\s|$)/gi, '$1$2') // barra/guión colgante ("BASADO/ HIGH..." -> "BASADO HIGH...")
+    .replace(/\s+/g, ' ').trim();
+
+  // Si sacar la marca no deja nada identificable (solo talle/concentración/género), mejor no tocar el nombre —
+  // pasa con fragancias que se llaman igual (o casi) que la marca, ej. "Karl Ikonik" de Karl Lagerfeld.
+  const hasContent = stripped.split(' ').some(tok => {
+    const t = tok.replace(/[^A-Z0-9]/gi, '');
+    return t.length >= 2 && !/^\d+(ML)?$/i.test(t) && !PL_NAME_NOISE_TOKENS.has(t.toUpperCase());
+  });
+
+  return hasContent ? stripped : base;
+}
+
+function renderPlTable() {
+  const body = document.getElementById('pl-body');
+  if (!body) return;
+  const sorted = [...plItems].sort((a, b) =>
+    (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
+
+  const visible  = sorted.filter(it => !it.excluded);
+  const excluded = sorted.filter(it => it.excluded);
+
+  const query = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
+  const matchesQuery = it => !query
+    || (it.brand || '').toLowerCase().includes(query)
+    || plCleanName(it.name, it.brand).toLowerCase().includes(query);
+
+  const rowsToShow = (plShowExcluded ? sorted : visible).filter(matchesQuery);
+
+  body.innerHTML = rowsToShow.map(it => {
+    const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
+    const rowStyle = it.excluded ? 'opacity:.45;' : '';
+    const origen = it.multiSource
+      ? `<span title="Alternativas: ${esc(it.alternates.map(a => a.source + ' USD ' + a.price.toFixed(2)).join(', '))}">
+           ${esc(it.sourceLabel)} 🔗×${it.alternates.length + 1}
+         </span>`
+      : esc(it.sourceLabel);
+    return `
+      <tr id="pl-row-${it.id}" style="${rowStyle}">
+        <td>
+          <input type="text" value="${esc(it.brand)}" placeholder="Sin marca ⚠"
+            style="width:150px;padding:6px 7px;border:1px solid ${it.brand ? 'transparent' : 'var(--warn)'};border-radius:5px;font-size:.85rem;background:transparent;"
+            onchange="updatePlBrand(${it.id}, this.value)" />
+        </td>
+        <td style="min-width:220px;" title="${esc(it.name)}">
+          ${it.autoExcludedReason === 'arabic' ? '<span title="Excluido automático — marca árabe/de Medio Oriente" style="margin-right:4px;">🌙</span>' : ''}${it.autoExcludedReason === 'category' ? '<span title="Excluido automático — no es perfume" style="margin-right:4px;">🚫</span>' : ''}${esc(plCleanName(it.name, it.brand))}
+        </td>
+        <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
+        <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
+        <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
+        <td class="cell-computed">${it.marginPct}%</td>
+        <td>
+          <input type="number" value="${Math.round(price)}" min="0" step="${document.getElementById('pl-round-step').value || 100}"
+            style="width:100px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;text-align:right;"
+            oninput="updatePlManualPrice(${it.id}, +this.value)" />
+          ${it.manualPrice != null ? `<button class="del-btn" title="Volver al precio calculado" onclick="resetPlManualPrice(${it.id})">↺</button>` : ''}
+        </td>
+        <td>
+          ${it.excluded
+            ? `<button class="del-btn" title="Restaurar" onclick="restorePlItem(${it.id})">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 12 3 6 9 6"/><path d="M3 6l6 6"/><path d="M21 12a9 9 0 1 1-3-6.7"/></svg>
+               </button>`
+            : `<button class="del-btn" title="Excluir" onclick="excludePlItem(${it.id})">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+               </button>`}
+        </td>
+      </tr>`;
+  }).join('');
+
+  const autoExcludedParts = [];
+  if (plAutoExcludedArabic > 0) autoExcludedParts.push(`${plAutoExcludedArabic} por marca árabe 🌙`);
+  if (plAutoExcludedCategory > 0) autoExcludedParts.push(`${plAutoExcludedCategory} no es perfume 🚫`);
+  const autoExcludedNote = autoExcludedParts.length ? ` (${autoExcludedParts.join(', ')})` : '';
+
+  document.getElementById('pl-summary').textContent = query
+    ? `${rowsToShow.length} resultado${rowsToShow.length !== 1 ? 's' : ''} de ${visible.length}`
+    : `${visible.length} producto${visible.length !== 1 ? 's' : ''}` +
+      (excluded.length ? ` · ${excluded.length} excluido${excluded.length !== 1 ? 's' : ''}` : '') +
+      autoExcludedNote;
+
+  const toggle = document.getElementById('pl-excluded-toggle');
+  if (excluded.length > 0) {
+    toggle.style.display = '';
+    toggle.textContent = plShowExcluded ? 'Ocultar excluidos' : `Mostrar ${excluded.length} excluido${excluded.length !== 1 ? 's' : ''}`;
+  } else {
+    toggle.style.display = 'none';
+  }
+}
+
+function updatePlManualPrice(id, val) {
+  const it = plItems.find(x => x.id === id);
+  if (it) it.manualPrice = val > 0 ? val : null;
+}
+
+function updatePlBrand(id, val) {
+  const it = plItems.find(x => x.id === id);
+  if (!it) return;
+  const clean = val.trim();
+  if (!clean) { it.brand = ''; renderPlTable(); return; }
+  // Si lo que escribiste ya matchea una marca/alias existente, usamos el nombre canónico
+  // (ej. escribís "Hermes" y queda "Hermes Paris") en vez de crear una marca duplicada.
+  const canonical = detectKnownBrand(` ${clean} `);
+  it.brand = canonical || clean;
+  if (!canonical) addCustomBrand(clean); // recién si es realmente nueva se aprende para la próxima
+  renderPlTable();
+}
+
+function resetPlManualPrice(id) {
+  const it = plItems.find(x => x.id === id);
+  if (it) { it.manualPrice = null; renderPlTable(); }
+}
+
+function excludePlItem(id) {
+  const it = plItems.find(x => x.id === id);
+  if (it) { it.excluded = true; renderPlTable(); }
+}
+
+function restorePlItem(id) {
+  const it = plItems.find(x => x.id === id);
+  if (it) { it.excluded = false; renderPlTable(); }
+}
+
+// ── Export ──
+function exportPlExcel() {
+  const sorted = [...plItems]
+    .filter(it => !it.excluded)
+    .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
+  if (sorted.length === 0) { alert('No hay productos para exportar.'); return; }
+
+  const rowsOut = [['Marca', 'Producto', 'Precio (ARS)']];
+  sorted.forEach(it => {
+    const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
+    rowsOut.push([it.brand || 'Sin categoría', plCleanName(it.name, it.brand), Math.round(price)]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rowsOut);
+  ws['!cols'] = [{ wch: 26 }, { wch: 55 }, { wch: 16 }];
+  ws['!autofilter'] = { ref: ws['!ref'] }; // flechitas de filtro/orden en Excel — dejan buscar por marca sin tocar nada más
+
+  // Precio como número real (se puede ordenar/sumar) pero mostrado como "$ 141.100"
+  for (let r = 1; r < rowsOut.length; r++) {
+    const cellRef = XLSX.utils.encode_cell({ r, c: 2 });
+    if (ws[cellRef]) ws[cellRef].z = '"$" #,##0';
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lista de precios');
+  XLSX.writeFile(wb, `lista_precios_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// Archivo único (sin hosting) con buscador en vivo — se lo mandás al cliente como cualquier
+// archivo por WhatsApp y lo abre en el navegador del celu, sin necesitar Excel.
+function exportPlSearchablePage() {
+  const sorted = [...plItems]
+    .filter(it => !it.excluded)
+    .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
+  if (sorted.length === 0) { alert('No hay productos para exportar.'); return; }
+
+  const data = sorted.map(it => ({
+    brand: it.brand || 'Sin categoría',
+    name: plCleanName(it.name, it.brand),
+    price: Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs)
+  }));
+  const dataJson = JSON.stringify(data).replace(/</g, '\\u003c');
+  const fecha = new Date().toLocaleDateString('es-AR');
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de precios</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f6f9; color: #1e293b; padding-bottom: 40px; }
+  header { position: sticky; top: 0; z-index: 10; background: #2563eb; color: #fff; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  header h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 2px; }
+  header .sub { font-size: .75rem; opacity: .85; margin-bottom: 12px; }
+  header input { width: 100%; padding: 11px 14px; border: none; border-radius: 8px; font-size: .95rem; background: #fff; color: #1e293b; }
+  header input:focus { outline: 2px solid #93c5fd; }
+  .container { max-width: 720px; margin: 0 auto; padding: 14px; }
+  .brand-group { margin-bottom: 18px; }
+  .brand-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #2563eb; background: #eff6ff; padding: 6px 12px; border-radius: 6px; margin-bottom: 6px; }
+  .item { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #fff; border: 1px solid #e0e4eb; border-radius: 8px; padding: 11px 14px; margin-bottom: 6px; }
+  .item .name { font-size: .88rem; font-weight: 600; }
+  .item .price { font-size: .92rem; font-weight: 700; color: #16a34a; white-space: nowrap; }
+  .empty { text-align: center; color: #64748b; padding: 40px 20px; font-size: .9rem; }
+  .count { font-size: .72rem; color: #64748b; margin: 4px 0 12px; min-height: 1em; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lista de precios</h1>
+  <div class="sub">Actualizado ${esc(fecha)} · ${data.length} productos</div>
+  <input id="q" type="search" placeholder="Buscar por marca o producto…" autocomplete="off" />
+</header>
+<div class="container">
+  <div class="count" id="count"></div>
+  <div id="results"></div>
+</div>
+<script>
+var DATA = ${dataJson};
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtPrice(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
+function render(query) {
+  var q = query.trim().toLowerCase();
+  var filtered = q ? DATA.filter(function(d) {
+    return d.brand.toLowerCase().indexOf(q) !== -1 || d.name.toLowerCase().indexOf(q) !== -1;
+  }) : DATA;
+  var groups = {};
+  filtered.forEach(function(d) { (groups[d.brand] = groups[d.brand] || []).push(d); });
+  var brands = Object.keys(groups).sort(function(a, b) { return a.localeCompare(b); });
+  document.getElementById('count').textContent = q ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
+  var out = '';
+  if (brands.length === 0) {
+    out = '<div class="empty">No se encontraron productos.</div>';
+  } else {
+    brands.forEach(function(b) {
+      out += '<div class="brand-group"><div class="brand-title">' + esc(b) + '</div>';
+      groups[b].forEach(function(d) {
+        out += '<div class="item"><span class="name">' + esc(d.name) + '</span><span class="price">' + fmtPrice(d.price) + '</span></div>';
+      });
+      out += '</div>';
+    });
+  }
+  document.getElementById('results').innerHTML = out;
+}
+document.getElementById('q').addEventListener('input', function(e) { render(e.target.value); });
+render('');
+<\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `lista_precios_buscable_${new Date().toISOString().slice(0, 10)}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+['pl-modo', 'pl-envio-unid', 'pl-round-step'].forEach(id => {
+  document.getElementById(id).addEventListener('change', () => {
+    if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
+  });
+});
+
+renderPlTiers();
+renderPlBrandTags();
 
 // ─────────────────────────────────────────────
 // Export plain text notes

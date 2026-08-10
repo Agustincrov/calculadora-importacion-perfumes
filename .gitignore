@@ -29,6 +29,7 @@ node_modules/
 *.xlsx
 *.xls
 compra_*.txt
+listas/
 
 # Windows alternate data stream markers
 *:Zone.Identifier
