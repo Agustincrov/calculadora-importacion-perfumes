@@ -418,7 +418,7 @@
       <h1>Calculadora de Importación</h1>
       <p>Ciudad del Este — Paraguay</p>
     </div>
-    <a href="https://agustincrov.github.io/calculadora-importacion-perfumes/guia.html"
+    <a href="https://agustincrov.github.io/calculadora-importacion-perfumes/docs/guia.html"
        target="_blank"
        style="font-size:.8rem;font-weight:600;color:var(--accent);text-decoration:none;
               border:1px solid var(--accent);padding:6px 13px;border-radius:6px;
@@ -873,8 +873,8 @@
           🔑 Configurar publicación automática (una sola vez) — <span id="pl-publish-secret-status"></span>
         </summary>
         <div style="margin-top:10px;font-size:.78rem;color:var(--muted);line-height:1.5;">
-          Publica <code>catalogo.html</code> directo en tu GitHub Pages sin tocar archivos ni git — el link para tus
-          clientes es siempre <strong>agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html</strong>.
+          Publica <code>docs/catalogo.html</code> directo en tu GitHub Pages sin tocar archivos ni git — el link para tus
+          clientes es siempre <strong>agustincrov.github.io/calculadora-importacion-perfumes/docs/catalogo.html</strong>.
           Necesita que tu Cloudflare Worker (<code>comparapi-proxy</code>) tenga configuradas dos variables secretas
           (Settings → Variables): <code>GITHUB_TOKEN</code> (fine-grained PAT, permiso de escritura solo en este repo)
           y <code>PUBLISH_SECRET</code> (cualquier clave larga random — pegá la misma acá abajo).
@@ -888,8 +888,8 @@
 
       <div style="font-size:.76rem;color:var(--muted);margin:-6px 0 14px;line-height:1.5;">
         💡 Si preferís hacerlo a mano: "Descargar página buscable" siempre descarga <code>catalogo.html</code>
-        (mismo nombre) — reemplazá ese archivo en la carpeta del repo,
-        <code>git add catalogo.html && git commit -m "catálogo" && git push</code>, y compartí el mismo link de arriba.
+        (mismo nombre) — movelo a <code>docs/catalogo.html</code> en la carpeta del repo (reemplazando el anterior),
+        <code>git add docs/catalogo.html && git commit -m "catálogo" && git push</code>, y compartí el mismo link de arriba.
         — así en WhatsApp les abre directo en el navegador (a diferencia de mandar el archivo suelto, que en iPhone no siempre abre bien).
       </div>
       <div class="table-wrap">
@@ -1914,7 +1914,7 @@ async function fetchAllRates() {
 // ─────────────────────────────────────────────
 let plSources     = []; // [{ id, name, items: [{name, brand, price}] }]
 let plNextSourceId = 1;
-let plTiers = [
+const PL_DEFAULT_TIERS = [
   { max: 60,  margin: 32 },
   { max: 100, margin: 24 },
   { max: 150, margin: 22 },
@@ -1922,6 +1922,15 @@ let plTiers = [
   { max: 500, margin: 10 },
   { max: null, margin: 20 }
 ];
+let plTiers = PL_DEFAULT_TIERS.map(t => ({ ...t }));
+try {
+  const savedTiers = JSON.parse(localStorage.getItem('importo-margin-tiers') || 'null');
+  if (Array.isArray(savedTiers) && savedTiers.length > 0) plTiers = savedTiers;
+} catch { /* se queda con el default */ }
+
+function savePlTiers() {
+  localStorage.setItem('importo-margin-tiers', JSON.stringify(plTiers));
+}
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
 let plShowExcluded = false;
@@ -2049,21 +2058,19 @@ function plMergeDuplicate(idA, idB) {
   plItems = plItems.filter(x => x.id !== exp.id);
 }
 
-// Limpieza única: sacar marcas guardadas de sesiones anteriores que ahora ya están cubiertas
-// por la lista conocida (evita duplicados tipo "Hermes" vs "Hermes Paris").
-{
-  const before = customBrands.length;
-  customBrands = customBrands.filter(b => !detectKnownBrand(` ${b} `));
-  if (customBrands.length !== before) saveCustomBrands();
-}
-
-function detectKnownBrand(name) {
+function plNormalizeForBrandMatch(name) {
   // separadores como "P.MARCA", "CAIXA/AMASADA", "BASADO/INITIO" no llevan espacio —
   // hay que partirlos antes de buscar, si no la marca nunca calza aunque esté en la lista.
-  const norm = ' ' + String(name).toUpperCase()
+  return ' ' + String(name).toUpperCase()
     .replace(/[’']/g, "'")
     .replace(/[.\/,_()\-]/g, ' ')
     .replace(/\s+/g, ' ').trim() + ' ';
+}
+
+// Busca SOLO contra la lista fija de marcas conocidas (KNOWN_BRANDS), sin mirar customBrands —
+// separado a propósito: si detectKnownBrand (más abajo) se usara acá, cada marca guardada por el
+// usuario "se detectaría a sí misma" y la limpieza de abajo las borraría todas en cada carga.
+function detectStaticBrand(norm) {
   let best = null, bestLen = 0;
   for (const entry of KNOWN_BRANDS) {
     const label = entry[0];
@@ -2073,9 +2080,24 @@ function detectKnownBrand(name) {
       if (cand.length > bestLen && norm.includes(c)) { best = label; bestLen = cand.length; }
     }
   }
-  for (const label of customBrands) {
-    const c = ' ' + label.toUpperCase() + ' ';
-    if (label.length > bestLen && norm.includes(c)) { best = label; bestLen = label.length; }
+  return { label: best, len: bestLen };
+}
+
+// Limpieza única: sacar marcas guardadas de sesiones anteriores que ahora ya están cubiertas
+// por la lista fija (evita duplicados tipo "Hermes" vs "Hermes Paris"). Compara solo contra
+// KNOWN_BRANDS, nunca contra las otras marcas guardadas.
+{
+  const before = customBrands.length;
+  customBrands = customBrands.filter(b => !detectStaticBrand(plNormalizeForBrandMatch(b)).label);
+  if (customBrands.length !== before) saveCustomBrands();
+}
+
+function detectKnownBrand(name) {
+  const norm = plNormalizeForBrandMatch(name);
+  let { label: best, len: bestLen } = detectStaticBrand(norm);
+  for (const custom of customBrands) {
+    const c = ' ' + custom.toUpperCase() + ' ';
+    if (custom.length > bestLen && norm.includes(c)) { best = custom; bestLen = custom.length; }
   }
   return best;
 }
@@ -2251,17 +2273,20 @@ function renderPlTiers() {
 function updatePlTier(i, field, val) {
   if (!plTiers[i]) return;
   plTiers[i][field] = val;
+  savePlTiers();
   if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
 }
 
 function addPlTier() {
   plTiers.splice(Math.max(0, plTiers.length - 1), 0, { max: 100, margin: 30 });
+  savePlTiers();
   renderPlTiers();
 }
 
 function removePlTier(i) {
   if (plTiers.length <= 1) return;
   plTiers.splice(i, 1);
+  savePlTiers();
   renderPlTiers();
 }
 
@@ -2526,6 +2551,7 @@ function plCleanName(name, brand) {
       .replace(/^\s*(?:PERF|P)\b\.?\s*/i, '')
       .replace(/\(\s*\d+\s*\)/g, ' ') // código interno del proveedor, ej "(3572)" — no aporta nada al cliente
       .replace(/\b(?:UNI|MASC|FEM)\b/gi, ' ') // código de género — tampoco aporta
+      .replace(/\.{2,}/g, ' ') // puntos de relleno del proveedor, ej "...100ML ......" — no son parte del nombre
       .replace(/\s+/g, ' ').trim()
   );
   if (!brand) return base;
@@ -2719,34 +2745,143 @@ function buildCatalogHtml() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lista de precios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Mulish:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --lino: #F6F1E9;
+    --tinta: #14110E;
+    --vino: #6E2A39;
+    --humo: #8A8378;
+    --humo-claro: #C9C1B2;
+    --borde: #E4DCCB;
+    --chrome-grad: linear-gradient(176deg,#6b757c 0%,#9aa4ab 12%,#eef3f6 28%,#ffffff 39%,#aeb8be 50%,#717b81 58%,#bcc5cb 73%,#ffffff 88%,#8a949b 100%);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f6f9; color: #1e293b; padding-bottom: 40px; }
-  header { position: sticky; top: 0; z-index: 10; background: #2563eb; color: #fff; padding: 16px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
-  header h1 { font-size: 1.15rem; font-weight: 700; margin-bottom: 2px; }
-  header .sub { font-size: .75rem; opacity: .85; margin-bottom: 12px; }
-  header input { width: 100%; padding: 11px 14px; border: none; border-radius: 8px; font-size: .95rem; background: #fff; color: #1e293b; }
-  header input:focus { outline: 2px solid #93c5fd; }
-  .container { max-width: 720px; margin: 0 auto; padding: 14px; }
-  .brand-group { margin-bottom: 18px; }
-  .brand-title { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #2563eb; background: #eff6ff; padding: 6px 12px; border-radius: 6px; margin-bottom: 6px; }
-  .item { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #fff; border: 1px solid #e0e4eb; border-radius: 8px; padding: 11px 14px; margin-bottom: 6px; }
-  .item .name { font-size: .88rem; font-weight: 600; }
-  .item .price { font-size: .92rem; font-weight: 700; color: #16a34a; white-space: nowrap; }
-  .empty { text-align: center; color: #64748b; padding: 40px 20px; font-size: .9rem; }
-  .count { font-size: .72rem; color: #64748b; margin: 4px 0 12px; min-height: 1em; }
+  body { font-family: 'Mulish', system-ui, sans-serif; background: var(--lino); color: var(--tinta); padding-bottom: 56px; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--tinta); color: var(--lino); padding: 18px 18px 16px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+  header .header-top { display: grid; grid-template-columns: 78px 1fr 78px; align-items: center; gap: 8px; margin-bottom: 5px; }
+  header .wordmark { grid-column: 2; text-align: center; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.15rem; letter-spacing: .16em; text-transform: uppercase; background-image: var(--chrome-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header .firma-header { grid-column: 3; justify-self: end; width: 78px; height: auto; }
+  header .sub { text-align: center; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: .82rem; color: var(--humo-claro); margin-bottom: 14px; }
+  .sello-flotante-wrap { position: fixed; right: 14px; bottom: 14px; z-index: 20; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
+  .sello-flotante-wrap .sello-caption-arc { order: 1; display: block; width: 320px; height: auto; margin-bottom: -42px; pointer-events: none; }
+  .sello-flotante-wrap .sello-caption-mobile { display: none; }
+  .sello-flotante { order: 2; display: block; width: 224px; height: 224px; transform: rotate(-8deg); filter: drop-shadow(0 3px 6px rgba(20,17,14,.35)); transition: transform .18s ease; }
+  .sello-flotante-wrap:hover .sello-flotante { transform: rotate(-8deg) scale(1.08); }
+  @media (max-width: 420px) {
+    body { padding-bottom: 98px; }
+    header .header-top { grid-template-columns: 44px 1fr 44px; gap: 6px; }
+    header .firma-header { width: 44px; }
+    header .wordmark { font-size: .8rem; letter-spacing: .09em; }
+    .sello-flotante-wrap {
+      left: 0; right: 0; bottom: 0; top: auto;
+      width: 100%; height: 86px;
+      flex-direction: row; align-items: center; justify-content: center; gap: 12px;
+      background: var(--lino); border-top: 1px solid var(--borde); box-shadow: 0 -3px 10px rgba(20,17,14,.18);
+    }
+    .sello-flotante-wrap .sello-caption-arc { display: none; }
+    .sello-flotante-wrap .sello-caption-mobile { display: block; order: 2; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: .95rem; line-height: 1.15; color: var(--vino); max-width: 160px; }
+    .sello-flotante { order: 1; width: 58px; height: 58px; margin: 0; }
+    .sello-flotante-wrap:hover .sello-flotante { transform: rotate(-8deg); }
+  }
+  header input { width: 100%; padding: 12px 15px; border: 1px solid transparent; border-radius: 3px; font-family: 'Mulish', sans-serif; font-size: .95rem; background: var(--lino); color: var(--tinta); }
+  header input::placeholder { color: var(--humo); }
+  header input:focus { outline: none; border-color: var(--vino); box-shadow: 0 0 0 2px rgba(110,42,57,.25); }
+  .container { max-width: 720px; margin: 0 auto; padding: 16px 14px; }
+  .brand-group { margin-bottom: 22px; }
+  .brand-title { font-family: 'Mulish', sans-serif; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--vino); padding-bottom: 6px; margin-bottom: 10px; border-bottom: 1px solid var(--borde); }
+  .item { display: flex; justify-content: space-between; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--borde); border-radius: 4px; padding: 12px 16px; margin-bottom: 7px; }
+  .item .name { font-family: 'Mulish', sans-serif; font-size: .86rem; font-weight: 600; color: var(--tinta); }
+  .item .price { font-family: 'Mulish', sans-serif; font-weight: 800; font-size: .92rem; letter-spacing: -.01em; color: var(--vino); white-space: nowrap; }
+  .empty { font-family: 'Cormorant Garamond', serif; font-style: italic; text-align: center; color: var(--humo); padding: 48px 20px; font-size: 1rem; }
+  .count { font-family: 'Mulish', sans-serif; font-size: .72rem; color: var(--humo); margin: 2px 0 14px; min-height: 1em; letter-spacing: .02em; }
+  .firma-footer { max-width: 720px; margin: 30px auto 0; padding: 26px 20px 10px; border-top: 1px solid var(--borde); display: flex; justify-content: center; }
+  .firma-footer .firma-block { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .firma-footer .firma { width: 150px; height: auto; flex-shrink: 0; }
+  .firma-footer .firma-caption { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: .85rem; color: var(--humo); }
 </style>
 </head>
 <body>
 <header>
-  <h1>Lista de precios</h1>
-  <div class="sub">Actualizado ${esc(fecha)} · ${data.length} productos</div>
+  <div class="header-top">
+    <div class="wordmark">Crovato Fragrances</div>
+    <svg class="firma-header" viewBox="0 0 400 160" fill="none" role="img" aria-label="Firma Crovato">
+      <g stroke="#F6F1E9" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M150 40 C150 20 110 12 82 26 C50 42 48 100 86 116 C112 126 142 116 150 96"></path>
+        <path d="M150 102 C162 82 176 84 180 104 C184 122 196 118 200 100 C204 84 218 82 222 102 C226 120 238 118 242 100 C246 84 260 84 264 102 C268 118 282 116 290 98"></path>
+        <path d="M236 72 C260 66 286 66 300 72"></path>
+        <path d="M96 134 C170 150 270 150 332 126 C344 121 346 112 338 108"></path>
+      </g>
+      <circle cx="312" cy="80" r="3.4" fill="#F6F1E9"></circle>
+    </svg>
+  </div>
+  <div class="sub">Lista de precios · Actualizado ${esc(fecha)} · ${data.length} productos</div>
   <input id="q" type="search" placeholder="Buscar por marca o producto…" autocomplete="off" />
 </header>
+<a class="sello-flotante-wrap" href="https://crovatofragrances.com" target="_blank" rel="noopener" title="Clickeá aquí para realizar el pedido" aria-label="Clickeá aquí para realizar el pedido">
+<svg class="sello-caption-arc" viewBox="0 0 400 150" aria-hidden="true">
+  <defs><path id="capArc" d="M20,140 A210,210 0 0 1 380,140" fill="none"></path></defs>
+  <text font-family="'Mulish', sans-serif" font-weight="800" font-size="17" letter-spacing="1" fill="#6E2A39" style="paint-order: stroke; stroke: #F6F1E9; stroke-width: 5px; stroke-linejoin: round;">
+    <textPath href="#capArc" startOffset="50%" text-anchor="middle">CLICKEÁ AQUÍ PARA REALIZAR EL PEDIDO</textPath>
+  </text>
+</svg>
+<svg class="sello-flotante" viewBox="0 0 240 240" role="img" aria-hidden="true">
+  <defs>
+    <radialGradient id="wax" cx="38%" cy="32%" r="78%">
+      <stop offset="0" stop-color="#9c4250"></stop>
+      <stop offset="34%" stop-color="#7c3140"></stop>
+      <stop offset="72%" stop-color="#6E2A39"></stop>
+      <stop offset="100%" stop-color="#4e1a26"></stop>
+    </radialGradient>
+    <linearGradient id="foil" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b757c"></stop><stop offset="0.12" stop-color="#9aa4ab"></stop>
+      <stop offset="0.28" stop-color="#eef3f6"></stop><stop offset="0.39" stop-color="#ffffff"></stop>
+      <stop offset="0.50" stop-color="#aeb8be"></stop><stop offset="0.58" stop-color="#717b81"></stop>
+      <stop offset="0.73" stop-color="#bcc5cb"></stop><stop offset="0.88" stop-color="#ffffff"></stop>
+      <stop offset="1" stop-color="#8a949b"></stop>
+    </linearGradient>
+    <path id="waxarc" d="M120,62 a58,58 0 1,1 -0.1,0" fill="none"></path>
+    <filter id="cast" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#2a0e14" flood-opacity="0.45"></feDropShadow>
+    </filter>
+  </defs>
+  <g filter="url(#cast)">
+    <path d="M188 188 c16 5 23 19 11 27 c-11 7 -24 -2 -22 -15 c1 -8 7 -10 11 -12 z" fill="url(#wax)"></path>
+    <path d="M40 160 c-13 1 -18 14 -7 21 c9 5 18 -2 16 -13 c-1 -5 -5 -7 -9 -8 z" fill="url(#wax)"></path>
+    <path d="M150 18 c10 -7 24 -3 24 8 c0 10 -12 14 -20 9 c-6 -4 -8 -13 -4 -17 z" fill="url(#wax)"></path>
+    <path d="M120 16 C158 14 176 34 192 54 C214 80 222 96 220 122 C218 152 192 170 184 192 C172 214 150 224 120 222 C92 220 74 200 56 188 C30 170 16 148 18 120 C20 92 40 70 52 54 C70 30 90 18 120 16 Z" fill="url(#wax)" stroke="#45161f" stroke-width="1.5"></path>
+  </g>
+  <circle cx="120" cy="120" r="84" fill="none" stroke="#451620" stroke-width="3" opacity="0.45"></circle>
+  <circle cx="120" cy="120" r="86" fill="none" stroke="#b86b78" stroke-width="1" opacity="0.4"></circle>
+  <ellipse cx="92" cy="76" rx="48" ry="30" fill="#ffffff" opacity="0.14" transform="rotate(-22 92 76)"></ellipse>
+  <circle cx="120" cy="120" r="74" fill="none" stroke="url(#foil)" stroke-width="2.5"></circle>
+  <text font-family="'Space Mono', monospace" font-size="11" letter-spacing="3" fill="url(#foil)">
+    <textPath href="#waxarc" startOffset="2%">CROVATO · EST · CÓRDOBA · </textPath>
+  </text>
+  <text x="120" y="146" text-anchor="middle" font-family="Cinzel, serif" font-weight="600" font-size="86" fill="url(#foil)">C</text>
+</svg>
+<span class="sello-caption-mobile">Clickeá aquí para realizar el pedido</span>
+</a>
 <div class="container">
   <div class="count" id="count"></div>
   <div id="results"></div>
 </div>
+<footer class="firma-footer">
+  <div class="firma-block">
+    <svg class="firma" viewBox="0 0 400 160" fill="none" role="img" aria-label="Firma Crovato">
+      <g stroke="#14110E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M150 40 C150 20 110 12 82 26 C50 42 48 100 86 116 C112 126 142 116 150 96"></path>
+        <path d="M150 102 C162 82 176 84 180 104 C184 122 196 118 200 100 C204 84 218 82 222 102 C226 120 238 118 242 100 C246 84 260 84 264 102 C268 118 282 116 290 98"></path>
+        <path d="M236 72 C260 66 286 66 300 72"></path>
+        <path d="M96 134 C170 150 270 150 332 126 C344 121 346 112 338 108"></path>
+      </g>
+      <circle cx="312" cy="80" r="3.4" fill="#14110E"></circle>
+    </svg>
+    <div class="firma-caption">Cada lista, armada por mí.</div>
+  </div>
+</footer>
 <script>
 var DATA = ${dataJson};
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }

@@ -130,7 +130,7 @@ async function fetchDolarOficial() {
 // El token nunca sale del Worker — el navegador solo manda el HTML + el secreto compartido.
 const GITHUB_OWNER = 'Agustincrov';
 const GITHUB_REPO  = 'calculadora-importacion-perfumes';
-const CATALOG_PATH = 'catalogo.html';
+const CATALOG_PATH = 'docs/catalogo.html';
 
 async function handlePublishCatalog(req) {
   const secret = req.headers.get('X-Publish-Secret');

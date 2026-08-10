@@ -3,7 +3,7 @@
 A web-based calculator that computes the real landed cost of imported goods and suggests a selling price based on a target margin. Built for product importers who buy in Ciudad del Este, Paraguay and sell in Argentina — adaptable to any country's exchange rates and fee structures.
 
 **Live →** [calculadora-importacion-perfumes.agustincrovato7.workers.dev](https://calculadora-importacion-perfumes.agustincrovato7.workers.dev)
-**Landing →** [agustincrov.github.io/calculadora-importacion-perfumes/landing.html](https://agustincrov.github.io/calculadora-importacion-perfumes/landing.html)
+**Landing →** [agustincrov.github.io/calculadora-importacion-perfumes/docs/landing.html](https://agustincrov.github.io/calculadora-importacion-perfumes/docs/landing.html)
 
 ---
 
@@ -70,9 +70,11 @@ User
  │                                                ├─► Binance P2P     (USDT)
  │                                                └─► Madrid Center   (store PIX)
  │
- └─► GitHub Pages (public)
-      ├─► landing.html  (marketing + Mercado Pago subscription)
-      └─► gracias.html  (post-payment, WhatsApp activation flow)
+ └─► GitHub Pages (public, served from /docs only — index.html is NOT public here)
+      ├─► docs/landing.html   (marketing + Mercado Pago subscription)
+      ├─► docs/gracias.html   (post-payment, WhatsApp activation flow)
+      ├─► docs/guia.html      (user guide)
+      └─► docs/catalogo.html  (client-facing searchable price list, auto-published)
 ```
 
 ---
@@ -81,14 +83,14 @@ User
 
 ```
 /
-├── index.html          # Main calculator app
-├── landing.html        # Public marketing landing page
-├── gracias.html        # Post-payment activation page
-├── worker.js           # Cloudflare Worker — rate API proxy
-├── docs/
-│   └── guia-usuario.md # End-user guide (Spanish)
-└── assets/
-    └── favicon.webp
+├── index.html            # Main calculator app (NOT served by GitHub Pages — private/paid)
+├── worker.js             # Cloudflare Worker — rate API proxy + auto-publish endpoint
+└── docs/                 # GitHub Pages source — everything here is public
+    ├── landing.html      # Public marketing landing page
+    ├── gracias.html      # Post-payment activation page
+    ├── guia.html         # User guide
+    ├── guia-usuario.md   # End-user guide source (Spanish)
+    └── catalogo.html     # Client-facing searchable price list (auto-published)
 ```
 
 ---
