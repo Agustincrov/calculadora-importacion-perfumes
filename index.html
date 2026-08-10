@@ -2333,18 +2333,33 @@ function plJaccard(a, b) {
   return union === 0 ? 0 : inter / union;
 }
 
+function plBrandTokenSet(brand) {
+  return new Set(String(brand || '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean));
+}
+
+function plCoreTokensExcludingBrand(item, core) {
+  const brandTokens = plBrandTokenSet(item.brand);
+  return core.split(' ').filter(t => t && !brandTokens.has(t));
+}
+
 function detectFuzzyDuplicates(items) {
-  // Ojo: NO se restringe a pares entre distintas listas — un mismo proveedor puede tener
-  // el mismo producto cargado dos veces con formato distinto dentro de su propia planilla
-  // (ej. "ERBA GOLD EDP 100ML" y "ERBA GOLD U 100ML EDP"), no solo al mezclar varias listas.
+  // Un mismo proveedor no repite el mismo producto dos veces en su propia planilla —
+  // los duplicados reales aparecen solo al cruzar varias listas distintas.
   const pairs = [];
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
       const a = items[i], b = items[j];
+      if (a.sourceLabel === b.sourceLabel) continue; // solo entre listas distintas
+      if (a.brand && b.brand && a.brand !== b.brand) continue; // deben ser la misma marca
       const na = plNormalizeCore(a.name), nb = plNormalizeCore(b.name);
       if (na.ml !== nb.ml) continue; // never suggest merging different sizes
-      const sim = plJaccard(plTokenSet(na.core), plTokenSet(nb.core));
-      if (sim >= 0.55 && sim < 1) {
+      // La similitud se calcula SIN los tokens de marca — si no, marcas largas
+      // ("STEPHANE HUMBERT LUCAS 777") inflan la similitud entre productos
+      // totalmente distintos de esa misma línea (ej. "PANTHEA" vs "PINK BOA").
+      const ta = plCoreTokensExcludingBrand(a, na.core);
+      const tb = plCoreTokensExcludingBrand(b, nb.core);
+      const sim = plJaccard(new Set(ta), new Set(tb));
+      if (sim >= 0.6 && sim < 1) {
         const decision = plDuplicateDecisions[plDuplicateKey(a.name, b.name)];
         if (decision === 'different') continue; // ya dijiste que no son el mismo — no se vuelve a preguntar
         pairs.push({ a: a.id, b: b.id, sim, resolved: false, remembered: decision === 'same' });
