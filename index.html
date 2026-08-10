@@ -859,6 +859,14 @@
       <input type="text" id="pl-search" placeholder="Buscar por marca o producto…" oninput="renderPlTable()"
         style="width:100%;max-width:340px;padding:8px 12px;margin-bottom:14px;
                border:1px solid var(--border);border-radius:6px;font-size:.85rem;" />
+
+      <div style="font-size:.76rem;color:var(--muted);margin:-6px 0 14px;line-height:1.5;">
+        💡 "Exportar página buscable" siempre descarga <code>catalogo.html</code> (mismo nombre) — reemplazá ese archivo
+        en la carpeta del repo, <code>git add catalogo.html && git commit -m "catálogo" && git push</code>, y compartí
+        siempre el mismo link con tus clientes:
+        <strong>agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html</strong>
+        — así en WhatsApp les abre directo en el navegador (a diferencia de mandar el archivo suelto, que en iPhone no siempre abre bien).
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -2751,7 +2759,7 @@ render('');
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `lista_precios_buscable_${new Date().toISOString().slice(0, 10)}.html`;
+  a.download = 'catalogo.html'; // nombre fijo a propósito: reemplaza el mismo archivo en el repo cada vez
   a.click();
   URL.revokeObjectURL(url);
 }
