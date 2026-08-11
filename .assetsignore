@@ -1,0 +1,12 @@
+.git
+.gitignore
+.wrangler
+.claude
+wrangler.jsonc
+.assetsignore
+.DS_Store
+worker.js
+listas
+README.md
+CLAUDE.md
+docs/mensaje-promocional.txt
