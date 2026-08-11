@@ -2355,6 +2355,26 @@ function plCoreTokensExcludingBrand(item, core) {
 // ni se sugiere como candidato.
 const PL_CONDITION_RE = /\bTESTER\b|CAIXA\/|AMASSAD|AMASAD|\bFEIA\b|\bBASADO\b|S\/TAPA|S\/CAJA|\bC\/T\b/i;
 
+// Palabras que casi siempre marcan una variante/edición real y distinta dentro de una
+// misma línea (ej. "Sauvage" vs "Sauvage Eau Forte", "Stronger With You" vs "...Absolutely").
+// Si aparecen en un solo lado del par, nunca se sugiere como candidato — no es ruido de
+// formato, es una diferencia de producto real que ningún algoritmo de texto puede resolver solo.
+const PL_QUALIFIER_RE = /\bINTENSE\b|\bINTENSO\b|\bINTENSELY\b|\bELIXIR\b|\bEXTREME\b|\bABSOLU\b|\bABSOLUTELY\b|\bPOWERFULLY\b|\bEXTRADOSE\b|\bEAU FORTE\b|\bOVERDOSE\b/i;
+
+// Marcadores de género en conflicto real (no solo etiqueta de formato) — cuando un lado dice
+// femenino y el otro masculino, puede ser el mismo producto mal etiquetado por un proveedor,
+// o puede ser una fragancia "his/hers" genuinamente distinta (ej. Amouage Epic Man/Woman,
+// Versace Eros/Eros Pour Femme). Nunca se auto-fusiona; siempre queda para revisión manual.
+const PL_FEM_RE = /\bFEM\b|\bF\b|\bWOMAN\b|\bWOMEN\b|\bMUJER\b/;
+const PL_MASC_RE = /\bMASC\b|\bMAS\b|\bM\b|\bMEN\b|\bMAN\b|\bHOMME\b|\bHOMBRE\b/;
+function plGenderConflict(nameA, nameB) {
+  const isFemA = PL_FEM_RE.test(nameA), isMascA = PL_MASC_RE.test(nameA);
+  const isFemB = PL_FEM_RE.test(nameB), isMascB = PL_MASC_RE.test(nameB);
+  const gA = isFemA && !isMascA ? 'F' : (isMascA && !isFemA ? 'M' : null);
+  const gB = isFemB && !isMascB ? 'F' : (isMascB && !isFemB ? 'M' : null);
+  return gA && gB && gA !== gB;
+}
+
 function detectFuzzyDuplicates(items) {
   // Un mismo proveedor no repite el mismo producto dos veces en su propia planilla —
   // los duplicados reales aparecen solo al cruzar varias listas distintas.
@@ -2365,6 +2385,7 @@ function detectFuzzyDuplicates(items) {
       if (a.sourceLabel === b.sourceLabel) continue; // solo entre listas distintas
       if (a.brand && b.brand && a.brand !== b.brand) continue; // deben ser la misma marca
       if (PL_CONDITION_RE.test(a.name) !== PL_CONDITION_RE.test(b.name)) continue; // tester/caja dañada asimétrico
+      if (PL_QUALIFIER_RE.test(a.name) !== PL_QUALIFIER_RE.test(b.name)) continue; // variante real asimétrica
       const na = plNormalizeCore(a.name), nb = plNormalizeCore(b.name);
       if (na.ml !== nb.ml) continue; // never suggest merging different sizes
       // La similitud se calcula SIN los tokens de marca — si no, marcas largas
@@ -2376,7 +2397,10 @@ function detectFuzzyDuplicates(items) {
       if (sim >= 0.6) {
         const decision = plDuplicateDecisions[plDuplicateKey(a.name, b.name)];
         if (decision === 'different') continue; // ya dijiste que no son el mismo — no se vuelve a preguntar
-        pairs.push({ a: a.id, b: b.id, sim, resolved: false, remembered: decision === 'same' });
+        // Similitud perfecta (sin marca ni letras sueltas queda un nombre idéntico) y sin
+        // conflicto de género = fusión automática, sin pedir confirmación.
+        const autoSame = sim === 1 && !plGenderConflict(a.name, b.name);
+        pairs.push({ a: a.id, b: b.id, sim, resolved: false, remembered: decision === 'same' || autoSame });
       }
     }
   }
