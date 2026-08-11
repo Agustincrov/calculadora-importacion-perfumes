@@ -2817,10 +2817,12 @@ function buildCatalogHtml() {
   body { font-family: 'Mulish', system-ui, sans-serif; background: var(--lino); color: var(--tinta); padding-bottom: 56px; }
   header { position: sticky; top: 0; z-index: 10; background: var(--tinta); color: var(--lino); padding: 18px 18px 16px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
   header .header-top { display: grid; grid-template-columns: 78px 1fr 78px; align-items: center; gap: 8px; margin-bottom: 5px; }
-  header .wordmark { grid-column: 2; text-align: center; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.15rem; letter-spacing: .16em; text-transform: uppercase; background-image: var(--chrome-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header .firma-header { grid-column: 1; justify-self: start; width: 78px; height: auto; }
-  header .cart-toggle { grid-column: 3; justify-self: end; position: relative; width: 46px; height: 46px; padding: 0; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  header .cart-toggle svg { width: 30px; height: 30px; }
+  header .wordmark { grid-column: 2; grid-row: 1; text-align: center; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.15rem; letter-spacing: .16em; text-transform: uppercase; background-image: var(--chrome-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header .firma-header { grid-column: 1; grid-row: 1; justify-self: start; width: 78px; height: 46px; }
+  header .cart-toggle { grid-column: 3; grid-row: 1; justify-self: end; position: relative; width: 46px; height: 46px; padding: 0; border: none; background: transparent; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s ease; }
+  header .cart-toggle:hover { background: rgba(246,241,233,.14); }
+  header .cart-toggle svg { width: 30px; height: 30px; transition: transform .15s ease; }
+  header .cart-toggle:hover svg { transform: scale(1.1); }
   .cart-badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 10px; background: var(--vino); color: var(--lino); font-family: 'Mulish', sans-serif; font-size: .66rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
   @keyframes popPunch { 0% { transform: scale(1); } 35% { transform: scale(1.32); } 60% { transform: scale(.94); } 100% { transform: scale(1); } }
   .pop { animation: popPunch .4s cubic-bezier(.34,1.56,.64,1); }
@@ -2836,7 +2838,7 @@ function buildCatalogHtml() {
   @media (max-width: 420px) {
     body { padding-bottom: 98px; }
     header .header-top { grid-template-columns: 44px 1fr 44px; gap: 6px; }
-    header .firma-header { width: 44px; }
+    header .firma-header { width: 44px; height: 38px; }
     header .cart-toggle { width: 38px; height: 38px; }
     header .cart-toggle svg { width: 26px; height: 26px; }
     header .wordmark { font-size: .8rem; letter-spacing: .09em; }
@@ -2919,11 +2921,11 @@ function buildCatalogHtml() {
   <div class="sub">Lista de precios · Actualizado ${esc(fecha)} · ${data.length} productos</div>
   <input id="q" type="search" placeholder="Buscar por marca o producto…" autocomplete="off" />
 </header>
-<a class="sello-flotante-wrap" href="https://crovatofragrances.com" target="_blank" rel="noopener" title="Clickeá aquí para realizar el pedido" aria-label="Clickeá aquí para realizar el pedido">
+<a class="sello-flotante-wrap" href="https://crovatofragrances.com" target="_blank" rel="noopener" title="Clickeá aquí para visitar la página" aria-label="Clickeá aquí para visitar la página">
 <svg class="sello-caption-arc" viewBox="0 0 400 150" aria-hidden="true">
   <defs><path id="capArc" d="M20,140 A210,210 0 0 1 380,140" fill="none"></path></defs>
   <text font-family="'Mulish', sans-serif" font-weight="800" font-size="17" letter-spacing="1" fill="#6E2A39" style="paint-order: stroke; stroke: #F6F1E9; stroke-width: 5px; stroke-linejoin: round;">
-    <textPath href="#capArc" startOffset="50%" text-anchor="middle">CLICKEÁ AQUÍ PARA REALIZAR EL PEDIDO</textPath>
+    <textPath href="#capArc" startOffset="50%" text-anchor="middle">CLICKEÁ AQUÍ PARA VISITAR LA PÁGINA</textPath>
   </text>
 </svg>
 <svg class="sello-flotante" viewBox="0 0 240 240" role="img" aria-hidden="true">
@@ -2961,7 +2963,7 @@ function buildCatalogHtml() {
   </text>
   <text x="120" y="146" text-anchor="middle" font-family="Cinzel, serif" font-weight="600" font-size="86" fill="url(#foil)">C</text>
 </svg>
-<span class="sello-caption-mobile">Clickeá aquí para realizar el pedido</span>
+<span class="sello-caption-mobile">Clickeá aquí para visitar la página</span>
 </a>
 <div id="cartOverlay" class="cart-overlay" hidden>
   <div class="cart-panel">
