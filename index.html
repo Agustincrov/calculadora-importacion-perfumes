@@ -3125,10 +3125,10 @@ function buildWhatsappUrl() {
     return '• ' + it.qty + 'x ' + it.name + ' (' + it.brand + ') — ' + fmtPrice(it.price * it.qty);
   });
   var t = cartTotals();
-  var msg = '¡Hola! Quiero encargar estas fragancias:\n\n' + lines.join('\n') +
-    '\n\nSubtotal: ' + fmtPrice(t.gross) +
-    (t.descuento > 0 ? '\nDescuento envío combinado: −' + fmtPrice(t.descuento) : '') +
-    '\nTotal: ' + fmtPrice(t.total);
+  var msg = '¡Hola! Quiero encargar estas fragancias:\\n\\n' + lines.join('\\n') +
+    '\\n\\nSubtotal: ' + fmtPrice(t.gross) +
+    (t.descuento > 0 ? '\\nDescuento envío combinado: −' + fmtPrice(t.descuento) : '') +
+    '\\nTotal: ' + fmtPrice(t.total);
   return 'https://wa.me/5493516199682?text=' + encodeURIComponent(msg);
 }
 
