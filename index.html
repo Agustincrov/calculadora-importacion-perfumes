@@ -761,6 +761,13 @@
         </button>
         <input type="file" id="pl-file" accept=".xls,.xlsx" multiple style="display:none"
           onchange="importPlExcel(this.files); this.value=''" />
+        <button class="btn btn-outline" onclick="clearAllPlSources()" style="color:var(--danger);border-color:var(--danger);" title="Borra las listas cargadas y el resultado generado, para empezar de cero">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+          Borrar todo
+        </button>
       </div>
 
       <div id="pl-source-tags" class="catalog-tags"></div>
@@ -1914,6 +1921,30 @@ async function fetchAllRates() {
 // ─────────────────────────────────────────────
 let plSources     = []; // [{ id, name, items: [{name, brand, price}] }]
 let plNextSourceId = 1;
+try {
+  const savedPlSources = JSON.parse(localStorage.getItem('importo-pl-sources') || 'null');
+  if (savedPlSources && Array.isArray(savedPlSources.sources)) {
+    plSources = savedPlSources.sources;
+    plNextSourceId = savedPlSources.nextId || (plSources.reduce((m, s) => Math.max(m, s.id), 0) + 1);
+  }
+} catch { /* se queda vacío */ }
+
+function savePlSources() {
+  localStorage.setItem('importo-pl-sources', JSON.stringify({ sources: plSources, nextId: plNextSourceId }));
+}
+
+function clearAllPlSources() {
+  if (plSources.length === 0 && plItems.length === 0) return;
+  if (!confirm('¿Borrar todas las listas cargadas y el resultado generado? No se puede deshacer.')) return;
+  plSources = [];
+  plNextSourceId = 1;
+  plItems = [];
+  plFuzzyPairs = [];
+  savePlSources();
+  renderPlSourceTags();
+  document.getElementById('pl-result-card').style.display = 'none';
+  document.getElementById('pl-fuzzy-card').style.display = 'none';
+}
 const PL_DEFAULT_TIERS = [
   { max: 60,  margin: 32 },
   { max: 100, margin: 24 },
@@ -2182,6 +2213,7 @@ function importPastedText() {
   }
   plSources.push({ id: plNextSourceId++, name: `Texto pegado (${items.length})`, items });
   ta.value = '';
+  savePlSources();
   renderPlSourceTags();
 }
 
@@ -2224,6 +2256,7 @@ function importPlExcel(fileList) {
       const items  = parseExcelPriceList(rows2d);
       const label  = file.name.replace(/\.[^.]+$/, '');
       plSources.push({ id: plNextSourceId++, name: label, items });
+      savePlSources();
       renderPlSourceTags();
     };
     reader.readAsArrayBuffer(file);
@@ -2232,6 +2265,7 @@ function importPlExcel(fileList) {
 
 function removePlSource(id) {
   plSources = plSources.filter(s => s.id !== id);
+  savePlSources();
   renderPlSourceTags();
 }
 
@@ -3269,6 +3303,7 @@ async function publishCatalogAuto() {
 
 renderPlTiers();
 renderPlBrandTags();
+renderPlSourceTags();
 renderPublishSecretStatus();
 
 // ─────────────────────────────────────────────
