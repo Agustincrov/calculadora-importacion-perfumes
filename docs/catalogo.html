@@ -22,10 +22,15 @@
   header { position: sticky; top: 0; z-index: 10; background: var(--tinta); color: var(--lino); padding: 18px 18px 16px; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
   header .header-top { display: grid; grid-template-columns: 78px 1fr 78px; align-items: center; gap: 8px; margin-bottom: 5px; }
   header .wordmark { grid-column: 2; text-align: center; font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.15rem; letter-spacing: .16em; text-transform: uppercase; background-image: var(--chrome-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  header .firma-header { grid-column: 3; justify-self: end; width: 78px; height: auto; }
-  header .cart-toggle { grid-column: 1; justify-self: start; position: relative; width: 36px; height: 36px; padding: 0; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  header .cart-toggle svg { width: 24px; height: 24px; }
-  .cart-badge { position: absolute; top: -3px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 9px; background: var(--vino); color: var(--lino); font-family: 'Mulish', sans-serif; font-size: .62rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  header .firma-header { grid-column: 1; justify-self: start; width: 78px; height: auto; }
+  header .cart-toggle { grid-column: 3; justify-self: end; position: relative; width: 46px; height: 46px; padding: 0; border: none; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  header .cart-toggle svg { width: 30px; height: 30px; }
+  .cart-badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 10px; background: var(--vino); color: var(--lino); font-family: 'Mulish', sans-serif; font-size: .66rem; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  @keyframes popPunch { 0% { transform: scale(1); } 35% { transform: scale(1.32); } 60% { transform: scale(.94); } 100% { transform: scale(1); } }
+  .pop { animation: popPunch .4s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes rowFlash { 0% { background-color: #F1DEE2; } 100% { background-color: transparent; } }
+  .item.flash { animation: rowFlash .7s ease-out; }
+  .cart-row.flash { animation: rowFlash .7s ease-out; border-radius: 4px; }
   header .sub { text-align: center; font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: .82rem; color: var(--humo-claro); margin-bottom: 14px; }
   .sello-flotante-wrap { position: fixed; right: 14px; bottom: 14px; z-index: 20; display: flex; flex-direction: column; align-items: center; text-decoration: none; }
   .sello-flotante-wrap .sello-caption-arc { order: 1; display: block; width: 320px; height: auto; margin-bottom: -42px; pointer-events: none; }
@@ -36,8 +41,8 @@
     body { padding-bottom: 98px; }
     header .header-top { grid-template-columns: 44px 1fr 44px; gap: 6px; }
     header .firma-header { width: 44px; }
-    header .cart-toggle { width: 30px; height: 30px; }
-    header .cart-toggle svg { width: 21px; height: 21px; }
+    header .cart-toggle { width: 38px; height: 38px; }
+    header .cart-toggle svg { width: 26px; height: 26px; }
     header .wordmark { font-size: .8rem; letter-spacing: .09em; }
     .sello-flotante-wrap {
       left: 0; right: 0; bottom: 0; top: auto;
@@ -257,6 +262,25 @@ function handleCartAction(action, key) {
   renderCartBadge();
   renderCartPanel();
   render(document.getElementById('q').value);
+  if (action === 'add' || action === 'inc') {
+    triggerPop(document.getElementById('cartToggle'));
+    triggerPop(document.getElementById('cartBadge'));
+    triggerFlash(document.querySelector('.item[data-key="' + CSS.escape(key) + '"]'));
+    triggerFlash(document.querySelector('.cart-row[data-key="' + CSS.escape(key) + '"]'));
+  }
+}
+
+function triggerPop(el) {
+  if (!el) return;
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+function triggerFlash(el) {
+  if (!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
 }
 
 function renderCartBadge() {
@@ -273,7 +297,7 @@ function renderCartPanel() {
   } else {
     itemsEl.innerHTML = keys.map(function(k) {
       var it = cart[k];
-      return '<div class="cart-row">' +
+      return '<div class="cart-row" data-key="' + esc(k) + '">' +
         '<div class="cart-row-info"><div class="cart-row-name">' + esc(it.name) + '</div><div class="cart-row-brand">' + esc(it.brand) + '</div></div>' +
         '<div class="qty-ctrl"><button type="button" class="qty-btn" data-action="dec" data-key="' + esc(k) + '">−</button>' +
         '<span class="qty-num">' + it.qty + '</span>' +
@@ -342,7 +366,7 @@ function render(query) {
       out += '<div class="brand-group"><div class="brand-title">' + esc(b) + '</div>';
       groups[b].forEach(function(d) {
         var key = d.brand + '||' + d.name;
-        out += '<div class="item"><span class="name">' + esc(d.name) + '</span>' +
+        out += '<div class="item" data-key="' + esc(key) + '"><span class="name">' + esc(d.name) + '</span>' +
           '<div class="item-right"><span class="price">' + fmtPrice(d.price) + '</span>' + qtyCtrlHtml(key) + '</div></div>';
       });
       out += '</div>';
