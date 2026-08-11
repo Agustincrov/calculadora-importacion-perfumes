@@ -2064,6 +2064,21 @@ function saveCustomBrands() {
   localStorage.setItem('importo-custom-brands', JSON.stringify(customBrands));
 }
 
+// Correcciones de marca por producto puntual — separado de customBrands porque esa lista
+// solo ayuda cuando el nombre de la marca aparece como palabra dentro del nombre del producto.
+// Muchas listas de proveedor agrupan por marca sin repetirla en cada línea, así que la única
+// forma de que la corrección sobreviva a un "Generar" de nuevo es recordar el par nombre→marca.
+let plBrandOverrides = {};
+try { plBrandOverrides = JSON.parse(localStorage.getItem('importo-brand-overrides') || '{}'); } catch { plBrandOverrides = {}; }
+
+function savePlBrandOverrides() {
+  localStorage.setItem('importo-brand-overrides', JSON.stringify(plBrandOverrides));
+}
+
+function plBrandOverrideKey(name) {
+  return String(name || '').trim().toUpperCase();
+}
+
 // Memoria de duplicados: una vez que confirmás o descartás un par ("es el mismo" / "son distintos"),
 // se guarda por nombre normalizado y no se vuelve a preguntar en futuras generaciones.
 let plDuplicateDecisions = {};
@@ -2515,7 +2530,8 @@ function generatePriceList() {
   for (const arr of groups.values()) {
     arr.sort((a, b) => a.price - b.price);
     const cheapest = arr[0];
-    const brand = cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
+    const overrideBrand = plBrandOverrides[plBrandOverrideKey(cheapest.name)];
+    const brand = overrideBrand || cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
     const isNonPerfume = plIsNonPerfumeCategory(cheapest.name);
     const isArabic = excludeArabicEnabled && EXCLUDED_BRANDS.has(brand);
     if (isNonPerfume) autoExcludedCategory++;
@@ -2759,13 +2775,24 @@ function updatePlManualPrice(id, val) {
 function updatePlBrand(id, val) {
   const it = plItems.find(x => x.id === id);
   if (!it) return;
+  const key = plBrandOverrideKey(it.name);
   const clean = val.trim();
-  if (!clean) { it.brand = ''; renderPlTable(); return; }
+  if (!clean) {
+    it.brand = '';
+    delete plBrandOverrides[key];
+    savePlBrandOverrides();
+    renderPlTable();
+    return;
+  }
   // Si lo que escribiste ya matchea una marca/alias existente, usamos el nombre canónico
   // (ej. escribís "Hermes" y queda "Hermes Paris") en vez de crear una marca duplicada.
   const canonical = detectKnownBrand(` ${clean} `);
   it.brand = canonical || clean;
   if (!canonical) addCustomBrand(clean); // recién si es realmente nueva se aprende para la próxima
+  // Además del aprendizaje por palabra, recordamos este producto puntual — así la corrección
+  // sobrevive aunque el nombre de la marca no aparezca en el texto del producto.
+  plBrandOverrides[key] = it.brand;
+  savePlBrandOverrides();
   renderPlTable();
 }
 
