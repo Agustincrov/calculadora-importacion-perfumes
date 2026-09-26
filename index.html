@@ -869,7 +869,26 @@
           </button>
         </div>
       </div>
-      <input type="text" id="pl-search" placeholder="Buscar por marca o producto…" oninput="renderPlTable()"
+
+      <style id="pl-hidden-brand-style"></style>
+      <details id="pl-brand-filter" style="margin-bottom:14px;border:1px solid var(--border);border-radius:8px;padding:8px 14px;">
+        <summary style="cursor:pointer;font-size:.82rem;font-weight:700;color:var(--muted);">
+          Filtro de marcas para publicar — <span id="pl-brand-filter-summary">generá la lista primero</span>
+        </summary>
+        <div style="margin-top:10px;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+            <input type="text" id="pl-brand-filter-search" placeholder="Buscar marca…" oninput="renderPlBrandFilterChecklist()"
+              style="flex:1;min-width:160px;max-width:260px;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;" />
+            <button class="btn btn-outline" onclick="plBrandFilterSetAll(true)">Todas</button>
+            <button class="btn btn-outline" onclick="plBrandFilterSetAll(false)">Ninguna</button>
+            <button class="btn btn-outline" onclick="plBrandFilterInvert()">Invertir</button>
+          </div>
+          <div id="pl-brand-filter-list" onchange="onPlBrandFilterChange(event)"
+            style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 14px;max-height:260px;overflow-y:auto;padding-right:4px;"></div>
+        </div>
+      </details>
+
+      <input type="text" id="pl-search" placeholder="Buscar por marca o producto…" oninput="onPlSearchInput()"
         style="width:100%;max-width:340px;padding:8px 12px;margin-bottom:14px;
                border:1px solid var(--border);border-radius:6px;font-size:.85rem;" />
 
@@ -1968,6 +1987,43 @@ let plShowExcluded = false;
 let plAutoExcludedArabic = 0;
 let plAutoExcludedCategory = 0;
 
+// ── Filtro de marcas para publicar ──
+// Clave de comparación normalizada — "Hermes Paris" y "HERMES PARIS " (mayúsculas/espacios
+// distintos según la fuente) tienen que caer en la misma marca a los fines del filtro.
+function plBrandKey(brand) {
+  const clean = String(brand || '').trim().toUpperCase();
+  return clean || 'SIN CATEGORÍA';
+}
+
+// Se guardan las marcas OCULTAS (no las elegidas): así al cargar una lista nueva no perdés de
+// vista marcas que ya tenías visibles — solo se ocultan las que vos apagaste a propósito.
+let plHiddenBrands = new Set();
+try {
+  const savedHidden = JSON.parse(localStorage.getItem('importo-hidden-brands') || '[]');
+  if (Array.isArray(savedHidden)) plHiddenBrands = new Set(savedHidden);
+} catch { /* se queda vacío */ }
+
+function savePlHiddenBrands() {
+  localStorage.setItem('importo-hidden-brands', JSON.stringify([...plHiddenBrands]));
+}
+
+// Marcas ya vistas alguna vez — para avisar "nueva" la primera vez que aparece una marca
+// distinta y que no se cuele sin que la veas al menos una vez.
+let plSeenBrands = new Set();
+try {
+  const savedSeen = JSON.parse(localStorage.getItem('importo-seen-brands') || '[]');
+  if (Array.isArray(savedSeen)) plSeenBrands = new Set(savedSeen);
+} catch { /* se queda vacío */ }
+
+function savePlSeenBrands() {
+  localStorage.setItem('importo-seen-brands', JSON.stringify([...plSeenBrands]));
+}
+
+// Ítems que realmente se publican: ni excluidos en la revisión ni de una marca apagada acá.
+function plPublishableItems() {
+  return plItems.filter(it => !it.excluded && !plHiddenBrands.has(plBrandKey(it.brand)));
+}
+
 // ── Known brands (detected directly from the product name, not from message structure) ──
 // Each entry: [nombre a mostrar, ...alias con los que aparece dentro del nombre del producto]
 const KNOWN_BRANDS = [
@@ -2097,11 +2153,12 @@ function plDuplicateKey(nameA, nameB) {
 function plMergeDuplicate(idA, idB) {
   const a = plItems.find(x => x.id === idA);
   const b = plItems.find(x => x.id === idB);
-  if (!a || !b) return; // uno de los dos ya se sacó por otra fusión
+  if (!a || !b) return null; // uno de los dos ya se sacó por otra fusión
   const [cheap, exp] = a.priceUsd <= b.priceUsd ? [a, b] : [b, a];
   cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
   cheap.multiSource = true;
   plItems = plItems.filter(x => x.id !== exp.id);
+  return { cheap, exp }; // para que quien llame sepa qué filas tocar sin reconstruir toda la tabla
 }
 
 function plNormalizeForBrandMatch(name) {
@@ -2540,6 +2597,10 @@ function generatePriceList() {
       id: idc++,
       name: cheapest.name,
       brand,
+      // Nombre limpio cacheado: plCleanName compila varias RegExp por llamada — calcularlo una
+      // vez acá (y de nuevo solo si cambia la marca, ver updatePlBrand) evita repetirlo en cada
+      // comparación del sort, cada tecla del buscador y cada fila del render.
+      displayName: plCleanName(cheapest.name, brand),
       priceUsd: cheapest.price,
       sourceLabel: cheapest.sourceLabel,
       alternates: arr.slice(1).map(a => ({ source: a.sourceLabel, price: a.price })),
@@ -2564,35 +2625,40 @@ function generatePriceList() {
   document.getElementById('pl-result-card').style.display = '';
   renderPlFuzzyPanel();
   renderPlTable();
+  renderPlBrandFilter();
 }
 
 // ── Fuzzy review panel ──
+function plFuzzyPairHtml(p, idx) {
+  const a = plItems.find(x => x.id === p.a);
+  const b = plItems.find(x => x.id === p.b);
+  if (!a || !b) return ''; // uno de los dos ya se fusionó por otro par — ver invalidación en resolvePlFuzzyPair
+  return `
+    <div id="pl-pair-${idx}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;
+                 padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+      <div style="font-size:.82rem;line-height:1.5;">
+        <div><strong>${esc(a.name)}</strong> — USD ${a.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(a.sourceLabel)})</span></div>
+        <div><strong>${esc(b.name)}</strong> — USD ${b.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(b.sourceLabel)})</span></div>
+      </div>
+      <div class="btn-group" style="flex-shrink:0;">
+        <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, true)">Es el mismo</button>
+        <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, false)">Son distintos</button>
+      </div>
+    </div>`;
+}
+
 function renderPlFuzzyPanel() {
   const card = document.getElementById('pl-fuzzy-card');
   const list = document.getElementById('pl-fuzzy-list');
   const pending = plFuzzyPairs.filter(p => !p.resolved);
   if (pending.length === 0) { card.style.display = 'none'; return; }
   card.style.display = '';
-  list.innerHTML = pending.map(p => {
-    const idx = plFuzzyPairs.indexOf(p);
-    const a = plItems.find(x => x.id === p.a);
-    const b = plItems.find(x => x.id === p.b);
-    if (!a || !b) return '';
-    return `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;
-                   padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
-        <div style="font-size:.82rem;line-height:1.5;">
-          <div><strong>${esc(a.name)}</strong> — USD ${a.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(a.sourceLabel)})</span></div>
-          <div><strong>${esc(b.name)}</strong> — USD ${b.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(b.sourceLabel)})</span></div>
-        </div>
-        <div class="btn-group" style="flex-shrink:0;">
-          <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, true)">Es el mismo</button>
-          <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, false)">Son distintos</button>
-        </div>
-      </div>`;
-  }).join('');
+  list.innerHTML = plFuzzyPairs.map((p, idx) => p.resolved ? '' : plFuzzyPairHtml(p, idx)).join('');
 }
 
+// Actualización quirúrgica: en vez de reconstruir toda la tabla de revisión (miles de filas en
+// listas grandes — ver nota de perf más abajo), solo se tocan los nodos que realmente cambian.
+// Antes cada clic acá disparaba un renderPlTable() completo y se sentía con casi 1s de demora.
 function resolvePlFuzzyPair(idx, sameProduct) {
   const pair = plFuzzyPairs[idx];
   if (!pair || pair.resolved) return;
@@ -2606,11 +2672,35 @@ function resolvePlFuzzyPair(idx, sameProduct) {
   }
 
   if (sameProduct) {
-    plMergeDuplicate(pair.a, pair.b);
-    recomputePlPricing();
+    // No hace falta recomputePlPricing(): el ítem que sobrevive (cheap) no cambia su priceUsd,
+    // así que su costo/margen/precio final ya calculados en el "Generar" siguen valiendo.
+    const merged = plMergeDuplicate(pair.a, pair.b);
+    if (merged) {
+      document.getElementById(`pl-row-${merged.exp.id}`)?.remove();
+      const cheapRow = document.getElementById(`pl-row-${merged.cheap.id}`);
+      if (cheapRow) cheapRow.outerHTML = plRowHtml(merged.cheap);
+
+      // Otros pares pendientes que apuntaban al ítem que acaba de desaparecer quedan huérfanos
+      // (no se pueden resolver desde la UI) — se dan por resueltos para no dejar la card
+      // abierta con un hueco invisible.
+      plFuzzyPairs.forEach((p2, i2) => {
+        if (p2.resolved || i2 === idx) return;
+        if (p2.a === merged.exp.id || p2.b === merged.exp.id) {
+          p2.resolved = true;
+          document.getElementById(`pl-pair-${i2}`)?.remove();
+        }
+      });
+
+      renderPlSummary();
+      renderPlBrandFilterSummary(); // fusionar saca un ítem de plItems — el conteo por marca cambia
+    }
   }
-  renderPlFuzzyPanel();
-  renderPlTable();
+
+  document.getElementById(`pl-pair-${idx}`)?.remove();
+  if (plFuzzyPairs.every(p => p.resolved)) {
+    const card = document.getElementById('pl-fuzzy-card');
+    if (card) card.style.display = 'none';
+  }
 }
 
 // ── Main review table ──
@@ -2691,11 +2781,169 @@ function plCleanName(name, brand) {
   return hasContent ? stripped : base;
 }
 
+// ── Panel de filtro de marcas ──
+// Agrupa por marca todos los ítems no excluidos (la exclusión por ítem es otra decisión, ver
+// D3/D4 — este filtro es aparte, actúa solo al momento de publicar/exportar).
+function plBrandCounts() {
+  const counts = new Map(); // key normalizada -> { key, label, total }
+  plItems.filter(it => !it.excluded).forEach(it => {
+    const key = plBrandKey(it.brand);
+    if (!counts.has(key)) counts.set(key, { key, label: it.brand || 'Sin categoría', total: 0 });
+    counts.get(key).total++;
+  });
+  return counts;
+}
+
+// Reescribe una sola hoja de estilos con selectores por marca oculta — atenúa esas filas en la
+// tabla de revisión sin tocar ninguna fila individual ni reconstruir la tabla (aplica sola a
+// cualquier fila presente o futura con ese data-brand-key, sin importar cuándo se generó).
+function renderPlHiddenBrandStyle() {
+  const styleEl = document.getElementById('pl-hidden-brand-style');
+  if (!styleEl) return;
+  const escAttr = k => k.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const selectors = [...plHiddenBrands].map(k => `tr[data-brand-key="${escAttr(k)}"]`);
+  styleEl.textContent = selectors.length ? `${selectors.join(',\n')} { opacity: .4; }` : '';
+}
+
+// Contador "se publicarán X de Y productos · N de M marcas" — se actualiza solo (sin rehacer
+// la lista de checkboxes) en cada tilde/destilde, así responde al instante con ~140 marcas.
+function renderPlBrandFilterSummary() {
+  const summaryEl = document.getElementById('pl-brand-filter-summary');
+  if (!summaryEl) return;
+  const counts = plBrandCounts();
+  const totalBrands  = counts.size;
+  const hiddenBrands = [...counts.keys()].filter(k => plHiddenBrands.has(k)).length;
+  const totalItems   = plItems.filter(it => !it.excluded).length;
+  const publishItems = plPublishableItems().length;
+  summaryEl.textContent = totalBrands === 0
+    ? 'generá la lista primero'
+    : `se publicarán ${publishItems} de ${totalItems} producto${totalItems !== 1 ? 's' : ''} · ${totalBrands - hiddenBrands} de ${totalBrands} marca${totalBrands !== 1 ? 's' : ''}`;
+}
+
+function renderPlBrandFilterChecklist() {
+  const container = document.getElementById('pl-brand-filter-list');
+  if (!container) return;
+  const query  = (document.getElementById('pl-brand-filter-search')?.value || '').trim().toLowerCase();
+  const counts = plBrandCounts();
+  const brands = [...counts.values()]
+    .map(b => ({ ...b, hidden: plHiddenBrands.has(b.key), isNew: !plSeenBrands.has(b.key) }))
+    .filter(b => !query || b.label.toLowerCase().includes(query))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  container.innerHTML = brands.length ? brands.map(b => `
+    <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;padding:2px 4px;cursor:pointer;">
+      <input type="checkbox" data-brand-key="${esc(b.key)}" ${b.hidden ? '' : 'checked'} style="width:15px;height:15px;flex-shrink:0;" />
+      <span style="flex:1;${b.hidden ? 'color:var(--muted);text-decoration:line-through;' : ''}">${esc(b.label)}</span>
+      <span style="color:var(--muted);">(${b.total})</span>
+      ${b.isNew ? '<span style="font-size:.66rem;color:var(--accent);font-weight:700;">nueva</span>' : ''}
+      ${b.key === 'SIN CATEGORÍA' ? '<span title="Ítems sin marca detectada">⚠</span>' : ''}
+    </label>`).join('') : '<span style="font-size:.8rem;color:var(--muted);grid-column:1/-1;">Generá la lista primero.</span>';
+
+  // Solo se avisa "nueva" en este primer render en que la marca aparece — de acá en más ya
+  // cuenta como vista, incluso si en esta sesión no se llegó a abrir el panel para verla.
+  counts.forEach((_, key) => plSeenBrands.add(key));
+  savePlSeenBrands();
+}
+
+function renderPlBrandFilter() {
+  renderPlBrandFilterChecklist();
+  renderPlHiddenBrandStyle();
+  renderPlBrandFilterSummary();
+}
+
+// Un solo listener delegado en el contenedor en vez de un onclick por marca — con ~140 marcas
+// evita atar 140 closures y facilita re-renderizar la lista sin perder el patrón.
+function onPlBrandFilterChange(e) {
+  const input = e.target.closest('input[type="checkbox"][data-brand-key]');
+  if (!input) return;
+  const key = input.dataset.brandKey;
+  if (input.checked) plHiddenBrands.delete(key); else plHiddenBrands.add(key);
+  savePlHiddenBrands();
+
+  // Actualización quirúrgica del propio checkbox (tachar/destachar la marca) — nada de
+  // reconstruir la lista de ~140 marcas ni la tabla de miles de filas por un solo tilde.
+  const labelSpan = input.nextElementSibling;
+  if (labelSpan) {
+    labelSpan.style.color = input.checked ? '' : 'var(--muted)';
+    labelSpan.style.textDecoration = input.checked ? '' : 'line-through';
+  }
+  renderPlHiddenBrandStyle();
+  renderPlBrandFilterSummary();
+}
+
+function plBrandFilterSetAll(visible) {
+  if (visible) {
+    plHiddenBrands.clear();
+  } else {
+    plBrandCounts().forEach((_, key) => plHiddenBrands.add(key));
+  }
+  savePlHiddenBrands();
+  renderPlBrandFilter();
+}
+
+function plBrandFilterInvert() {
+  const counts = plBrandCounts();
+  counts.forEach((_, key) => {
+    if (plHiddenBrands.has(key)) plHiddenBrands.delete(key); else plHiddenBrands.add(key);
+  });
+  savePlHiddenBrands();
+  renderPlBrandFilter();
+}
+
+// Fila de la tabla de revisión — separada de renderPlTable para poder reemplazar una sola fila
+// (ver resolvePlFuzzyPair) sin reconstruir las miles de filas restantes.
+function plRowHtml(it) {
+  const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
+  const rowStyle = it.excluded ? 'opacity:.45;' : '';
+  const origen = it.multiSource
+    ? `<span title="Alternativas: ${esc(it.alternates.map(a => a.source + ' USD ' + a.price.toFixed(2)).join(', '))}">
+         ${esc(it.sourceLabel)} 🔗×${it.alternates.length + 1}
+       </span>`
+    : esc(it.sourceLabel);
+  return `
+    <tr id="pl-row-${it.id}" data-brand-key="${esc(plBrandKey(it.brand))}" style="${rowStyle}">
+      <td>
+        <input type="text" value="${esc(it.brand)}" placeholder="Sin marca ⚠"
+          style="width:150px;padding:6px 7px;border:1px solid ${it.brand ? 'transparent' : 'var(--warn)'};border-radius:5px;font-size:.85rem;background:transparent;"
+          onchange="updatePlBrand(${it.id}, this.value)" />
+      </td>
+      <td style="min-width:220px;" title="${esc(it.name)}">
+        ${it.autoExcludedReason === 'arabic' ? '<span title="Excluido automático — marca árabe/de Medio Oriente" style="margin-right:4px;">🌙</span>' : ''}${it.autoExcludedReason === 'category' ? '<span title="Excluido automático — no es perfume" style="margin-right:4px;">🚫</span>' : ''}${esc(it.displayName)}
+      </td>
+      <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
+      <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
+      <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
+      <td class="cell-computed">${it.marginPct}%</td>
+      <td>
+        <input type="number" value="${Math.round(price)}" min="0" step="${document.getElementById('pl-round-step').value || 100}"
+          style="width:100px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;text-align:right;"
+          oninput="updatePlManualPrice(${it.id}, +this.value)" />
+        ${it.manualPrice != null ? `<button class="del-btn" title="Volver al precio calculado" onclick="resetPlManualPrice(${it.id})">↺</button>` : ''}
+      </td>
+      <td>
+        ${it.excluded
+          ? `<button class="del-btn" title="Restaurar" onclick="restorePlItem(${it.id})">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 12 3 6 9 6"/><path d="M3 6l6 6"/><path d="M21 12a9 9 0 1 1-3-6.7"/></svg>
+             </button>`
+          : `<button class="del-btn" title="Excluir" onclick="excludePlItem(${it.id})">
+               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+             </button>`}
+      </td>
+    </tr>`;
+}
+
+// Debounce del buscador — con miles de productos, filtrar en cada tecla se siente.
+let plSearchDebounceTimer = null;
+function onPlSearchInput() {
+  clearTimeout(plSearchDebounceTimer);
+  plSearchDebounceTimer = setTimeout(renderPlTable, 150);
+}
+
 function renderPlTable() {
   const body = document.getElementById('pl-body');
   if (!body) return;
   const sorted = [...plItems].sort((a, b) =>
-    (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
+    (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
 
   const visible  = sorted.filter(it => !it.excluded);
   const excluded = sorted.filter(it => it.excluded);
@@ -2703,49 +2951,25 @@ function renderPlTable() {
   const query = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
   const matchesQuery = it => !query
     || (it.brand || '').toLowerCase().includes(query)
-    || plCleanName(it.name, it.brand).toLowerCase().includes(query);
+    || it.displayName.toLowerCase().includes(query);
 
   const rowsToShow = (plShowExcluded ? sorted : visible).filter(matchesQuery);
 
-  body.innerHTML = rowsToShow.map(it => {
-    const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
-    const rowStyle = it.excluded ? 'opacity:.45;' : '';
-    const origen = it.multiSource
-      ? `<span title="Alternativas: ${esc(it.alternates.map(a => a.source + ' USD ' + a.price.toFixed(2)).join(', '))}">
-           ${esc(it.sourceLabel)} 🔗×${it.alternates.length + 1}
-         </span>`
-      : esc(it.sourceLabel);
-    return `
-      <tr id="pl-row-${it.id}" style="${rowStyle}">
-        <td>
-          <input type="text" value="${esc(it.brand)}" placeholder="Sin marca ⚠"
-            style="width:150px;padding:6px 7px;border:1px solid ${it.brand ? 'transparent' : 'var(--warn)'};border-radius:5px;font-size:.85rem;background:transparent;"
-            onchange="updatePlBrand(${it.id}, this.value)" />
-        </td>
-        <td style="min-width:220px;" title="${esc(it.name)}">
-          ${it.autoExcludedReason === 'arabic' ? '<span title="Excluido automático — marca árabe/de Medio Oriente" style="margin-right:4px;">🌙</span>' : ''}${it.autoExcludedReason === 'category' ? '<span title="Excluido automático — no es perfume" style="margin-right:4px;">🚫</span>' : ''}${esc(plCleanName(it.name, it.brand))}
-        </td>
-        <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
-        <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
-        <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
-        <td class="cell-computed">${it.marginPct}%</td>
-        <td>
-          <input type="number" value="${Math.round(price)}" min="0" step="${document.getElementById('pl-round-step').value || 100}"
-            style="width:100px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;text-align:right;"
-            oninput="updatePlManualPrice(${it.id}, +this.value)" />
-          ${it.manualPrice != null ? `<button class="del-btn" title="Volver al precio calculado" onclick="resetPlManualPrice(${it.id})">↺</button>` : ''}
-        </td>
-        <td>
-          ${it.excluded
-            ? `<button class="del-btn" title="Restaurar" onclick="restorePlItem(${it.id})">
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 12 3 6 9 6"/><path d="M3 6l6 6"/><path d="M21 12a9 9 0 1 1-3-6.7"/></svg>
-               </button>`
-            : `<button class="del-btn" title="Excluir" onclick="excludePlItem(${it.id})">
-                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-               </button>`}
-        </td>
-      </tr>`;
-  }).join('');
+  body.innerHTML = rowsToShow.map(plRowHtml).join('');
+
+  renderPlSummary();
+}
+
+// Resumen + toggle de excluidos — separado para poder refrescarlo solo (ver resolvePlFuzzyPair)
+// sin pasar por el innerHTML completo de la tabla.
+function renderPlSummary() {
+  const query = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
+  const visible  = plItems.filter(it => !it.excluded);
+  const excluded = plItems.filter(it => it.excluded);
+  const matchesQuery = it => !query
+    || (it.brand || '').toLowerCase().includes(query)
+    || it.displayName.toLowerCase().includes(query);
+  const rowsToShow = (plShowExcluded ? plItems : visible).filter(matchesQuery);
 
   const autoExcludedParts = [];
   if (plAutoExcludedArabic > 0) autoExcludedParts.push(`${plAutoExcludedArabic} por marca árabe 🌙`);
@@ -2779,21 +3003,25 @@ function updatePlBrand(id, val) {
   const clean = val.trim();
   if (!clean) {
     it.brand = '';
+    it.displayName = plCleanName(it.name, it.brand);
     delete plBrandOverrides[key];
     savePlBrandOverrides();
-    renderPlTable();
+    renderPlTable(); // cambia la marca → cambia el orden de la fila, hace falta re-ordenar la tabla
+    renderPlBrandFilter(); // la marca cambió de grupo — recontar y re-listar el panel de filtro
     return;
   }
   // Si lo que escribiste ya matchea una marca/alias existente, usamos el nombre canónico
   // (ej. escribís "Hermes" y queda "Hermes Paris") en vez de crear una marca duplicada.
   const canonical = detectKnownBrand(` ${clean} `);
   it.brand = canonical || clean;
+  it.displayName = plCleanName(it.name, it.brand);
   if (!canonical) addCustomBrand(clean); // recién si es realmente nueva se aprende para la próxima
   // Además del aprendizaje por palabra, recordamos este producto puntual — así la corrección
   // sobrevive aunque el nombre de la marca no aparezca en el texto del producto.
   plBrandOverrides[key] = it.brand;
   savePlBrandOverrides();
-  renderPlTable();
+  renderPlTable(); // cambia la marca → cambia el orden de la fila, hace falta re-ordenar la tabla
+  renderPlBrandFilter(); // la marca cambió de grupo — recontar y re-listar el panel de filtro
 }
 
 function resetPlManualPrice(id) {
@@ -2803,25 +3031,24 @@ function resetPlManualPrice(id) {
 
 function excludePlItem(id) {
   const it = plItems.find(x => x.id === id);
-  if (it) { it.excluded = true; renderPlTable(); }
+  if (it) { it.excluded = true; renderPlTable(); renderPlBrandFilterSummary(); }
 }
 
 function restorePlItem(id) {
   const it = plItems.find(x => x.id === id);
-  if (it) { it.excluded = false; renderPlTable(); }
+  if (it) { it.excluded = false; renderPlTable(); renderPlBrandFilterSummary(); }
 }
 
 // ── Export ──
 function exportPlExcel() {
-  const sorted = [...plItems]
-    .filter(it => !it.excluded)
-    .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
-  if (sorted.length === 0) { alert('No hay productos para exportar.'); return; }
+  const sorted = plPublishableItems()
+    .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
+  if (sorted.length === 0) { alert('No hay productos para exportar (revisá el filtro de marcas).'); return; }
 
   const rowsOut = [['Marca', 'Producto', 'Precio (ARS)']];
   sorted.forEach(it => {
     const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
-    rowsOut.push([it.brand || 'Sin categoría', plCleanName(it.name, it.brand), Math.round(price)]);
+    rowsOut.push([it.brand || 'Sin categoría', it.displayName, Math.round(price)]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(rowsOut);
@@ -2842,14 +3069,13 @@ function exportPlExcel() {
 // Archivo único (sin hosting) con buscador en vivo — se lo mandás al cliente como cualquier
 // archivo por WhatsApp y lo abre en el navegador del celu, sin necesitar Excel.
 function buildCatalogHtml() {
-  const sorted = [...plItems]
-    .filter(it => !it.excluded)
-    .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || plCleanName(a.name, a.brand).localeCompare(plCleanName(b.name, b.brand)));
+  const sorted = plPublishableItems()
+    .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
   if (sorted.length === 0) return null;
 
   const data = sorted.map(it => ({
     brand: it.brand || 'Sin categoría',
-    name: plCleanName(it.name, it.brand),
+    name: it.displayName,
     price: Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs)
   }));
   const dataJson = JSON.stringify(data).replace(/</g, '\\u003c');

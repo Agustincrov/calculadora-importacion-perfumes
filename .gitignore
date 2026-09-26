@@ -36,3 +36,6 @@ listas/
 
 # Claude Code local settings
 .claude/
+
+# Notas internas de planificación (no para publicar)
+cards/
