@@ -646,8 +646,8 @@
           </svg>
           Importar catálogo
         </button>
-        <input type="file" id="catalog-file" accept=".xls,.xlsx" style="display:none"
-          onchange="loadCatalog(this.files[0]); this.value=''" />
+        <input type="file" id="catalog-file" accept=".xls,.xlsx" multiple style="display:none"
+          onchange="importPlExcel(this.files); this.value=''" />
         <div id="catalog-tags" class="catalog-tags"></div>
         <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -950,8 +950,6 @@
 // ─────────────────────────────────────────────
 let rows = [];
 let nextId = 1;
-let catalogs = []; // [{ name, items: [{name, price}] }]
-let catalog  = []; // flat merged list — rebuilt from catalogs
 // payMode removed — each row now has its own row.modo
 let knownClients = []; // persisted list of known client names
 
@@ -1003,107 +1001,83 @@ function parsePrice(val) {
   return parseFloat(s);
 }
 
-function loadCatalog(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const wb     = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-    const sheet  = wb.Sheets[wb.SheetNames[0]];
-    const rows2d = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    if (rows2d.length < 2) return;
-
-    const nameKw  = ['descripcion','description','producto','product','nombre','name','articulo','item'];
-    const priceKw = ['precio','price','usd','costo','cost','valor'];
-
-    let headerRow = -1, nameCol = -1, priceCol = -1;
-    for (let i = 0; i < Math.min(10, rows2d.length); i++) {
-      const hdrs = rows2d[i].map(h => String(h ?? '').toLowerCase().trim());
-      const nc = hdrs.findIndex(h => nameKw.some(k => h.includes(k)));
-      const pc = hdrs.findIndex(h => priceKw.some(k => h.includes(k)));
-      if (nc >= 0 && pc >= 0) { headerRow = i; nameCol = nc; priceCol = pc; break; }
-    }
-    if (headerRow < 0) { headerRow = 0; nameCol = 1; priceCol = 2; }
-
-    const items = [];
-    for (let i = headerRow + 1; i < rows2d.length; i++) {
-      const row   = rows2d[i];
-      const name  = String(row[nameCol]  ?? '').trim();
-      const price = parsePrice(row[priceCol]);
-      if (name && !isNaN(price) && price > 0) items.push({ name, price });
-    }
-    items.sort((a, b) => {
-      const at = a.name.toLowerCase().startsWith('tester');
-      const bt = b.name.toLowerCase().startsWith('tester');
-      return (bt ? 1 : 0) - (at ? 1 : 0);
-    });
-
-    // Strip extension for display name
-    const label = file.name.replace(/\.[^.]+$/, '');
-    // Replace if same filename, otherwise add
-    const existing = catalogs.findIndex(c => c.name === label);
-    if (existing >= 0) catalogs[existing].items = items;
-    else catalogs.push({ name: label, items });
-
-    rebuildCatalog();
-    renderTable();
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-function rebuildCatalog() {
-  // Merge all catalogs, deduplicate by name (last one wins)
-  const map = new Map();
-  for (const cat of catalogs) {
-    for (const item of cat.items) map.set(item.name, item);
-  }
-  catalog = Array.from(map.values());
-  renderCatalogTags();
-}
-
-function removeCatalog(name) {
-  catalogs = catalogs.filter(c => c.name !== name);
-  rebuildCatalog();
-  renderTable();
-}
-
-function renderCatalogTags() {
-  const el = document.getElementById('catalog-tags');
-  if (!el) return;
-  if (catalogs.length === 0) { el.innerHTML = ''; return; }
-  el.innerHTML = catalogs.map(c =>
-    `<span class="catalog-tag">
-      ${esc(c.name)} <span style="opacity:.7">(${c.items.length})</span>
-      <button class="catalog-tag-close" onclick="removeCatalog('${esc(c.name)}')" title="Quitar catálogo">×</button>
-    </span>`
-  ).join('');
-}
-
-function updateCatalogDatalist() {} // no-op — replaced by custom dropdown
+// El botón "Importar catálogo" de la calculadora ahora carga al mismo pool compartido que el
+// Generador de listas (plSources, ver más abajo) en vez de tener su propio catálogo aislado —
+// así una lista cargada de cualquiera de los dos lados sirve para los dos. La calculadora arma
+// su propio catálogo "para autocompletar" a partir de esas fuentes — ver getCalcCatalog().
 
 // ── Autocomplete state ──
 let acCurrentRowId = null;
 const acMatches = {};
 const acActiveIdx = {};
 
+// Nombre visible: "Marca Nombre limpio" — igual al que usa el Generador para la tabla de
+// revisión (plCleanName), así el producto se ve igual de un lado que del otro.
+function plComposeName(brand, displayName) {
+  return brand ? `${brand} ${displayName}` : displayName;
+}
+
+// Catálogo de la calculadora: agrupa plSources (las listas del Generador, ver más abajo) por
+// producto (plItemKey) quedándose con el más barato entre proveedores. Cacheado — con miles de
+// productos, recalcularlo en cada tecla del autocompletado se sentiría (ver card de perf).
+let calcCatalogCache = null;
+function invalidateCalcCatalog() { calcCatalogCache = null; }
+
+function getCalcCatalog() {
+  if (calcCatalogCache) return calcCatalogCache;
+  const all = [];
+  plSources.forEach(src => src.items.forEach(it => all.push({ ...it, sourceLabel: src.name })));
+
+  const groups = new Map();
+  all.forEach(it => {
+    const key = plItemKey(it);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(it);
+  });
+
+  const out = [];
+  groups.forEach(arr => {
+    arr.sort((a, b) => a.price - b.price);
+    const cheapest = arr[0];
+    // Misma corrección de marca puntual que aplica el Generador al generar (ver plBrandOverrides).
+    const overrideBrand = plBrandOverrides[plBrandOverrideKey(cheapest.name)];
+    const brand = overrideBrand || cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
+    const displayName = plCleanName(cheapest.name, brand);
+    const name = plComposeName(brand, displayName);
+    out.push({
+      name,
+      brand,
+      priceUsd: cheapest.price,
+      sourceLabel: cheapest.sourceLabel,
+      altCount: arr.length - 1,
+      searchText: `${brand} ${displayName} ${cheapest.name}`.toLowerCase()
+    });
+  });
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  calcCatalogCache = out;
+  return out;
+}
+
 function onNameInput(rowId, value) {
   const row = rows.find(r => r.id === rowId);
   if (!row) return;
   row.name = value;
 
-  if (catalog.length > 0) {
+  const cat = getCalcCatalog();
+  if (cat.length > 0) {
     const q = value.toLowerCase().trim();
     const matches = q.length === 0
-      ? catalog.slice(0, 60)
-      : catalog.filter(c => c.name.toLowerCase().includes(q)).slice(0, 120);
+      ? cat.slice(0, 60)
+      : cat.filter(c => c.searchText.includes(q)).slice(0, 120);
     showDropdown(rowId, matches);
   }
 
   // Auto-fill price on exact match
-  const item = catalog.find(c => c.name === value);
+  const item = cat.find(c => c.name === value);
   if (item) {
-    row.price = item.price;
+    row.price = item.priceUsd;
     const priceInput = document.getElementById(`price-${rowId}`);
-    if (priceInput) priceInput.value = item.price;
+    if (priceInput) priceInput.value = item.priceUsd;
     closeDropdown();
   }
 
@@ -1119,9 +1093,12 @@ function showDropdown(rowId, matches) {
   if (!el) return;
   if (matches.length === 0) { el.classList.remove('open'); return; }
 
-  el.innerHTML = matches.map((c, i) =>
-    `<div class="autocomplete-item" data-idx="${i}"
-      onmousedown="selectAcItem(${rowId}, ${i})">${esc(c.name)}</div>`
+  el.innerHTML = matches.map((c, i) => `
+    <div class="autocomplete-item" data-idx="${i}" onmousedown="selectAcItem(${rowId}, ${i})"
+      style="display:flex;justify-content:space-between;gap:10px;">
+      <span>${esc(c.name)}</span>
+      <span style="color:var(--muted);font-size:.85em;flex-shrink:0;">USD ${c.priceUsd.toFixed(2)} · ${esc(c.sourceLabel)}${c.altCount > 0 ? ` +${c.altCount}` : ''}</span>
+    </div>`
   ).join('');
 
   // Position: anchor to the input, flip upward if near bottom of viewport
@@ -1149,14 +1126,22 @@ function selectAcItem(rowId, idx) {
   const row = rows.find(r => r.id === rowId);
   if (row) {
     row.name = item.name;
-    row.price = item.price;
+    row.price = item.priceUsd;
     const nameInput  = document.getElementById(`name-${rowId}`);
     const priceInput = document.getElementById(`price-${rowId}`);
     if (nameInput)  nameInput.value  = item.name;
-    if (priceInput) priceInput.value = item.price;
+    if (priceInput) priceInput.value = item.priceUsd;
   }
   closeDropdown();
   recalculate();
+}
+
+// Crea una fila nueva en la lista activa de la calculadora a partir de un producto —
+// la usan tanto el botón "+ Calculadora" del Generador como (potencialmente) otros flujos futuros.
+function addRowFromProduct(p) {
+  const modo   = document.getElementById('pl-modo')?.value || 'pix';
+  const margin = marginForPriceUsd(p.priceUsd);
+  addRow({ name: p.name, price: p.priceUsd, qty: 1, margin, modo });
 }
 
 function onNameKeydown(e, rowId) {
@@ -1253,7 +1238,7 @@ function renderTable() {
       </td>
       <td>
         <input type="text" id="name-${row.id}" value="${esc(row.name)}"
-          placeholder="${catalog.length > 0 ? 'Buscar producto…' : 'Nombre…'}"
+          placeholder="${getCalcCatalog().length > 0 ? 'Buscar producto…' : 'Nombre…'}"
           oninput="onNameInput(${row.id}, this.value)"
           onkeydown="onNameKeydown(event, ${row.id})"
           onblur="scheduleCloseDropdown(${row.id})" />
@@ -1950,6 +1935,7 @@ try {
 
 function savePlSources() {
   localStorage.setItem('importo-pl-sources', JSON.stringify({ sources: plSources, nextId: plNextSourceId }));
+  invalidateCalcCatalog(); // el catálogo de la calculadora sale de estas mismas fuentes
 }
 
 function clearAllPlSources() {
@@ -2129,6 +2115,7 @@ try { plBrandOverrides = JSON.parse(localStorage.getItem('importo-brand-override
 
 function savePlBrandOverrides() {
   localStorage.setItem('importo-brand-overrides', JSON.stringify(plBrandOverrides));
+  invalidateCalcCatalog(); // una corrección de marca cambia el nombre que arma getCalcCatalog()
 }
 
 function plBrandOverrideKey(name) {
@@ -2341,14 +2328,19 @@ function removePlSource(id) {
   renderPlSourceTags();
 }
 
+// Las listas cargadas son un único pool compartido (plSources) — se muestran igual en las
+// dos vistas: acá (Generador) y en "catalog-tags" (Calculadora), cualquiera sea desde dónde
+// se cargaron.
 function renderPlSourceTags() {
-  const el = document.getElementById('pl-source-tags');
-  if (!el) return;
-  el.innerHTML = plSources.map(s => `
+  const html = plSources.map(s => `
     <span class="catalog-tag">
       ${esc(s.name)} <span style="opacity:.7">(${s.items.length})</span>
       <button class="catalog-tag-close" onclick="removePlSource(${s.id})" title="Quitar">×</button>
     </span>`).join('');
+  ['pl-source-tags', 'catalog-tags'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
 }
 
 // ── Margin tiers UI ──
@@ -2920,7 +2912,10 @@ function plRowHtml(it) {
           oninput="updatePlManualPrice(${it.id}, +this.value)" />
         ${it.manualPrice != null ? `<button class="del-btn" title="Volver al precio calculado" onclick="resetPlManualPrice(${it.id})">↺</button>` : ''}
       </td>
-      <td>
+      <td style="white-space:nowrap;">
+        <button class="del-btn" id="pl-add-calc-${it.id}" title="Agregar como fila a la lista activa de la Calculadora" onclick="addPlItemToCalc(${it.id})">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
         ${it.excluded
           ? `<button class="del-btn" title="Restaurar" onclick="restorePlItem(${it.id})">
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 12 3 6 9 6"/><path d="M3 6l6 6"/><path d="M21 12a9 9 0 1 1-3-6.7"/></svg>
@@ -2930,6 +2925,21 @@ function plRowHtml(it) {
              </button>`}
       </td>
     </tr>`;
+}
+
+// La usa el botón "+ Calculadora" de cada fila de la tabla de revisión.
+function addPlItemToCalc(id) {
+  const it = plItems.find(x => x.id === id);
+  if (!it) return;
+  addRowFromProduct({ name: plComposeName(it.brand, it.displayName), priceUsd: it.priceUsd });
+
+  // Feedback breve en el propio botón — sin cambiar de pestaña (se sigue viendo la revisión).
+  const btn = document.getElementById(`pl-add-calc-${id}`);
+  if (!btn) return;
+  const original = btn.innerHTML;
+  btn.innerHTML = '✓';
+  btn.disabled = true;
+  setTimeout(() => { btn.innerHTML = original; btn.disabled = false; }, 1100);
 }
 
 // Debounce del buscador — con miles de productos, filtrar en cada tecla se siente.
