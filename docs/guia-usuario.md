@@ -21,12 +21,15 @@ Al abrir la calculadora, los valores se actualizan solos desde internet. Aun as�
 | **Mejor PIX (BRL/USD)** | El mejor servicio disponible para mandar dólares y que lleguen en reales (Brubank o Astropay vía comparapix.ar). Se completa solo. |
 | **Dólar Oficial** | Cotización oficial Córdoba (BBVA). Se usa para calcular cuánto te cuestan los productos en pesos y para la comisión del shipper. Se autocompleta. |
 | **Dólar Blue** | Cotización blue Córdoba. Se autocompleta. Se usa solo para mostrarte el precio de venta equivalente en dólares blue. |
-| **USDT** | Cotización USDT en Binance P2P. Se autocompleta. Se usa para calcular la comisión del shipper en pesos. |
+| **USDT** | Cotización USDT en Binance P2P. Se autocompleta. Se usa para calcular la comisión del shipper y la fee de transferencia en pesos. |
 | **Comisión/producto** | Lo que cobra el shipper por producto, en USD. Generalmente $4. |
-| **Envío total** | El costo total del envío en pesos, que se reparte entre todos los clientes. |
-| **Clientes** | Cuántas personas comparten el envío. Si sos vos solo, dejalo en 1. Si son 3 amigos comprando juntos, poné 3. Afecta el "precio lista individual". |
+| **Envío total (real)** | Lo que de verdad le pagás al fletero por todo el embarque. No se le cobra así al cliente — se usa solo para que la calculadora te muestre tu costo y ROI reales en el resumen. |
+| **Clientes** | Se calcula solo, contando nombres distintos en el campo "Cliente" de las filas. Informativo — ya no afecta el precio. |
+| **Envío fijo/producto** | Lo que le cobrás al cliente por cada producto, sin importar el costo real del embarque (por eso "fijo"). Si el cliente pide varios productos, cada uno suma este monto. |
+| **Fee transferencia USDT** | Fee fija (en USDT) que cobra el exchange por cada transferencia real que hacés al pagar en modo USDT directo. Se cuenta una vez por cada nombre distinto que cargues en el campo "Pedido" de las filas USDT (ver más abajo). |
+| **Redondeo precio** | Los precios de venta se redondean hacia arriba a este número, para que coincidan con los precios publicados en el catálogo. |
 
-> El botón **Actualizar cotizaciones** refresca todos los valores desde internet en cualquier momento.
+> El botón **Actualizar cotizaciones** refresca las tasas de mercado (oficial, blue, USDT, PIX) desde internet en cualquier momento. La comisión, los envíos, la fee USDT y el redondeo son configuración tuya — se guardan solos y no se pierden al recargar la página.
 
 ---
 
@@ -45,7 +48,9 @@ USD × dólar_oficial        = costo en ARS
 ```
 
 ### USDT directo
-Mandás USDT directamente a la tienda, sin pasar por la conversión a BRL. Requiere que la tienda acepte cripto. Evita un paso en la cadena y puede resultar más barato dependiendo de la cotización del momento.
+Mandás USDT directamente a la tienda, sin pasar por la conversión a BRL — no interviene ningún valor en reales en este modo. Requiere que la tienda acepte cripto. Evita un paso en la cadena y puede resultar más barato dependiendo de la cotización del momento.
+
+En las filas con este modo aparece un campo extra, **"Pedido"**: escribí ahí un nombre que identifique cada transferencia real que vas a hacer. Si varios productos van en la misma transferencia, ponéles el mismo nombre — así la calculadora cobra la fee de transferencia una sola vez entre esos productos. Si vas a transferir en momentos distintos (por ejemplo, mismo pedido pero repartido en dos días), usá nombres distintos: cada uno cuenta como una transferencia con su propia fee.
 
 ---
 
@@ -83,12 +88,12 @@ Todas las columnas de resultados muestran el valor total (precio × cantidad):
 
 **Fase 2 — gastos del shipper (verde):**
 - **Comisión total** — La comisión del shipper por todas las unidades, en pesos.
-- **Envío total** — La parte del envío que le corresponde a ese producto.
-- **Costo total** — El costo real final, sumando producto + comisión + envío.
+- **Envío + fee total** — El envío fijo que le cobrás al cliente por ese producto, más (en modo USDT) la parte proporcional de la fee de transferencia. Las filas de tipo STOCK no llevan envío (no hay cliente que lo pague), pero sí llevan la fee USDT si corresponde.
+- **Costo total** — El costo real final, sumando producto + comisión + envío/fee.
 
 **Precio de venta (violeta):**
-- **Precio ARS** — El precio al que tenés que venderlo para lograr el margen que pediste.
-- **Precio lista** — Precio con el envío distribuido entre todos los clientes (precio individual para cada comprador).
+- **Precio ARS** — El precio al que tenés que venderlo para lograr el margen que pediste, ya redondeado hacia arriba (Redondeo precio).
+- **Precio lista** — Con el envío fijo por producto, hoy coincide con "Precio ARS" (antes eran distintos porque el envío se prorrateaba; ver Ejemplo rápido).
 - **USD lista** — Ese mismo precio expresado en dólares blue (útil para publicar).
 - **Ganancia** — Cuánto ganás en pesos después de cubrir todos los costos.
 - **Ganancia USD** — La ganancia expresada en dólares blue.
@@ -123,8 +128,10 @@ Podés importar catálogos de varias tiendas al mismo tiempo. Cada archivo que i
 
 Hay dos modos para copiar los precios al portapapeles:
 
-- **Copiar individual** — Cada producto lleva el costo completo del envío cargado a él. Usalo cuando le estás cotizando un solo artículo a un cliente.
-- **Copiar bundle** — El envío se divide entre todos los productos de la lista. Usalo cuando el cliente se lleva todo junto.
+- **Copiar individual** — Precio por producto ("Precio lista").
+- **Copiar bundle** — Precio por producto ("Precio ARS").
+
+Con el envío fijo por producto, hoy los dos dan el mismo número (antes diferían porque el envío se prorrateaba distinto según si el cliente compraba uno o varios productos).
 
 ---
 
@@ -136,14 +143,13 @@ Hay dos modos para copiar los precios al portapapeles:
 
 ## Ejemplo rápido
 
-Querés comprar un perfume que cuesta **USD 170**, la tienda te manda que el valor do PIX es **5,32**, el dólar oficial está en **$1.395**, la comisión es **$4 USD** y el envío total es **$17.000** entre **3 clientes**.
+Querés comprar un perfume que cuesta **USD 170**, la tienda te manda que el valor do PIX es **5,32**, el dólar oficial está en **$1.395**, la comisión es **$4 USD** y tenés cargado un envío fijo de **$10.000/producto**.
 
 1. Verificá que "Valor do PIX" diga 5,32 (se autocompleta desde Madrid Center).
 2. Cargá el producto con precio 170 y cantidad 1.
-3. Poné 3 en "Clientes".
-4. Elegí un margen del 30%.
+3. Elegí un margen del 30%.
 
-La calculadora te muestra al instante el costo real, el precio de venta sugerido y cuánto ganás por unidad.
+La calculadora te muestra al instante el costo real, el precio de venta sugerido (redondeado según "Redondeo precio") y cuánto ganás por unidad. Si además cargás más productos para el mismo cliente en la misma lista, cada uno suma su propio envío fijo — si te parece mucho para un pedido grande, podés hacerle un descuento manual vos mismo, la calculadora no lo hace sola.
 
 ---
 
@@ -156,7 +162,7 @@ No. La calculadora funciona directo desde el navegador, sin instalación ni regi
 Sí, aunque se ve mejor en computadora por la cantidad de columnas en la tabla.
 
 **¿Los datos se guardan?**
-Sí, las listas de productos se guardan automáticamente en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, tus listas siguen ahí. Las cotizaciones no se guardan — se vuelven a buscar al abrir.
+Sí, las listas de productos y tu configuración (comisión, envíos, fee USDT, redondeo) se guardan automáticamente en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, todo sigue ahí. Solo las cotizaciones de mercado (oficial, blue, USDT, PIX) no se guardan — se vuelven a buscar al abrir.
 
 **¿Con qué frecuencia se actualizan las cotizaciones?**
 Cada vez que abrís la calculadora o apretás "Actualizar cotizaciones". No se actualizan solas mientras la tenés abierta.

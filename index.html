@@ -93,6 +93,7 @@
     }
     .pill-p1 { background: var(--p1-head); color: var(--p1-text); }
     .pill-p2 { background: var(--p2-head); color: var(--p2-text); }
+    .pill-sell { background: var(--sell-head); color: var(--sell-text); }
 
     .rate-input-wrap { position: relative; }
     .rate-input-wrap .prefix {
@@ -533,6 +534,39 @@
           <div style="font-size:.68rem;color:var(--muted);margin-top:3px;" id="clientes-hint">Auto — ingresá nombres en las filas</div>
         </div>
 
+        <!-- Envío fijo cobrado al cliente (reemplaza el prorrateo real en el precio de venta) -->
+        <div class="rate-item">
+          <label>Envío fijo/producto (ARS) <span class="pill pill-sell">VENTA</span>
+            <span class="col-tip" data-tip="Monto fijo de envío que se le cobra al cliente por cada producto (× cantidad), sin importar el costo real del embarque. El envío real de arriba se usa solo para tu costo/ROI real."></span>
+          </label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-envio-fijo" value="10000" step="500" />
+          </div>
+        </div>
+
+        <!-- Fee por transferencia USDT -->
+        <div class="rate-item">
+          <label>Fee transferencia USDT <span class="pill pill-p2">FASE 2</span>
+            <span class="col-tip" data-tip="Fee fija de red/exchange por cada transferencia USDT que hacés (no por producto). Se cuenta 1 por cada nombre de Pedido distinto entre filas en modo USDT."></span>
+          </label>
+          <div class="rate-input-wrap">
+            <span class="prefix">USDT</span>
+            <input type="number" id="r-usdt-fee" value="3" step="0.5" style="padding-left:44px" />
+          </div>
+        </div>
+
+        <!-- Paso de redondeo compartido con el generador de listas -->
+        <div class="rate-item">
+          <label>Redondeo precio (ARS) <span class="pill pill-sell">VENTA</span>
+            <span class="col-tip" data-tip="Los precios de venta se redondean hacia arriba a este paso. Mismo valor que usa el generador de listas de precios, para que los precios coincidan."></span>
+          </label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-round-step" value="100" step="10" min="1" />
+          </div>
+        </div>
+
       </div>
 
       <div style="margin-top:14px;font-size:.75rem;color:var(--muted);">
@@ -704,7 +738,7 @@
             <th class="bg-p1 col-usd" id="col-usd-head">USD / USDT total <span class="col-tip" data-tip="Total en dólares o USDT que enviás al servicio de pago (depende del método elegido por fila)."></span></th>
             <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
             <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
-            <th class="bg-p2">Envío total <span class="col-tip" data-tip="Envío asignado a esta fila. Solo filas CLI reciben envío, dividido entre unidades de clientes."></span></th>
+            <th class="bg-p2">Envío + fee total <span class="col-tip" data-tip="Envío fijo que se le cobra al cliente por esta fila (Envío fijo/producto × cantidad; $0 en filas STOCK) más, si el modo es USDT, la parte proporcional de la fee de transferencia."></span></th>
             <th class="bg-p2">Costo total <span class="col-tip" data-tip="Costo real final para esta fila: producto + comisión + envío. Lo que realmente invertís."></span></th>
             <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
             <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado, asumiendo que el cliente compra todos los productos (envío compartido)."></span></th>
@@ -798,18 +832,12 @@
             <option value="ars">Pesos (ARS)</option>
           </select>
         </div>
-        <div class="rate-item">
-          <label>Envío estimado / unidad <span class="col-tip" data-tip="Como esta lista no tiene un pedido real, no se puede dividir el envío por cantidad de clientes. Poné una estimación por unidad."></span></label>
-          <div class="rate-input-wrap">
-            <span class="prefix">$</span>
-            <input type="number" id="pl-envio-unid" value="12000" step="100" />
-          </div>
-        </div>
-        <div class="rate-item">
-          <label>Redondeo (siempre hacia arriba)</label>
-          <div class="rate-input-wrap">
-            <span class="prefix">$</span>
-            <input type="number" id="pl-round-step" value="100" step="10" min="1" />
+        <div class="rate-item" style="justify-content:center;">
+          <label>Envío fijo y redondeo <span class="col-tip" data-tip="Usa los mismos valores de 'Envío fijo/producto' y 'Redondeo precio' configurados en la Calculadora, para que el precio publicado coincida con el que arma la Calculadora."></span></label>
+          <div style="font-size:.82rem;color:var(--muted);padding:8px 0;">
+            Envío fijo: <strong id="pl-envio-fijo-preview">$ 0</strong>/producto ·
+            Redondeo: <strong id="pl-round-step-preview">$ 0</strong>
+            <div style="font-size:.72rem;margin-top:2px;">Se editan en la pestaña Calculadora — "Tasas y configuración".</div>
           </div>
         </div>
       </div>
@@ -960,6 +988,34 @@ let nextListId = 2;
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
+// ── Config de negocio persistente (comisión, envíos, fee USDT, redondeo, modo del generador) ──
+// A diferencia de las tasas de mercado (oficial/blue/usdt/pix), que siempre se refrescan desde
+// la API al cargar, esto es configuración propia del usuario y no debe perderse al recargar.
+// Se declara acá arriba (no junto al resto de la persistencia, más abajo) para poder restaurarla
+// ANTES que cualquier otra cosa la lea — ver la llamada a loadBusinessConfig() unas líneas abajo.
+const BUSINESS_CONFIG_IDS = ['r-comision', 'r-envio', 'r-envio-fijo', 'r-usdt-fee', 'r-round-step', 'pl-modo'];
+function saveBusinessConfig() {
+  try {
+    const cfg = {};
+    BUSINESS_CONFIG_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) cfg[id] = el.value;
+    });
+    localStorage.setItem('importo-business-config', JSON.stringify(cfg));
+  } catch(e) {}
+}
+function loadBusinessConfig() {
+  try {
+    const cfg = JSON.parse(localStorage.getItem('importo-business-config') || 'null');
+    if (!cfg) return;
+    BUSINESS_CONFIG_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && cfg[id] != null && cfg[id] !== '') el.value = cfg[id];
+    });
+  } catch(e) {}
+}
+loadBusinessConfig();
+
 // ── View switcher (Calculadora / Generador de listas) ──
 function switchView(view) {
   document.getElementById('view-calc').style.display       = view === 'calc' ? '' : 'none';
@@ -975,9 +1031,8 @@ function setRowMode(rowId, mode) {
   const row = rows.find(r => r.id === rowId);
   if (!row) return;
   row.modo = mode;
-  // Update the compare button label for this row
-  const btn = document.querySelector(`#row-${rowId} .compare-btn`);
-  if (btn) btn.textContent = MODE_LABELS[mode] || mode;
+  // Re-render: el campo "Pedido" (transferencias USDT) solo se muestra en modo USDT
+  renderTable();
   recalculate();
   hideCompareCard(true);
 }
@@ -1192,6 +1247,7 @@ function addRow(data = {}) {
     margin: data.margin ?? 30,
     tipo: data.tipo ?? 'cliente',
     cliente: data.cliente ?? '',
+    pedido: data.pedido ?? '',
     modo: data.modo ?? 'pix',
     gananciaUSDOverride: data.gananciaUSDOverride ?? null,
   });
@@ -1234,6 +1290,13 @@ function renderTable() {
               list="client-names-list" placeholder="Cliente…" style="min-width:90px"
               oninput="onClienteInput(${row.id}, this.value)"
               onblur="onClienteBlur(${row.id}, this.value)" />`
+        }
+        ${row.modo === 'usdt'
+          ? `<input type="text" id="pedido-${row.id}" value="${esc(row.pedido ?? '')}"
+              placeholder="Pedido (transferencia)…" style="min-width:90px;margin-top:4px;"
+              title="Agrupa filas pagadas en la misma transferencia USDT (incluye STOCK — también se compra con esa transferencia). Nombres distintos = transferencias distintas."
+              oninput="updateField(${row.id},'pedido',this.value)" />`
+          : ''
         }
       </td>
       <td>
@@ -1332,35 +1395,105 @@ function updateClientDatalist() {
 }
 
 // ─────────────────────────────────────────────
+// Shared costing — una sola fórmula para recalculate(), computeAllModeCosts() y exportNotes(),
+// para que no vuelvan a divergir entre sí (ver card 04).
+// ─────────────────────────────────────────────
+function roundUpToStep(value, step) {
+  const s = step > 0 ? step : 1;
+  return Math.ceil(value / s) * s;
+}
+
+// Lee tasas + config de negocio una sola vez y precalcula lo que depende de TODAS las filas
+// (comisión, fee de transferencia USDT por unidad). Se llama una vez por recálculo, no por fila.
+function getCostingContext() {
+  const pixRate    = getRate('r-pix');
+  const pixUsdRate = getRate('r-pix-usd');
+  const oficial    = getRate('r-oficial');
+  const blue       = getRate('r-blue');
+  const usdt       = getRate('r-usdt');
+  const brlArsRate = getRate('r-brl-ars');
+  const comUSD     = getRate('r-comision');
+  const envioFijo  = getRate('r-envio-fijo');
+  const usdtFeeUsd = getRate('r-usdt-fee');
+  const roundStep  = getRate('r-round-step') || 1;
+  const comisionARS = comUSD * usdt;
+
+  // Transferencias USDT = nombres de "Pedido" distintos entre filas en modo usdt (default 1
+  // si hay filas usdt pero ninguna tiene pedido cargado — nunca 0 transferencias si hay filas).
+  // Mismo patrón que el auto-conteo de Clientes (:1512 aprox.), aplicado a `pedido`.
+  const filasUsdt = rows.filter(r => (r.modo || 'pix') === 'usdt');
+  const pedidoNameSet = new Set(
+    filasUsdt.filter(r => (r.pedido ?? '').trim()).map(r => r.pedido.trim().toLowerCase())
+  );
+  const unidadesUsdt = filasUsdt.reduce((s, r) => s + r.qty, 0);
+  const transferencias = filasUsdt.length === 0 ? 0 : (pedidoNameSet.size > 0 ? pedidoNameSet.size : 1);
+  const feeUsdtTotal = usdtFeeUsd * usdt * transferencias;
+  const feeUsdtPerUnit = unidadesUsdt > 0 ? feeUsdtTotal / unidadesUsdt : 0;
+
+  return {
+    pixRate, pixUsdRate, oficial, blue, usdt, brlArsRate,
+    comisionARS, envioFijo, usdtFeeUsd, roundStep,
+    transferencias, unidadesUsdt, feeUsdtTotal, feeUsdtPerUnit,
+  };
+}
+
+// Costo real de una fila (sin precio de venta todavía). `ctx` = getCostingContext().
+function computeRowCosting(row, ctx) {
+  const isStock = row.tipo === 'stock';
+  const rowMode = row.modo || 'pix';
+
+  let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
+  if (rowMode === 'usdt') {
+    usdUnid   = row.price;
+    costoARS1 = row.price * ctx.usdt;
+  } else if (rowMode === 'ars') {
+    brlUnid   = row.price * ctx.pixRate;
+    costoARS1 = ctx.brlArsRate > 0 ? brlUnid * ctx.brlArsRate : 0;
+  } else {
+    brlUnid   = row.price * ctx.pixRate;
+    usdUnid   = ctx.pixUsdRate > 0 ? brlUnid / ctx.pixUsdRate : 0;
+    costoARS1 = usdUnid * ctx.oficial;
+  }
+
+  // Envío fijo POR UNIDAD (se multiplica × qty más abajo, igual que costoARS1/comisionARS —
+  // todo en esta función es "por unidad", nunca total de la fila). Se le cobra al cliente, por
+  // eso las filas STOCK no lo tienen (no hay cliente que lo pague).
+  const envioFijoUnid = isStock ? 0 : ctx.envioFijo;
+
+  // Fee de transferencia USDT por unidad — costo real de comprar en ese modo, aplica a toda
+  // fila usdt (stock incluido, es costo de compra, no algo exclusivo del cliente).
+  const feeUsdtUnid = rowMode === 'usdt' ? ctx.feeUsdtPerUnit : 0;
+
+  const costoTotal = costoARS1 + ctx.comisionARS + envioFijoUnid + feeUsdtUnid;
+
+  return { isStock, rowMode, brlUnid, usdUnid, costoARS1, envioFijoUnid, feeUsdtUnid, costoTotal };
+}
+
+// ─────────────────────────────────────────────
 // Payment mode compare card
 // ─────────────────────────────────────────────
 let _compareHideTimer = null;
 
 function computeAllModeCosts(row) {
-  const pixRate    = getRate('r-pix');
-  const pixUsdRate = getRate('r-pix-usd');
-  const oficial    = getRate('r-oficial');
-  const usdt       = getRate('r-usdt');
-  const brlArsRate = getRate('r-brl-ars');
-  const comUSD     = getRate('r-comision');
-  const envioTotal = getRate('r-envio');
-  const comisionARS = comUSD * usdt;
-
+  const ctx = getCostingContext();
   const isStock = row.tipo === 'stock';
-  const totalClienteUnits = rows.filter(r => r.tipo !== 'stock').reduce((s, r) => s + r.qty, 0);
-  const envioPerUnit = isStock ? 0 : (totalClienteUnits > 0 ? envioTotal / totalClienteUnits : 0);
+  const envioFijoUnid = isStock ? 0 : ctx.envioFijo;
 
-  const brlUnid = row.price * pixRate;
+  const brlUnid = row.price * ctx.pixRate;
 
-  const usdPix  = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
-  const ars1Pix = usdPix * oficial;
-  const costoPix = ars1Pix > 0 ? ars1Pix + comisionARS + envioPerUnit : 0;
+  const usdPix  = ctx.pixUsdRate > 0 ? brlUnid / ctx.pixUsdRate : 0;
+  const ars1Pix = usdPix * ctx.oficial;
+  const costoPix = ars1Pix > 0 ? ars1Pix + ctx.comisionARS + envioFijoUnid : 0;
 
-  const ars1Usdt  = row.price * usdt;
-  const costoUsdt = ars1Usdt + comisionARS + envioPerUnit;
+  // USDT directo: el fee de transferencia de ESTA fila si ya está en modo usdt (usa la
+  // fee/unidad ya prorrateada entre las filas usdt reales); si la fila no está en ese modo,
+  // se muestra "como si" fuera la única transferencia (mejor estimación posible al comparar).
+  const feeUsdtEstim = row.modo === 'usdt' ? ctx.feeUsdtPerUnit : (ctx.usdtFeeUsd * ctx.usdt);
+  const ars1Usdt  = row.price * ctx.usdt;
+  const costoUsdt = ars1Usdt + ctx.comisionARS + envioFijoUnid + feeUsdtEstim;
 
-  const ars1Ars  = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
-  const costoArs = ars1Ars > 0 ? ars1Ars + comisionARS + envioPerUnit : 0;
+  const ars1Ars  = ctx.brlArsRate > 0 ? brlUnid * ctx.brlArsRate : 0;
+  const costoArs = ars1Ars > 0 ? ars1Ars + ctx.comisionARS + envioFijoUnid : 0;
 
   return { pix: costoPix, usdt: costoUsdt, ars: costoArs };
 }
@@ -1446,32 +1579,29 @@ function cancelHideCompareCard() {
 //   usd_unid    = brl_unid / pix_usd_rate           (USD you send to the PIX service)
 //   costo_ars1  = usd_unid × oficial                (what those USD cost you in ARS)
 //
-// FASE 2 (paid to shipper):
-//   comision_ars = commission_usd × oficial
-//   envio_unid   = envio_total / total_units
+// FASE 2 (paid to shipper / exchange):
+//   comision_ars   = commission_usd × usdt
+//   envio_fijo_fila = r-envio-fijo × qty            (lo que se le cobra al cliente; $0 en STOCK)
+//   fee_usdt_fila   = fee_usdt_por_unidad × qty      (solo modo usdt; costo real de esa transferencia)
 //
 // TOTAL:
-//   costo_total = costo_ars1 + comision_ars + envio_unid
+//   costo_total = costo_ars1 + comision_ars + envio_fijo_fila + fee_usdt_fila
 //
-// SELLING PRICE:
-//   precio_venta_ars      = costo_total / (1 - margin%)
+// SELLING PRICE (redondeado hacia arriba a r-round-step):
+//   precio_venta_ars      = redondear(costo_total / (1 - margin%))
 //   precio_venta_usd_blue = precio_venta_ars / blue
-//   ganancia              = precio_venta_ars - costo_total
+//   ganancia              = precio_venta_ars - costo_total   (recalculada post-redondeo)
 //   margen_real           = ganancia / precio_venta_ars
+//
+// El envío REAL (r-envio, lo que de verdad se le paga al fletero) no interviene acá — se usa
+// solo en el resumen general, para el costo/ROI real del embarque (ver más abajo).
 // ─────────────────────────────────────────────
 function recalculate() {
-  const pixRate    = getRate('r-pix');
-  const pixUsdRate = getRate('r-pix-usd');
-  const oficial    = getRate('r-oficial');
-  const blue       = getRate('r-blue');
-  const usdt       = getRate('r-usdt');
-  const comUSD     = getRate('r-comision');
-  const envioTotal = getRate('r-envio');
-  const brlArsRate = getRate('r-brl-ars');
+  const ctx = getCostingContext();
+  const { blue, roundStep } = ctx;
+  const envioRealTotal = getRate('r-envio');
 
-  const totalUnits        = rows.reduce((s, r) => s + r.qty, 0);
-  const totalClienteUnits = rows.filter(r => r.tipo !== 'stock').reduce((s, r) => s + r.qty, 0);
-  const comisionARS       = comUSD * usdt;
+  const totalUnits = rows.reduce((s, r) => s + r.qty, 0);
 
   // Auto-derive clientes from distinct non-empty client names in CLI rows
   const clienteNameSet = new Set(
@@ -1497,46 +1627,27 @@ function recalculate() {
   const clientStats = {}; // name → { qty, costo, venta, ganancia }
 
   rows.forEach(row => {
-    const isStock = row.tipo === 'stock';
-    const rowMode = row.modo || 'pix';
+    const { isStock, rowMode, brlUnid, usdUnid, costoARS1, envioFijoUnid, feeUsdtUnid, costoTotal } = computeRowCosting(row, ctx);
 
-    // Fase 1
-    let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
-    if (rowMode === 'usdt') {
-      usdUnid   = row.price;
-      costoARS1 = row.price * usdt;
-    } else if (rowMode === 'ars') {
-      brlUnid   = row.price * pixRate;
-      costoARS1 = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
-    } else {
-      brlUnid   = row.price * pixRate;
-      usdUnid   = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
-      costoARS1 = usdUnid * oficial;
-    }
-
-    // Fase 2: shipping only allocated to CLI rows
-    const envioPerUnit = isStock ? 0 : (totalClienteUnits > 0 ? envioTotal / totalClienteUnits : 0);
-    const costoTotal   = costoARS1 + comisionARS + envioPerUnit;
-
-    // Precio lista: per-client individual (only for CLI rows)
-    const costoIndividual = !isStock ? (costoARS1 + comisionARS + (envioTotal / clientes)) : 0;
-
-    // Selling price — bidirectional: gananciaUSD ↔ margin
+    // Selling price — bidirectional: gananciaUSD ↔ margin. El resultado se redondea hacia
+    // arriba (r-round-step) y ganancia/margenReal se recalculan sobre el precio YA redondeado,
+    // para que lo que se muestra sea siempre coherente con lo que de verdad se cobra.
     let precioARS = 0, ganancia = 0, gananciaUSD = 0, margenReal = 0;
     let precioLista = 0, precioListaUSD = 0;
 
     if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0 && costoTotal > 0) {
-      // User set gananciaUSD → back-calculate margin
+      // User set gananciaUSD → back-calculate margin (el override se conserva tal cual escrito;
+      // el redondeo hacia arriba solo puede aumentar un poco la ganancia real vs la tipeada)
       gananciaUSD = row.gananciaUSDOverride;
-      ganancia    = gananciaUSD * blue;
-      precioARS   = costoTotal + ganancia;
+      precioARS   = roundUpToStep(costoTotal + gananciaUSD * blue, roundStep);
+      ganancia    = precioARS - costoTotal;
       margenReal  = ganancia / precioARS;
       row.margin  = parseFloat((margenReal * 100).toFixed(1));
       const mInput = document.getElementById(`margin-${row.id}`);
       if (mInput && document.activeElement !== mInput) mInput.value = row.margin;
     } else if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
-      // Margin set → calculate precio and ganancia
-      precioARS   = costoTotal / (1 - row.margin / 100);
+      // Margin set → calculate precio y ganancia
+      precioARS   = roundUpToStep(costoTotal / (1 - row.margin / 100), roundStep);
       ganancia    = precioARS - costoTotal;
       gananciaUSD = blue > 0 ? ganancia / blue : 0;
       margenReal  = ganancia / precioARS;
@@ -1548,21 +1659,19 @@ function recalculate() {
       gInput.value = gananciaUSD > 0 ? gananciaUSD.toFixed(2) : '';
     }
 
-    // Precio lista — only for CLI rows
-    if (!isStock && costoIndividual > 0) {
-      if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0) {
-        precioLista    = costoIndividual + row.gananciaUSDOverride * blue;
-      } else if (row.margin > 0 && row.margin < 100) {
-        precioLista    = costoIndividual / (1 - row.margin / 100);
-      }
-      precioListaUSD = blue > 0 && precioLista > 0 ? precioLista / blue : 0;
+    // Precio lista — con envío fijo por fila, el costo de "comprar solo este producto" y el
+    // de "comprar todo junto" ya son el mismo (antes diferían por el prorrateo real del envío
+    // entre unidades/clientes). Se mantiene como columna aparte por si el layout la necesita.
+    if (!isStock && precioARS > 0) {
+      precioLista    = precioARS;
+      precioListaUSD = blue > 0 ? precioARS / blue : 0;
     }
 
     // Accumulate totals
     totalBRL        += rowMode !== 'usdt' ? brlUnid * row.qty : 0;
     totalUSD1       += usdUnid   * row.qty;
     totalARS1       += costoARS1 * row.qty;
-    totalComisiones += comisionARS * row.qty;
+    totalComisiones += ctx.comisionARS * row.qty;
     if (!isStock) {
       totalVentaCliente    += precioARS * row.qty;
       totalGananciaCliente += ganancia  * row.qty;
@@ -1581,8 +1690,8 @@ function recalculate() {
     setCell(`brl-${row.id}`,  rowMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
     setCell(`usd-${row.id}`,  rowMode === 'ars'  ? '—' : (usdUnid > 0 ? fmt_usd(usdUnid * qty) : '—'));
     setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');
-    setCell(`com-${row.id}`,  fmt_ars(comisionARS * qty));
-    setCell(`env-${row.id}`,  isStock ? '$ 0' : fmt_ars(envioPerUnit * qty));
+    setCell(`com-${row.id}`,  fmt_ars(ctx.comisionARS * qty));
+    setCell(`env-${row.id}`,  fmt_ars((envioFijoUnid + feeUsdtUnid) * qty));
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal * qty) : '—');
     setCell(`vars-${row.id}`,  precioARS     > 0 ? fmt_ars(precioARS    * qty) : '—');
     setCell(`lista-${row.id}`, (!isStock && precioLista    > 0) ? fmt_ars(precioLista    * qty) : '—');
@@ -1591,19 +1700,19 @@ function recalculate() {
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
 
-  // Summary
-  const totalCostoReal = totalARS1 + totalComisiones + envioTotal;
+  // Summary — costo/ROI REAL del embarque (envío y fee USDT reales, no los fijos cobrados)
+  const totalCostoReal = totalARS1 + totalComisiones + envioRealTotal + ctx.feeUsdtTotal;
 
   setText('s-qty',          fmt_num(totalUnits));
   setText('s-brl',          fmt_brl(totalBRL));
   setText('s-usd1',         fmt_usd(totalUSD1));
   setText('s-ars-p1',       fmt_ars(totalARS1));
   setText('s-comisiones',   fmt_ars(totalComisiones));
-  setText('s-envio',        fmt_ars(envioTotal));
+  setText('s-envio',        fmt_ars(envioRealTotal));
   setText('s-costo-total',  fmt_ars(totalCostoReal));
   setText('s-venta',        fmt_ars(totalVentaCliente));
   setText('s-ganancia',     fmt_ars(totalGananciaCliente));
-  setText('s-ganancia-usd', oficial > 0 ? fmt_usd(totalGananciaCliente / oficial) : 'USD 0');
+  setText('s-ganancia-usd', ctx.oficial > 0 ? fmt_usd(totalGananciaCliente / ctx.oficial) : 'USD 0');
   const roi = totalCostoReal > 0 ? totalGananciaCliente / totalCostoReal * 100 : 0;
   setText('s-roi', roi.toFixed(1) + '%');
 
@@ -2507,8 +2616,11 @@ function detectFuzzyDuplicates(items) {
 }
 
 // ── Costing ──
-function plComputeCostTotal(priceUsd, mode, rates, envioUnid) {
-  const { pixRate, pixUsdRate, oficial, usdt, brlArsRate, comUSD } = rates;
+// NOTA: la lista de precios no tiene un pedido real, así que no hay forma de saber cuántas
+// transferencias USDT reales va a haber — se asume 1 (ver card 04, decisión D2). El precio
+// publicado puede no reflejar transferencias múltiples de un pedido grande real en ese modo.
+function plComputeCostTotal(priceUsd, mode, rates, envioFijo) {
+  const { pixRate, pixUsdRate, oficial, usdt, brlArsRate, comUSD, usdtFeeUsd } = rates;
   let costoARS1 = 0;
   if (mode === 'usdt') {
     costoARS1 = priceUsd * usdt;
@@ -2521,28 +2633,31 @@ function plComputeCostTotal(priceUsd, mode, rates, envioUnid) {
     costoARS1 = usdUnid * oficial;
   }
   const comisionARS = comUSD * usdt;
-  return costoARS1 + comisionARS + envioUnid;
+  const feeUsdt      = mode === 'usdt' ? (usdtFeeUsd || 0) * usdt : 0; // 1 transferencia asumida
+  return costoARS1 + comisionARS + envioFijo + feeUsdt;
 }
 
 function plFinalPrice(costTotal, marginPct, roundStep) {
   if (costTotal <= 0) return 0;
-  if (marginPct <= 0 || marginPct >= 100) return Math.ceil(costTotal / roundStep) * roundStep;
+  const step = roundStep > 0 ? roundStep : 1;
+  if (marginPct <= 0 || marginPct >= 100) return Math.ceil(costTotal / step) * step;
   const raw = costTotal / (1 - marginPct / 100);
-  return Math.ceil(raw / roundStep) * roundStep;
+  return Math.ceil(raw / step) * step;
 }
 
 function plGetConfig() {
   return {
     mode: document.getElementById('pl-modo').value,
-    envioUnid: parseFloat(document.getElementById('pl-envio-unid').value) || 0,
-    roundStep: parseFloat(document.getElementById('pl-round-step').value) || 1,
+    envioFijo: getRate('r-envio-fijo'),
+    roundStep: getRate('r-round-step') || 1,
     rates: {
       pixRate:    getRate('r-pix'),
       pixUsdRate: getRate('r-pix-usd'),
       oficial:    getRate('r-oficial'),
       usdt:       getRate('r-usdt'),
       brlArsRate: getRate('r-brl-ars'),
-      comUSD:     getRate('r-comision')
+      comUSD:     getRate('r-comision'),
+      usdtFeeUsd: getRate('r-usdt-fee')
     }
   };
 }
@@ -2550,10 +2665,18 @@ function plGetConfig() {
 function recomputePlPricing() {
   const cfg = plGetConfig();
   plItems.forEach(it => {
-    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.mode, cfg.rates, cfg.envioUnid);
+    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.mode, cfg.rates, cfg.envioFijo);
     it.marginPct   = marginForPriceUsd(it.priceUsd);
     it.finalPriceArs = plFinalPrice(it.costTotal, it.marginPct, cfg.roundStep);
   });
+}
+
+// Refleja los valores compartidos (editados en la pestaña Calculadora) en el panel del generador.
+function renderPlSharedConfigPreview() {
+  const envioEl = document.getElementById('pl-envio-fijo-preview');
+  const stepEl  = document.getElementById('pl-round-step-preview');
+  if (envioEl) envioEl.textContent = fmt_ars(getRate('r-envio-fijo'));
+  if (stepEl)  stepEl.textContent  = fmt_ars(getRate('r-round-step'));
 }
 
 // ── Generate pipeline ──
@@ -2907,7 +3030,7 @@ function plRowHtml(it) {
       <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
       <td class="cell-computed">${it.marginPct}%</td>
       <td>
-        <input type="number" value="${Math.round(price)}" min="0" step="${document.getElementById('pl-round-step').value || 100}"
+        <input type="number" value="${Math.round(price)}" min="0" step="${getRate('r-round-step') || 100}"
           style="width:100px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;text-align:right;"
           oninput="updatePlManualPrice(${it.id}, +this.value)" />
         ${it.manualPrice != null ? `<button class="del-btn" title="Volver al precio calculado" onclick="resetPlManualPrice(${it.id})">↺</button>` : ''}
@@ -3558,11 +3681,19 @@ async function publishCatalogAuto() {
   }
 }
 
-['pl-modo', 'pl-envio-unid', 'pl-round-step'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => {
+document.getElementById('pl-modo').addEventListener('change', () => {
+  saveBusinessConfig();
+  if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
+});
+// Envío fijo, fee USDT y redondeo son compartidos con la Calculadora (rates-grid principal) —
+// cualquier cambio ahí también tiene que recalcular la lista de precios ya generada.
+['r-envio-fijo', 'r-usdt-fee', 'r-round-step'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    renderPlSharedConfigPreview();
     if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
   });
 });
+renderPlSharedConfigPreview();
 
 renderPlTiers();
 renderPlBrandTags();
@@ -3573,38 +3704,36 @@ renderPublishSecretStatus();
 // Export plain text notes
 // ─────────────────────────────────────────────
 function exportNotes() {
-  const pixRate      = getRate('r-pix');
-  const pixUsdRate   = getRate('r-pix-usd');
-  const oficial      = getRate('r-oficial');
-  const blue         = getRate('r-blue');
-  const usdt         = getRate('r-usdt');
-  const comUSD       = getRate('r-comision');
-  const envioTotal   = getRate('r-envio');
-  const pixService   = document.getElementById('pix-usd-provider').textContent;
-  const totalUnits   = rows.reduce((s, r) => s + r.qty, 0);
-  const clientes     = Math.max(1, Math.round(getRate('r-clientes') || 1));
-  const comisionARS  = comUSD * usdt;
-  const fecha        = new Date().toLocaleString('es-AR');
+  // Usa el mismo motor que recalculate() (getCostingContext/computeRowCosting) — antes esta
+  // función tenía su propia copia de la fórmula y había quedado desalineada (ignoraba
+  // row.modo y gananciaUSDOverride). Ver card 04.
+  const ctx          = getCostingContext();
+  const envioRealTotal = getRate('r-envio');
+  const pixService    = document.getElementById('pix-usd-provider').textContent;
+  const totalUnits    = rows.reduce((s, r) => s + r.qty, 0);
+  const fecha         = new Date().toLocaleString('es-AR');
 
-  let totalCostoARS = 0, totalVenta = 0, totalGanancia = 0;
+  let totalCostoReal = 0, totalVenta = 0, totalGanancia = 0;
   const productRows = rows.map(row => {
-    const brlUnid    = row.price * pixRate;
-    const usdUnid    = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
-    const costoARS1  = usdUnid * oficial;
-    const envioPerUnit = totalUnits > 0 ? envioTotal / totalUnits : 0;
-    const costoTotal = costoARS1 + comisionARS + envioPerUnit;
+    const { costoTotal } = computeRowCosting(row, ctx);
     let precioARS = 0, precioUSD = 0, ganancia = 0;
-    if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
-      precioARS = costoTotal / (1 - row.margin / 100);
-      precioUSD = blue > 0 ? precioARS / blue : 0;
+    if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0 && costoTotal > 0) {
+      precioARS = roundUpToStep(costoTotal + row.gananciaUSDOverride * ctx.blue, ctx.roundStep);
       ganancia  = precioARS - costoTotal;
+      precioUSD = ctx.blue > 0 ? precioARS / ctx.blue : 0;
+    } else if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
+      precioARS = roundUpToStep(costoTotal / (1 - row.margin / 100), ctx.roundStep);
+      ganancia  = precioARS - costoTotal;
+      precioUSD = ctx.blue > 0 ? precioARS / ctx.blue : 0;
     }
-    totalCostoARS += costoTotal * row.qty;
     totalVenta    += precioARS  * row.qty;
     totalGanancia += ganancia   * row.qty;
     return { row, costoTotal, precioARS, precioUSD, ganancia };
   });
-  const roi = totalCostoARS > 0 ? (totalGanancia / totalCostoARS * 100).toFixed(1) : 0;
+  // Costo/ROI real del embarque — envío y fee USDT reales, no los fijos cobrados al cliente
+  totalCostoReal = rows.reduce((s, row) => s + computeRowCosting(row, ctx).costoARS1 * row.qty, 0)
+    + ctx.comisionARS * totalUnits + envioRealTotal + ctx.feeUsdtTotal;
+  const roi = totalCostoReal > 0 ? (totalGanancia / totalCostoReal * 100).toFixed(1) : 0;
 
   const line  = '─'.repeat(40);
   const lines = [];
@@ -3614,20 +3743,22 @@ function exportNotes() {
   lines.push(line);
 
   lines.push('TASAS');
-  lines.push(`  Valor do PIX (tienda):  ${pixRate} BRL/USD`);
-  lines.push(`  Servicio PIX (USD→BRL): ${pixUsdRate} BRL/USD  (${pixService})`);
-  lines.push(`  Dólar Oficial: $${oficial}`);
-  lines.push(`  Dólar Blue:    $${blue}`);
-  lines.push(`  USDT:          $${usdt}  (base comisión shipper)`);
-  lines.push(`  Comisión:      USD ${comUSD}/producto`);
-  lines.push(`  Envío:         $${envioTotal} total ÷ ${clientes} cliente${clientes !== 1 ? 's' : ''} = $${Math.round(envioTotal / clientes)}/cliente`);
+  lines.push(`  Valor do PIX (tienda):  ${ctx.pixRate} BRL/USD`);
+  lines.push(`  Servicio PIX (USD→BRL): ${ctx.pixUsdRate} BRL/USD  (${pixService})`);
+  lines.push(`  Dólar Oficial: $${ctx.oficial}`);
+  lines.push(`  Dólar Blue:    $${ctx.blue}`);
+  lines.push(`  USDT:          $${ctx.usdt}  (base comisión shipper y fee de transferencia)`);
+  lines.push(`  Comisión:      USD ${getRate('r-comision')}/producto`);
+  lines.push(`  Envío fijo:    $${ctx.envioFijo}/producto (cobrado al cliente)`);
+  lines.push(`  Envío real:    $${envioRealTotal} total (costo real del embarque, no se cobra así)`);
+  lines.push(`  Fee USDT:      USDT ${ctx.usdtFeeUsd}/transferencia × ${ctx.transferencias} transferencia${ctx.transferencias !== 1 ? 's' : ''}`);
   lines.push(line);
 
   lines.push('PRODUCTOS');
   productRows.forEach(({ row, costoTotal, precioARS, precioUSD, ganancia }) => {
     const nombre = row.name || '(sin nombre)';
     lines.push(`  ${nombre}`);
-    lines.push(`    Precio USD:       USD ${row.price}  ×  ${row.qty} unidad${row.qty !== 1 ? 'es' : ''}`);
+    lines.push(`    Precio USD:       USD ${row.price}  ×  ${row.qty} unidad${row.qty !== 1 ? 'es' : ''}  (${MODE_LABELS_FULL[row.modo] || 'PIX'})`);
     lines.push(`    Costo real/unid:  $${Math.round(costoTotal).toLocaleString('es-AR')}`);
     lines.push(`    Precio de venta:  $${Math.round(precioARS).toLocaleString('es-AR')}  (USD ${precioUSD.toFixed(2)} blue)`);
     lines.push(`    Ganancia/unid:    $${Math.round(ganancia).toLocaleString('es-AR')}`);
@@ -3635,13 +3766,13 @@ function exportNotes() {
   });
 
   lines.push(line);
-  const gananciaUSD = oficial > 0 ? (totalGanancia / oficial).toFixed(2) : '—';
+  const gananciaUSD = ctx.oficial > 0 ? (totalGanancia / ctx.oficial).toFixed(2) : '—';
   lines.push('TOTALES');
   lines.push(`  Unidades:            ${totalUnits}`);
-  lines.push(`  Costo total:         $${Math.round(totalCostoARS).toLocaleString('es-AR')}`);
+  lines.push(`  Costo real total:    $${Math.round(totalCostoReal).toLocaleString('es-AR')}`);
   lines.push(`  Total a cobrar:      $${Math.round(totalVenta).toLocaleString('es-AR')}`);
   lines.push(`  Ganancia total:      $${Math.round(totalGanancia).toLocaleString('es-AR')}`);
-  lines.push(`  Ganancia (USD):      USD ${gananciaUSD}  (÷ oficial $${oficial})`);
+  lines.push(`  Ganancia (USD):      USD ${gananciaUSD}  (÷ oficial $${ctx.oficial})`);
   lines.push(`  ROI:                 ${roi}%`);
 
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
@@ -3682,8 +3813,13 @@ function copyPrices(mode = 'individual') {
 // ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
-['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt','r-comision','r-envio'].forEach(id => {
+['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt'].forEach(id => {
   document.getElementById(id).addEventListener('input', recalculate);
+});
+// Config de negocio: recalcula igual que las tasas de mercado, pero además se persiste
+// (a diferencia de las tasas, que siempre se refrescan de la API al recargar).
+BUSINESS_CONFIG_IDS.filter(id => id !== 'pl-modo').forEach(id => {
+  document.getElementById(id).addEventListener('input', () => { saveBusinessConfig(); recalculate(); });
 });
 
 // ─────────────────────────────────────────────
