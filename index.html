@@ -1182,10 +1182,19 @@ function selectAcItem(rowId, idx) {
   if (row) {
     row.name = item.name;
     row.price = item.priceUsd;
+    // Mismo criterio que el botón "+ Calculadora" del generador (addRowFromProduct): el margen
+    // lo define el tramo según costo original, no el default de 30%. Pisa también un override
+    // de ganancia USD que hubiera quedado de un producto anterior en esta fila.
+    row.margin = marginForPriceUsd(item.priceUsd);
+    row.gananciaUSDOverride = null;
     const nameInput  = document.getElementById(`name-${rowId}`);
     const priceInput = document.getElementById(`price-${rowId}`);
-    if (nameInput)  nameInput.value  = item.name;
-    if (priceInput) priceInput.value = item.priceUsd;
+    const marginInput = document.getElementById(`margin-${rowId}`);
+    const ganUsdInput  = document.getElementById(`ganusd-${rowId}`);
+    if (nameInput)   nameInput.value   = item.name;
+    if (priceInput)  priceInput.value  = item.priceUsd;
+    if (marginInput) marginInput.value = row.margin;
+    if (ganUsdInput) ganUsdInput.value = '';
   }
   closeDropdown();
   recalculate();
