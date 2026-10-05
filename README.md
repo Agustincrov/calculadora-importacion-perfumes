@@ -25,17 +25,18 @@ Importo fetches all rates automatically and computes every number in real time a
 - All rates refresh on load and on demand
 
 **Cost calculation (per product)**
-- Full Phase 1 chain: `price_usd × store_pix → BRL → USD via PIX service → ARS at official rate`
-- Phase 2: shipper commission (in USDT) + shipping split equally per client
-- Selling price computed from cost + target margin (margin, not markup)
+- Full Phase 1 chain: `price_usd × store_pix → BRL → USD via PIX service → ARS at official rate` (3 payment modes: PIX via BRLUSD, USDT direct, or ARS via BRLARS — each with its own chain)
+- Phase 2: shipper commission (in USDT) + a flat shipping fee per product (configurable, charged to the client regardless of real shipping cost) + a USDT transfer fee (direct-USDT mode only, split across whichever product rows share the same "order" tag, since that's how many real transfers it takes)
+- Selling price computed from cost + target margin (margin, not markup), rounded up to a configurable step shared with the published price list
 - Gain per unit and real margin displayed with color-coded badges (green ≥20%, yellow ≥10%, red <10%)
 
 **Usability**
-- Excel catalog import — product names and prices auto-fill on search
-- Shipping cost split by number of clients, not units (each client pays a flat share)
+- Excel catalog import — product names and prices auto-fill on search, tier-based margin applied automatically by original cost
+- Real shipping cost tracked separately from the flat fee charged to clients, for accurate cost/ROI reporting
+- Results split across two tables — real cost above, selling price (margin/price/gain) in a compact table below, next to the summary panel
 - Export full purchase summary as `.txt`
 - Copy all selling prices to clipboard in one click
-- Fully reactive — recalculates on every input change
+- Fully reactive — recalculates on every input change, persists business config (commission, shipping, fees, rounding) across reloads
 
 **Access control**
 - Protected via Cloudflare Access (email OTP)
@@ -118,13 +119,15 @@ cost_ars      = usd_sent × official_rate
 
 ### Phase 2 — Shipper fees
 ```
-commission_ars = commission_usd × usdt_rate
-shipping_ars   = total_shipping / num_clients / qty
+commission_ars   = commission_usd × usdt_rate                      (every row)
+flat_shipping    = flat_shipping_per_product × qty                 (0 for stock rows — no client pays it)
+usdt_transfer_fee = (transfer_fee_usdt × usdt_rate × num_transfers) / usdt_mode_units   (USDT-direct rows only)
 ```
+The real total shipping cost (what you actually pay the courier) is tracked separately and never divided into the price — it only feeds the real cost/ROI numbers in the summary panel.
 
 ### Selling price
 ```
-selling_price = total_cost / (1 - margin)
+selling_price = round_up(total_cost / (1 - margin), rounding_step)
 gain_per_unit = selling_price - total_cost
 real_margin   = gain_per_unit / selling_price
 ```

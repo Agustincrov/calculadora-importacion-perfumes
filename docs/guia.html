@@ -368,26 +368,38 @@
           </tr>
           <tr>
             <td><strong>USDT</strong></td>
-            <td>Cotización USDT en Binance P2P. Se autocompleta. Se usa para calcular la comisión del shipper en pesos.</td>
+            <td>Cotización USDT en Binance P2P. Se autocompleta. Se usa para calcular la comisión del shipper y la fee de transferencia en pesos.</td>
           </tr>
           <tr>
             <td><strong>Comisión/producto</strong></td>
             <td>Lo que cobra el shipper por producto, en USD. Generalmente $4.</td>
           </tr>
           <tr>
-            <td><strong>Envío total</strong></td>
-            <td>El costo total del envío en pesos, que se reparte entre todos los clientes.</td>
+            <td><strong>Envío total (real)</strong></td>
+            <td>Lo que de verdad le pagás al fletero por todo el embarque. No se le cobra así al cliente — se usa solo para que la calculadora te muestre tu costo y ROI reales en el resumen.</td>
           </tr>
           <tr>
             <td><strong>Clientes</strong></td>
-            <td>Cuántas personas comparten el envío. Si sos vos solo, dejalo en 1. Si son 3 amigos comprando juntos, poné 3. Afecta el "precio lista individual".</td>
+            <td>Se calcula solo, contando nombres distintos en el campo "Cliente" de las filas. Informativo — ya no afecta el precio.</td>
+          </tr>
+          <tr>
+            <td><strong>Envío fijo/producto</strong></td>
+            <td>Lo que le cobrás al cliente por cada producto, sin importar el costo real del embarque (por eso "fijo"). Si el cliente pide varios productos, cada uno suma este monto.</td>
+          </tr>
+          <tr>
+            <td><strong>Fee transferencia USDT</strong></td>
+            <td>Fee fija (en USDT) que cobra el exchange por cada transferencia real que hacés al pagar en modo USDT directo. Se cuenta una vez por cada nombre distinto que cargues en el campo "Pedido" de las filas USDT.</td>
+          </tr>
+          <tr>
+            <td><strong>Redondeo precio</strong></td>
+            <td>Los precios de venta se redondean hacia arriba a este número, para que coincidan con los precios publicados en el catálogo.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <blockquote>
-      <p>El botón <strong>Actualizar cotizaciones</strong> refresca todos los valores desde internet en cualquier momento.</p>
+      <p>El botón <strong>Actualizar cotizaciones</strong> refresca las tasas de mercado (oficial, blue, USDT, PIX) desde internet en cualquier momento. La comisión, los envíos, la fee USDT y el redondeo son configuración tuya — se guardan solos y no se pierden al recargar la página.</p>
     </blockquote>
 
     <hr />
@@ -404,7 +416,8 @@ BRL ÷ mejor_pix            = USD que enviás al servicio
 USD × dólar_oficial        = costo en ARS</code></pre>
 
     <h3>USDT directo</h3>
-    <p>Mandás USDT directamente a la tienda, sin pasar por la conversión a BRL. Requiere que la tienda acepte cripto. Evita un paso en la cadena y puede resultar más barato dependiendo de la cotización del momento.</p>
+    <p>Mandás USDT directamente a la tienda, sin pasar por la conversión a BRL — no interviene ningún valor en reales en este modo. Requiere que la tienda acepte cripto. Evita un paso en la cadena y puede resultar más barato dependiendo de la cotización del momento.</p>
+    <p>En las filas con este modo aparece un campo extra, <strong>"Pedido"</strong>: escribí ahí un nombre que identifique cada transferencia real que vas a hacer. Si varios productos van en la misma transferencia, ponéles el mismo nombre — así la calculadora cobra la fee de transferencia una sola vez entre esos productos. Si vas a transferir en momentos distintos (por ejemplo, mismo pedido pero repartido en dos días), usá nombres distintos: cada uno cuenta como una transferencia con su propia fee.</p>
 
     <hr />
 
@@ -432,26 +445,27 @@ USD × dólar_oficial        = costo en ARS</code></pre>
       <li><strong>Cantidad</strong> — Cuántas unidades de ese producto estás comprando.</li>
       <li><strong>Margen %</strong> — El margen de ganancia que querés aplicar. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).</li>
     </ul>
-    <p>Todas las columnas de resultados muestran el valor total (precio × cantidad):</p>
+    <p>Los resultados están repartidos en <strong>dos tablas</strong> para que no haya que scrollear horizontalmente para relacionar costo con venta: la tabla de arriba (costo real) y una tabla más chica debajo, junto al Resumen (precio de venta). Las dos muestran los mismos productos, en el mismo orden — cruzalas por el nombre del producto. Todas las columnas de resultados muestran el valor total (precio × cantidad).</p>
 
-    <h3>Fase 1 — costo del producto (azul)</h3>
+    <h3>Tabla de arriba — Fase 1, costo del producto (azul)</h3>
     <ul>
       <li><strong>BRL total</strong> — Cuántos reales cuesta ese producto en total.</li>
       <li><strong>USD total</strong> (o <strong>USDT/unid</strong> en modo USDT directo) — Cuántos dólares o USDT enviás en total.</li>
       <li><strong>Costo ARS total</strong> — Lo que te cuesta en pesos argentinos al dólar oficial.</li>
     </ul>
 
-    <h3>Fase 2 — gastos del shipper (verde)</h3>
+    <h3>Tabla de arriba — Fase 2, gastos del shipper (verde)</h3>
     <ul>
       <li><strong>Comisión total</strong> — La comisión del shipper por todas las unidades, en pesos.</li>
-      <li><strong>Envío total</strong> — La parte del envío que le corresponde a ese producto.</li>
-      <li><strong>Costo total</strong> — El costo real final, sumando producto + comisión + envío.</li>
+      <li><strong>Envío + fee total</strong> — El envío fijo que le cobrás al cliente por ese producto, más (en modo USDT) la parte proporcional de la fee de transferencia. Las filas de tipo STOCK no llevan envío (no hay cliente que lo pague), pero sí llevan la fee USDT si corresponde.</li>
+      <li><strong>Costo total</strong> — El costo real final, sumando producto + comisión + envío/fee.</li>
     </ul>
 
-    <h3>Precio de venta (violeta)</h3>
+    <h3>Tabla de abajo — Precio de venta (violeta), junto al Resumen</h3>
     <ul>
-      <li><strong>Precio ARS</strong> — El precio al que tenés que venderlo para lograr el margen que pediste.</li>
-      <li><strong>Precio lista</strong> — Precio con el envío distribuido entre todos los clientes (precio individual para cada comprador).</li>
+      <li><strong>Margen %</strong> — El mismo campo editable que en la tabla de arriba, movido acá para que quede junto al resto de los números de venta.</li>
+      <li><strong>Precio ARS</strong> — El precio al que tenés que venderlo para lograr el margen que pediste, ya redondeado hacia arriba (Redondeo precio).</li>
+      <li><strong>Precio lista</strong> — Con el envío fijo por producto, hoy coincide con "Precio ARS" (antes eran distintos porque el envío se prorrateaba; ver Ejemplo rápido).</li>
       <li><strong>USD lista</strong> — Ese mismo precio expresado en dólares blue (útil para publicar).</li>
       <li><strong>Ganancia</strong> — Cuánto ganás en pesos después de cubrir todos los costos.</li>
       <li><strong>Ganancia USD</strong> — La ganancia expresada en dólares blue.</li>
@@ -487,9 +501,10 @@ USD × dólar_oficial        = costo en ARS</code></pre>
     <h2 id="copiar-precios">Copiar precios</h2>
     <p>Hay dos modos para copiar los precios al portapapeles:</p>
     <ul>
-      <li><strong>Copiar individual</strong> — Cada producto lleva el costo completo del envío cargado a él. Usalo cuando le estás cotizando un solo artículo a un cliente.</li>
-      <li><strong>Copiar bundle</strong> — El envío se divide entre todos los productos de la lista. Usalo cuando el cliente se lleva todo junto.</li>
+      <li><strong>Copiar individual</strong> — Precio por producto ("Precio lista").</li>
+      <li><strong>Copiar bundle</strong> — Precio por producto ("Precio ARS").</li>
     </ul>
+    <p>Con el envío fijo por producto, hoy los dos dan el mismo número (antes diferían porque el envío se prorrateaba distinto según si el cliente compraba uno o varios productos).</p>
 
     <hr />
 
@@ -501,19 +516,18 @@ USD × dólar_oficial        = costo en ARS</code></pre>
 
     <!-- Ejemplo rápido -->
     <h2 id="ejemplo">Ejemplo rápido</h2>
-    <p>Querés comprar un perfume que cuesta <strong>USD 170</strong>, la tienda te manda que el valor do PIX es <strong>5,32</strong>, el dólar oficial está en <strong>$1.395</strong>, la comisión es <strong>$4 USD</strong> y el envío total es <strong>$17.000</strong> entre <strong>3 clientes</strong>.</p>
+    <p>Querés comprar un perfume que cuesta <strong>USD 170</strong>, la tienda te manda que el valor do PIX es <strong>5,32</strong>, el dólar oficial está en <strong>$1.395</strong>, la comisión es <strong>$4 USD</strong> y tenés cargado un envío fijo de <strong>$10.000/producto</strong>.</p>
 
     <div class="example-box">
       <div class="example-label">Pasos</div>
       <ol>
         <li>Verificá que "Valor do PIX" diga 5,32 (se autocompleta desde Madrid Center).</li>
         <li>Cargá el producto con precio 170 y cantidad 1.</li>
-        <li>Poné 3 en "Clientes".</li>
         <li>Elegí un margen del 30%.</li>
       </ol>
     </div>
 
-    <p>La calculadora te muestra al instante el costo real, el precio de venta sugerido y cuánto ganás por unidad.</p>
+    <p>La calculadora te muestra al instante el costo real, el precio de venta sugerido (redondeado según "Redondeo precio") y cuánto ganás por unidad. Si además cargás más productos para el mismo cliente en la misma lista, cada uno suma su propio envío fijo — si te parece mucho para un pedido grande, podés hacerle un descuento manual vos mismo, la calculadora no lo hace sola.</p>
 
     <hr />
 
@@ -532,7 +546,7 @@ USD × dólar_oficial        = costo en ARS</code></pre>
 
     <div class="faq-item">
       <p class="faq-q">Los datos se guardan?</p>
-      <p class="faq-a">Sí, las listas de productos se guardan automáticamente en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, tus listas siguen ahí. Las cotizaciones no se guardan — se vuelven a buscar al abrir.</p>
+      <p class="faq-a">Sí, las listas de productos y tu configuración (comisión, envíos, fee USDT, redondeo) se guardan automáticamente en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, todo sigue ahí. Solo las cotizaciones de mercado (oficial, blue, USDT, PIX) no se guardan — se vuelven a buscar al abrir.</p>
     </div>
 
     <div class="faq-item">
