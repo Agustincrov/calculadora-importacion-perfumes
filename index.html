@@ -61,6 +61,14 @@
     }
     @media (max-width: 900px) { .top-grid { grid-template-columns: 1fr; } }
 
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    @media (max-width: 900px) { .bottom-grid { grid-template-columns: 1fr; } }
+
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -434,7 +442,6 @@
   </div>
 
   <div id="view-calc">
-  <div class="top-grid">
 
     <!-- ── Rates card ── -->
     <div class="card">
@@ -586,6 +593,127 @@
       </div>
     </div>
 
+  <!-- ── Products ── -->
+  <div class="card" style="padding: 20px 24px;">
+    <div class="products-header">
+      <h2>Productos</h2>
+      <div class="btn-group">
+        <button class="btn btn-outline" onclick="addRow()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Agregar producto
+        </button>
+        <button class="btn btn-outline" onclick="document.getElementById('catalog-file').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          Importar catálogo
+        </button>
+        <input type="file" id="catalog-file" accept=".xls,.xlsx" multiple style="display:none"
+          onchange="importPlExcel(this.files); this.value=''" />
+        <div id="catalog-tags" class="catalog-tags"></div>
+        <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          </svg>
+          Reset
+        </button>
+        <button class="btn btn-outline" onclick="copyPrices('individual')" title="Precio por producto como si el cliente comprara solo ese ítem (envío completo por producto)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copiar individual
+        </button>
+        <button class="btn btn-outline" onclick="copyPrices('bundle')" title="Precio con envío compartido entre todos los productos (cliente lleva todo)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copiar bundle
+        </button>
+        <button class="btn btn-success" onclick="exportNotes()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Exportar resumen
+        </button>
+      </div>
+    </div>
+
+    <div class="lists-tabs">
+      <div class="tabs-bar" id="tabs-bar"></div>
+      <button class="tab-add-btn" onclick="addList()" title="Nueva lista">+</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr class="phase-headers">
+            <th class="ph-input" colspan="6"></th>
+            <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo producto</th>
+            <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
+            <th class="ph-del"></th>
+          </tr>
+          <tr class="col-headers">
+            <th class="bg-input">#</th>
+            <th class="bg-input">Tipo <span class="col-tip" data-tip="CLI = producto para un cliente (paga el envío). STOCK = para vos, sin envío asignado."></span></th>
+            <th class="bg-input">Cliente <span class="col-tip" data-tip="Nombre del cliente. Se usa para dividir el envío automáticamente entre distintos clientes."></span></th>
+            <th class="bg-input">Producto <span class="col-tip" data-tip="Nombre del producto. Si cargaste un catálogo, escribí para buscar y autocompletar nombre y precio."></span></th>
+            <th class="bg-input">Precio USD <span class="col-tip" data-tip="Precio en dólares que cobra la tienda por una unidad."></span></th>
+            <th class="bg-input">Cantidad <span class="col-tip" data-tip="Unidades que comprás de este producto. Todos los valores de la fila muestran el total para esta cantidad."></span></th>
+            <th class="bg-p1 col-brl">BRL total <span class="col-tip" data-tip="Total en reales que necesitás enviar a la tienda por esta fila (precio × tipo PIX × cantidad)."></span></th>
+            <th class="bg-p1 col-usd" id="col-usd-head">USD / USDT total <span class="col-tip" data-tip="Total en dólares o USDT que enviás al servicio de pago (depende del método elegido por fila)."></span></th>
+            <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
+            <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
+            <th class="bg-p2">Envío + fee total <span class="col-tip" data-tip="Envío fijo que se le cobra al cliente por esta fila (Envío fijo/producto × cantidad; $0 en filas STOCK) más, si el modo es USDT, la parte proporcional de la fee de transferencia."></span></th>
+            <th class="bg-p2">Costo total <span class="col-tip" data-tip="Costo real final para esta fila: producto + comisión + envío. Lo que realmente invertís."></span></th>
+            <th class="bg-del"></th>
+          </tr>
+        </thead>
+        <tbody id="products-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Nota:</strong>
+    Las filas <em>CLI</em> son para clientes y pagan el envío fijo por producto. Las filas <em>STOCK</em> son para tu inventario y tienen envío $0 (pero sí pagan la fee de transferencia USDT si corresponde).
+    El número de <em>Clientes</em> se calcula automáticamente por nombres distintos ingresados en filas CLI — es informativo, no divide ningún costo.
+    En modo USDT, el campo <em>Pedido</em> agrupa filas pagadas en la misma transferencia.
+    La comisión se paga al shipper en USD al tipo <em>USDT</em> para todas las filas.
+  </div>
+
+  <!-- ── Precio de venta (Fase 3) + Resumen ── -->
+  <div class="bottom-grid">
+
+    <div class="card" style="padding: 20px 24px;">
+      <div class="card-title">Precio de venta</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr class="col-headers">
+              <th class="bg-sell">Producto</th>
+              <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
+              <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado."></span></th>
+              <th class="bg-sell">Precio lista (total) <span class="col-tip" data-tip="Con el envío fijo por producto, coincide con 'Precio ARS' — ya no depende de si el cliente compra uno o varios productos."></span></th>
+              <th class="bg-sell">USD lista (total) <span class="col-tip tip-left" data-tip="Precio lista expresado en dólares blue. Útil para publicar en grupos o catálogos."></span></th>
+              <th class="bg-sell">Ganancia (total) <span class="col-tip tip-left" data-tip="Lo que ganás en pesos por esta fila después de cubrir todos los costos."></span></th>
+              <th class="bg-sell">Gan. USD/unid <span class="col-tip tip-left" data-tip="Ganancia por unidad en dólares. Podés escribir directamente el valor deseado y el margen se recalcula solo."></span></th>
+              <th class="bg-sell">Margen real <span class="col-tip tip-left" data-tip="Margen efectivo resultante. Verde = 20% o más. Amarillo = entre 10% y 20%. Rojo = menos del 10%."></span></th>
+            </tr>
+          </thead>
+          <tbody id="products-sell-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;font-size:.78rem;color:var(--muted);">
+        Podés escribir directamente en <em>Gan. USD/unid</em> para fijar tu ganancia y ver el margen resultante — el margen se recalcula solo.
+      </div>
+    </div>
+
     <!-- ── Summary card ── -->
     <div class="card">
       <div class="card-title">Resumen</div>
@@ -659,109 +787,7 @@
 
       </div>
     </div>
-  </div>
 
-  <!-- ── Products ── -->
-  <div class="card" style="padding: 20px 24px;">
-    <div class="products-header">
-      <h2>Productos</h2>
-      <div class="btn-group">
-        <button class="btn btn-outline" onclick="addRow()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Agregar producto
-        </button>
-        <button class="btn btn-outline" onclick="document.getElementById('catalog-file').click()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-          </svg>
-          Importar catálogo
-        </button>
-        <input type="file" id="catalog-file" accept=".xls,.xlsx" multiple style="display:none"
-          onchange="importPlExcel(this.files); this.value=''" />
-        <div id="catalog-tags" class="catalog-tags"></div>
-        <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          </svg>
-          Reset
-        </button>
-        <button class="btn btn-outline" onclick="copyPrices('individual')" title="Precio por producto como si el cliente comprara solo ese ítem (envío completo por producto)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-          Copiar individual
-        </button>
-        <button class="btn btn-outline" onclick="copyPrices('bundle')" title="Precio con envío compartido entre todos los productos (cliente lleva todo)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-          Copiar bundle
-        </button>
-        <button class="btn btn-success" onclick="exportNotes()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Exportar resumen
-        </button>
-      </div>
-    </div>
-
-    <div class="lists-tabs">
-      <div class="tabs-bar" id="tabs-bar"></div>
-      <button class="tab-add-btn" onclick="addList()" title="Nueva lista">+</button>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr class="phase-headers">
-            <th class="ph-input" colspan="6"></th>
-            <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo producto</th>
-            <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
-            <th class="ph-sell" colspan="7">Precio de venta</th>
-            <th class="ph-del"></th>
-          </tr>
-          <tr class="col-headers">
-            <th class="bg-input">#</th>
-            <th class="bg-input">Tipo <span class="col-tip" data-tip="CLI = producto para un cliente (paga el envío). STOCK = para vos, sin envío asignado."></span></th>
-            <th class="bg-input">Cliente <span class="col-tip" data-tip="Nombre del cliente. Se usa para dividir el envío automáticamente entre distintos clientes."></span></th>
-            <th class="bg-input">Producto <span class="col-tip" data-tip="Nombre del producto. Si cargaste un catálogo, escribí para buscar y autocompletar nombre y precio."></span></th>
-            <th class="bg-input">Precio USD <span class="col-tip" data-tip="Precio en dólares que cobra la tienda por una unidad."></span></th>
-            <th class="bg-input">Cantidad <span class="col-tip" data-tip="Unidades que comprás de este producto. Todos los valores de la fila muestran el total para esta cantidad."></span></th>
-            <th class="bg-p1 col-brl">BRL total <span class="col-tip" data-tip="Total en reales que necesitás enviar a la tienda por esta fila (precio × tipo PIX × cantidad)."></span></th>
-            <th class="bg-p1 col-usd" id="col-usd-head">USD / USDT total <span class="col-tip" data-tip="Total en dólares o USDT que enviás al servicio de pago (depende del método elegido por fila)."></span></th>
-            <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
-            <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
-            <th class="bg-p2">Envío + fee total <span class="col-tip" data-tip="Envío fijo que se le cobra al cliente por esta fila (Envío fijo/producto × cantidad; $0 en filas STOCK) más, si el modo es USDT, la parte proporcional de la fee de transferencia."></span></th>
-            <th class="bg-p2">Costo total <span class="col-tip" data-tip="Costo real final para esta fila: producto + comisión + envío. Lo que realmente invertís."></span></th>
-            <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
-            <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado, asumiendo que el cliente compra todos los productos (envío compartido)."></span></th>
-            <th class="bg-sell">Precio lista (total) <span class="col-tip" data-tip="Precio si el cliente compra solo este producto. El envío completo del cliente se asigna únicamente a él."></span></th>
-            <th class="bg-sell">USD lista (total) <span class="col-tip tip-left" data-tip="Precio lista expresado en dólares blue. Útil para publicar en grupos o catálogos."></span></th>
-            <th class="bg-sell">Ganancia (total) <span class="col-tip tip-left" data-tip="Lo que ganás en pesos por esta fila después de cubrir todos los costos."></span></th>
-            <th class="bg-sell">Gan. USD/unid <span class="col-tip tip-left" data-tip="Ganancia por unidad en dólares. Podés escribir directamente el valor deseado y el margen se recalcula solo."></span></th>
-            <th class="bg-sell">Margen real <span class="col-tip tip-left" data-tip="Margen efectivo resultante. Verde = 20% o más. Amarillo = entre 10% y 20%. Rojo = menos del 10%."></span></th>
-            <th class="bg-del"></th>
-          </tr>
-        </thead>
-        <tbody id="products-body"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="note">
-    <strong>Nota:</strong>
-    Las filas <em>CLI</em> son para clientes y absorben el envío completo (dividido entre las unidades de filas CLI solamente).
-    Las filas <em>STOCK</em> son para tu inventario y tienen envío $0.
-    El número de <em>Clientes</em> se calcula automáticamente por nombres distintos ingresados en filas CLI.
-    Podés escribir directamente en <em>Gan. USD/unid</em> para fijar tu ganancia y ver el margen resultante.
-    La comisión se paga al shipper en USD al tipo <em>USDT</em> para todas las filas.
   </div>
   </div><!-- /view-calc -->
 
@@ -1271,7 +1297,14 @@ function deleteRow(id) {
   recalculate();
 }
 
+// Dos tablas, una fila por producto en cada una (mismo row.id) — ver card 06. La de costo
+// (Fase 1 + Fase 2) arriba, la de venta (Fase 3) compacta abajo junto al Resumen.
 function renderTable() {
+  renderCostTable();
+  renderSellTable();
+}
+
+function renderCostTable() {
   const tbody = document.getElementById('products-body');
   tbody.innerHTML = '';
   rows.forEach((row, idx) => {
@@ -1279,7 +1312,6 @@ function renderTable() {
     tr.id = `row-${row.id}`;
     const isStock = row.tipo === 'stock';
     if (isStock) tr.classList.add('stock-row');
-    const ganVal = row.gananciaUSDOverride != null ? row.gananciaUSDOverride.toFixed(2) : '';
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;vertical-align:middle;">
         ${idx + 1}
@@ -1325,6 +1357,31 @@ function renderTable() {
       <td class="cell-computed bg-p2" id="com-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="env-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="tot-${row.id}">—</td>
+      <td>
+        <button class="del-btn" onclick="deleteRow(${row.id})" title="Eliminar">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderSellTable() {
+  const tbody = document.getElementById('products-sell-body');
+  tbody.innerHTML = '';
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.id = `sell-row-${row.id}`;
+    if (row.tipo === 'stock') tr.classList.add('stock-row');
+    const ganVal = row.gananciaUSDOverride != null ? row.gananciaUSDOverride.toFixed(2) : '';
+    tr.innerHTML = `
+      <td id="sellname-${row.id}" style="color:var(--text);font-size:.85rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(row.name) || '—'}</td>
       <td class="bg-sell"><input type="number" id="margin-${row.id}" value="${row.margin}" min="0" max="99" step="0.5"
           oninput="updateField(${row.id},'margin',+this.value)" /></td>
       <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
@@ -1340,16 +1397,6 @@ function renderTable() {
           onblur="this.style.borderColor='transparent';this.style.background='transparent'" />
       </td>
       <td class="bg-sell" id="mreal-${row.id}" style="text-align:right;">—</td>
-      <td>
-        <button class="del-btn" onclick="deleteRow(${row.id})" title="Eliminar">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6"/><path d="M14 11v6"/>
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-          </svg>
-        </button>
-      </td>
     `;
     tbody.appendChild(tr);
   });
@@ -1696,6 +1743,7 @@ function recalculate() {
 
     // Update cells
     const qty = row.qty || 1;
+    setCell(`sellname-${row.id}`, row.name || '—');
     setCell(`brl-${row.id}`,  rowMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
     setCell(`usd-${row.id}`,  rowMode === 'ars'  ? '—' : (usdUnid > 0 ? fmt_usd(usdUnid * qty) : '—'));
     setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');

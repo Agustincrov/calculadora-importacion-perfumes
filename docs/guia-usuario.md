@@ -79,19 +79,20 @@ Completá los campos editables:
 - **Cantidad** — Cuántas unidades de ese producto estás comprando.
 - **Margen %** — El margen de ganancia que querés aplicar. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).
 
-Todas las columnas de resultados muestran el valor total (precio × cantidad):
+Los resultados están repartidos en **dos tablas** para que no haya que scrollear horizontalmente para relacionar costo con venta: la tabla de arriba (costo real) y una tabla más chica debajo, junto al Resumen (precio de venta). Las dos muestran los mismos productos, en el mismo orden — cruzalas por el nombre del producto. Todas las columnas de resultados muestran el valor total (precio × cantidad).
 
-**Fase 1 — costo del producto (azul):**
+**Tabla de arriba — Fase 1, costo del producto (azul):**
 - **BRL total** — Cuántos reales cuesta ese producto en total.
 - **USD total** (o **USDT/unid** en modo USDT directo) — Cuántos dólares o USDT enviás en total.
 - **Costo ARS total** — Lo que te cuesta en pesos argentinos al dólar oficial.
 
-**Fase 2 — gastos del shipper (verde):**
+**Tabla de arriba — Fase 2, gastos del shipper (verde):**
 - **Comisión total** — La comisión del shipper por todas las unidades, en pesos.
 - **Envío + fee total** — El envío fijo que le cobrás al cliente por ese producto, más (en modo USDT) la parte proporcional de la fee de transferencia. Las filas de tipo STOCK no llevan envío (no hay cliente que lo pague), pero sí llevan la fee USDT si corresponde.
 - **Costo total** — El costo real final, sumando producto + comisión + envío/fee.
 
-**Precio de venta (violeta):**
+**Tabla de abajo — Precio de venta (violeta), junto al Resumen:**
+- **Margen %** — El mismo campo editable que en la tabla de arriba, movido acá para que quede junto al resto de los números de venta.
 - **Precio ARS** — El precio al que tenés que venderlo para lograr el margen que pediste, ya redondeado hacia arriba (Redondeo precio).
 - **Precio lista** — Con el envío fijo por producto, hoy coincide con "Precio ARS" (antes eran distintos porque el envío se prorrateaba; ver Ejemplo rápido).
 - **USD lista** — Ese mismo precio expresado en dólares blue (útil para publicar).
