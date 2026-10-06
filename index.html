@@ -3330,9 +3330,10 @@ function buildCatalogHtml() {
     .sello-flotante { order: 1; width: 58px; height: 58px; margin: 0; }
     .sello-flotante-wrap:hover .sello-flotante { transform: rotate(-8deg); }
   }
-  header input { width: 100%; padding: 12px 15px; border: 1px solid transparent; border-radius: 3px; font-family: 'Mulish', sans-serif; font-size: .95rem; background: var(--lino); color: var(--tinta); }
+  header input, header select { width: 100%; padding: 12px 15px; border: 1px solid transparent; border-radius: 3px; font-family: 'Mulish', sans-serif; font-size: .95rem; background: var(--lino); color: var(--tinta); }
   header input::placeholder { color: var(--humo); }
-  header input:focus { outline: none; border-color: var(--vino); box-shadow: 0 0 0 2px rgba(110,42,57,.25); }
+  header input:focus, header select:focus { outline: none; border-color: var(--vino); box-shadow: 0 0 0 2px rgba(110,42,57,.25); }
+  header select { margin-top: 8px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8378' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 38px; }
   .container { max-width: 720px; margin: 0 auto; padding: 16px 14px; }
   .brand-group { margin-bottom: 22px; }
   .brand-title { font-family: 'Mulish', sans-serif; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--vino); padding-bottom: 6px; margin-bottom: 10px; border-bottom: 1px solid var(--borde); }
@@ -3397,6 +3398,7 @@ function buildCatalogHtml() {
   </div>
   <div class="sub">Lista de precios · Actualizado ${esc(fecha)} · ${data.length} productos</div>
   <input id="q" type="search" placeholder="Buscar por marca o producto…" autocomplete="off" />
+  <select id="brandFilter" aria-label="Filtrar por marca"></select>
 </header>
 <a class="sello-flotante-wrap" href="https://crovatofragrances.com" target="_blank" rel="noopener" title="Clickeá aquí para visitar la página" aria-label="Clickeá aquí para visitar la página">
 <svg class="sello-caption-arc" viewBox="0 0 400 150" aria-hidden="true">
@@ -3624,15 +3626,30 @@ document.getElementById('results').addEventListener('click', function(e) {
   if (btn) handleCartAction(btn.getAttribute('data-action'), btn.getAttribute('data-key'));
 });
 
+// ── Filtro de marca (dropdown, combina con la búsqueda de texto) ──
+var ALL_BRANDS = Array.from(new Set(DATA.map(function(d) { return d.brand; }))).sort(function(a, b) { return a.localeCompare(b); });
+(function populateBrandFilter() {
+  var sel = document.getElementById('brandFilter');
+  var countByBrand = {};
+  DATA.forEach(function(d) { countByBrand[d.brand] = (countByBrand[d.brand] || 0) + 1; });
+  var options = '<option value="">Todas las marcas (' + DATA.length + ')</option>' +
+    ALL_BRANDS.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + ' (' + countByBrand[b] + ')</option>'; }).join('');
+  sel.innerHTML = options;
+})();
+document.getElementById('brandFilter').addEventListener('change', function() { render(document.getElementById('q').value); });
+
 function render(query) {
   var q = query.trim().toLowerCase();
-  var filtered = q ? DATA.filter(function(d) {
-    return d.brand.toLowerCase().indexOf(q) !== -1 || d.name.toLowerCase().indexOf(q) !== -1;
-  }) : DATA;
+  var brandSel = document.getElementById('brandFilter').value;
+  var filtered = DATA.filter(function(d) {
+    if (brandSel && d.brand !== brandSel) return false;
+    if (q && d.brand.toLowerCase().indexOf(q) === -1 && d.name.toLowerCase().indexOf(q) === -1) return false;
+    return true;
+  });
   var groups = {};
   filtered.forEach(function(d) { (groups[d.brand] = groups[d.brand] || []).push(d); });
   var brands = Object.keys(groups).sort(function(a, b) { return a.localeCompare(b); });
-  document.getElementById('count').textContent = q ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
+  document.getElementById('count').textContent = (q || brandSel) ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
   var out = '';
   if (brands.length === 0) {
     out = '<div class="empty">No se encontraron productos.</div>';
