@@ -3333,7 +3333,10 @@ function buildCatalogHtml() {
   header input, header select { width: 100%; padding: 12px 15px; border: 1px solid transparent; border-radius: 3px; font-family: 'Mulish', sans-serif; font-size: .95rem; background: var(--lino); color: var(--tinta); }
   header input::placeholder { color: var(--humo); }
   header input:focus, header select:focus { outline: none; border-color: var(--vino); box-shadow: 0 0 0 2px rgba(110,42,57,.25); }
-  header select { margin-top: 8px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8378' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 38px; }
+  header .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  header .custom-range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  header .custom-range[hidden] { display: none; }
+  header select { min-width: 0; text-overflow: ellipsis; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8378' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 16px; padding-right: 38px; }
   .container { max-width: 720px; margin: 0 auto; padding: 16px 14px; }
   .brand-group { margin-bottom: 22px; }
   .brand-title { font-family: 'Mulish', sans-serif; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--vino); padding-bottom: 6px; margin-bottom: 10px; border-bottom: 1px solid var(--borde); }
@@ -3398,7 +3401,14 @@ function buildCatalogHtml() {
   </div>
   <div class="sub">Lista de precios · Actualizado ${esc(fecha)} · ${data.length} productos</div>
   <input id="q" type="search" placeholder="Buscar por marca o producto…" autocomplete="off" />
-  <select id="brandFilter" aria-label="Filtrar por marca"></select>
+  <div class="filters">
+    <select id="brandFilter" aria-label="Filtrar por marca"></select>
+    <select id="priceFilter" aria-label="Filtrar por precio"></select>
+  </div>
+  <div class="custom-range" id="customRange" hidden>
+    <input id="priceMin" type="text" inputmode="numeric" placeholder="Desde $" aria-label="Precio mínimo" autocomplete="off" />
+    <input id="priceMax" type="text" inputmode="numeric" placeholder="Hasta $" aria-label="Precio máximo" autocomplete="off" />
+  </div>
 </header>
 <a class="sello-flotante-wrap" href="https://crovatofragrances.com" target="_blank" rel="noopener" title="Clickeá aquí para visitar la página" aria-label="Clickeá aquí para visitar la página">
 <svg class="sello-caption-arc" viewBox="0 0 400 150" aria-hidden="true">
@@ -3638,18 +3648,80 @@ var ALL_BRANDS = Array.from(new Set(DATA.map(function(d) { return d.brand; }))).
 })();
 document.getElementById('brandFilter').addEventListener('change', function() { render(document.getElementById('q').value); });
 
+// ── Filtro de precio (rangos calculados de esta publicación) ──
+// Los cortes salen de los quintiles de precio, redondeados a números "lindos": como los precios
+// se mueven con las tasas, unos rangos fijos quedarían desbalanceados a las pocas semanas.
+var PRICE_RANGES = (function() {
+  var prices = DATA.map(function(d) { return d.price; }).sort(function(a, b) { return a - b; });
+  if (prices.length === 0) return [];
+  function nice(v) {
+    var step = v >= 500000 ? 100000 : v >= 100000 ? 50000 : 10000;
+    return Math.round(v / step) * step;
+  }
+  var cuts = [];
+  [0.2, 0.4, 0.6, 0.8].forEach(function(q) {
+    var c = nice(prices[Math.floor(q * prices.length)]);
+    if (c > prices[0] && c <= prices[prices.length - 1] && cuts.indexOf(c) === -1) cuts.push(c);
+  });
+  var ranges = [];
+  for (var i = 0; i <= cuts.length; i++) {
+    var min = i === 0 ? null : cuts[i - 1];
+    var max = i === cuts.length ? null : cuts[i];
+    var label = min == null ? 'Hasta ' + fmtPrice(max) : max == null ? 'Más de ' + fmtPrice(min) : fmtPrice(min) + ' – ' + fmtPrice(max);
+    ranges.push({ min: min, max: max, label: label });
+  }
+  return ranges.length > 1 ? ranges : [];
+})();
+function inPriceRange(price, r) {
+  return (r.min == null || price >= r.min) && (r.max == null || price < r.max);
+}
+(function populatePriceFilter() {
+  var sel = document.getElementById('priceFilter');
+  sel.innerHTML = '<option value="">Todos los precios</option>' +
+    PRICE_RANGES.map(function(r, i) {
+      var n = DATA.filter(function(d) { return inPriceRange(d.price, r); }).length;
+      return '<option value="' + i + '">' + esc(r.label) + ' (' + n + ')</option>';
+    }).join('') +
+    '<option value="custom">Personalizado…</option>';
+})();
+// Rango personalizado: ambos extremos inclusive, cualquiera de los dos puede quedar vacío.
+// Acepta "150.000", "150000" o "$150.000" (se ignora todo lo que no sea dígito).
+function parsePriceInput(id) {
+  var digits = document.getElementById(id).value.replace(/\\D/g, '');
+  return digits ? +digits : null;
+}
+function currentPriceRange() {
+  var v = document.getElementById('priceFilter').value;
+  if (v === '') return null;
+  if (v !== 'custom') return PRICE_RANGES[+v];
+  var min = parsePriceInput('priceMin'), max = parsePriceInput('priceMax');
+  if (min == null && max == null) return null;
+  return { min: min, max: max == null ? null : max + 1 };
+}
+document.getElementById('priceFilter').addEventListener('change', function() {
+  var custom = this.value === 'custom';
+  document.getElementById('customRange').hidden = !custom;
+  if (custom) document.getElementById('priceMin').focus();
+  render(document.getElementById('q').value);
+});
+['priceMin', 'priceMax'].forEach(function(id) {
+  document.getElementById(id).addEventListener('input', function() { render(document.getElementById('q').value); });
+});
+
 function render(query) {
   var q = query.trim().toLowerCase();
   var brandSel = document.getElementById('brandFilter').value;
+  var priceRange = currentPriceRange();
   var filtered = DATA.filter(function(d) {
     if (brandSel && d.brand !== brandSel) return false;
+    if (priceRange && !inPriceRange(d.price, priceRange)) return false;
     if (q && d.brand.toLowerCase().indexOf(q) === -1 && d.name.toLowerCase().indexOf(q) === -1) return false;
     return true;
   });
   var groups = {};
   filtered.forEach(function(d) { (groups[d.brand] = groups[d.brand] || []).push(d); });
   var brands = Object.keys(groups).sort(function(a, b) { return a.localeCompare(b); });
-  document.getElementById('count').textContent = (q || brandSel) ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
+  document.getElementById('count').textContent = (q || brandSel || priceRange) ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
   var out = '';
   if (brands.length === 0) {
     out = '<div class="empty">No se encontraron productos.</div>';
