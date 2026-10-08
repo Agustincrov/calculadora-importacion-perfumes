@@ -2205,10 +2205,10 @@ const KNOWN_BRANDS = [
   ['Van Cleef & Arpels', 'VAN CLEEF & ARPELS', 'VAN CLEEF ARPELS'],
   ['Animale'], ['Antonio Banderas', 'ANTONIO', 'AB'], ['Azzaro'], ['Billie Eilish'], ['Britney Spears', 'BRITNEY'], ['Burberry'],
   ['Cacharel'], ['Calvin Klein', 'CK'], ['Carolina Herrera', 'CAROLINA', 'CH'], ['Chanel'], ['Chloe'], ['Clinique'],
-  ['Davidoff'], ['Diesel'], ['Dolce&Gabbana', 'DOLCE&GABBANA', 'DOLCE & GABBANA', 'D&G', 'DOLCE GAB'],
-  ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV'], ['Ferrari'], ['Giorgio Beverly Hills'],
+  ['Davidoff'], ['Diesel'], ['Dolce&Gabbana', 'DOLCE&GABBANA', 'DOLCE & GABBANA', 'D&G', 'DOLCE GAB', 'DOLCE G'],
+  ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV', 'ELIZ A'], ['Ferrari'], ['Giorgio Beverly Hills'],
   ['Givenchy', 'GIV'], ['Gres'], ['Gucci'], ['Guerlain'], ['Halloween', 'HALLOWEN'], ['Hermes Paris', 'HERMES'],
-  ['Hugo Boss'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G', 'JPG'],
+  ['Hugo Boss', 'HUGO'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G', 'JPG'],
   ['Jimmy Choo'], ['Joop'], ['Juicy Couture'], ['Kenzo'], ['Lacoste'], ['Lancome'], ['Lomani'],
   ['Marc Jacobs'], ['Marina de Bourbon', 'MARINA'], ['Michael Kors'], ['Montblanc', 'MONT BLANC'], ['Moschino'],
   ['Narciso Rodriguez'], ['Nina Ricci', 'NINA'], ['Paco Rabanne', 'PACO'], ['Paloma Picasso'], ['Prada'],
@@ -2222,13 +2222,13 @@ const KNOWN_BRANDS = [
   ['Arsenal'], ['Axis'], ['Benetton', 'UNITED COLORS OF BENETTON'], ['Blauer'], ['Blumarine'],
   ['Cuba Paris', 'CUBA'], ['Elodie Roy'], ['Enrico Coveri'], ['Escentric Molecules', 'ESCENTRIC'],
   ['Faconnable'], ['Fragluxe'], ['Fred Hayman', "FRED HAYMAN'S"], ['Furla'], ['Gisada'], ['J.Arthe', 'J ARTHE', 'JEANNE ARTHES'],
-  ['Jacomo'], ['Jaguar'], ['Jennifer Lopez', 'JENNIFER L'], ['Kate Spade'], ['Katy Perry'],
+  ['Jacomo'], ['Jaguar'], ['Jennifer Lopez', 'JENNIFER L', 'JENNIFER LP'], ['Kate Spade'], ['Katy Perry'],
   ['La Rive'], ['Lanvin'], ['Ted Lapidus', 'LAPIDUS'], ['Loewe'], ['Lonkoom'], ['Lotto'],
   ['Mandarina Duck'], ['Mauboussin'], ['Max & Co'], ['Moncler'], ['Nadia Ferreira'],
   ['Nazareno Gabrielli', 'NAZARENO'], ['One Direction'], ['Pascal Morabito'], ['Perry Ellis'],
   ['Pino Silvestre'], ['Pitbull'], ['Porsche Design'], ['Puccini'], ['Reebok'],
   ['Salvador Dali', 'SAL DALI'], ['Skil'], ['Sorvella'], ['Stella Dustin'],
-  ['Ulric de Varens', 'UDV'], ["Women'Secret", 'WOMEN ST'],
+  ['Ulric de Varens', 'UDV'], ["Women'Secret", 'WOMEN ST', 'WOMEN SECRET'],
   ['Police'], ['Paris Bleu'], ['David Beckham'], ['Pepe Jeans'], ['Bharara'],
   ['Oscar de la Renta', 'OSCAR DL'], ['Tous'], ['Trussardi'], ['Replay'], ['Rochas'],
   ['Escada'], ['Cool & Cool', 'COOL&COOL'], ['Brut'], ['Nautica'], ['Paris Hilton'],
@@ -2244,7 +2244,20 @@ const KNOWN_BRANDS = [
   ['Maison Alhambra'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
   ['Rayhaan'], ['Sahari'],
   // Confianza media (revisar) — sí se agregan para detectarlas, pero confirmá si van también excluidas
-  ['Borouj'], ['Mawwal'], ['French Avenue'], ['Zirconia'], ['Arqus'], ['Bespoke'], ['Marina Royal'], ['Amaran']
+  ['Borouj'], ['Mawwal'], ['French Avenue'], ['Zirconia'], ['Arqus'], ['Bespoke'], ['Marina Royal'], ['Amaran'],
+
+  // Agregadas al clasificar por categoría (2026-10-08), sacadas de las listas de nicho/árabes de los
+  // proveedores. Las árabes NO van a EXCLUDED_BRANDS: antes de esto se publicaban como "sin marca",
+  // y agregarlas acá no tiene que cambiar qué se publica, solo darles nombre y categoría.
+  ['Atelier des Ors'], ['Christian Provenzano'], ['Ex Nihilo'], ['Fugazzi'], ['Liquides Imaginaires'],
+  ['Marc-Antoine Barrois', 'MARC ANTOINE BARROIS'], ['Mes Bisous'], ['Oman Luxury'], ['Pantheon Roma'],
+  ["Penhaligon's", 'PENHALIGONS', "PENHALIGON'S"], ['Rajani'], ['Salum Parfums', 'SALUM'], ['Unique Luxury'],
+  ['Ahmed Al Maghribi', 'AHMED'], ['Arabiyat'], ['Ard Al Zaafaran'], ['Asdaaf'], ['Aurora'], ['By Charisma'],
+  ['Camara'], ['Emper'], ['Fragrance World', 'FRAGANCE WORLD'], ['Hamidi'], ['Karen Low'],
+  ['Khadlaj'], ['Khalis'], ['Krip'], ['Laverne'], ['Maison Asrar'], ['My Perfumes', 'MPF'], ['Nusuk'],
+  ['Oriarome'], ['Paris Corner'], ['Riiffs'], ['Thoq Al Hawamer'], ['Tubbees'], ['Zakat']
+  // Flavia (Armaf) y Zimaya (Afnan) quedan afuera a propósito: aparecen como "ARMAF FLAVIA …" /
+  // "AFNAN ZIMAYA …", y como marca propia le ganarían a Armaf/Afnan y se saltearían EXCLUDED_BRANDS.
 ];
 
 // Marcas que se excluyen automáticamente de la lista generada (perfumes árabes/de Medio Oriente
@@ -2254,6 +2267,90 @@ const EXCLUDED_BRANDS = new Set([
   'Dar Al Ward', 'Lattafa', 'Maison Alhambra', 'Maryaj', 'Nasma', 'Nejma',
   'Orientica', 'Rasasi', 'Rayhaan', 'Sahari'
 ]);
+
+// ── Categoría de marca (nicho / diseñador / árabe) — alimenta el filtro de la lista publicada ──
+// Usa el nombre canónico (primer elemento de KNOWN_BRANDS). Criterio: la sección donde la ponen los
+// proveedores (listas "NICHOS"/"DISEÑADOR"/"ÁRABES", "PERFUMES DE NICHO"/"INTERNACIONAIS"/"ÁRABES"),
+// corregida cuando la casa en sí dice otra cosa — ej. Montale viene en la lista de diseñador pero es
+// nicho; Dumont es una casa de Dubái aunque tenga nombre europeo.
+const PL_CATEGORY_LABELS = { nicho: 'Nicho', disenador: 'Diseñador', arabe: 'Árabe' };
+const BRAND_CATEGORY = (() => {
+  const map = {};
+  const add = (cat, brands) => brands.forEach(b => { map[b] = cat; });
+  add('nicho', [
+    '12 Parfumeurs Francais', 'Acqua di Parma', 'Acqua di Sardegna', 'Alexandre J', 'Alfred Ritchy', 'Amouage',
+    'Argos', 'Atelier des Ors', 'Atelier Rebul', 'BDK Parfums', 'Boadicea the Victorious', 'Bois 1920',
+    'Bond No 9', 'Born to Stand Out', 'Byredo', 'Chabaud Maison de Parfum', 'Christian Provenzano',
+    'Clive Christian', 'Creed', 'Diptyque', 'Escentric Molecules', 'Essential Parfums', 'Ex Nihilo',
+    'Fragrance du Bois', 'Frederic Malle', 'Fugazzi', 'Gisada', 'Goldfield & Banks', 'Gritti',
+    'Haute Fragrance Company', 'Initio', 'Jo Malone', 'Jo Milano', 'Juliette Has a Gun', 'Kajal', 'Kayali', 'Kilian',
+    'Le Labo', 'Liquides Imaginaires', 'Lorenzo Pazzaglia', 'Maison Crivelli',
+    'Maison Francis Kurkdjian', 'Maison Margiela', 'Mancera Paris', 'Marc-Antoine Barrois', 'Matiere Premiere', 'Memo Paris',
+    'Mes Bisous', 'Mizensir', 'Montale', 'New Notes', 'Nishane', 'Oman Luxury', 'Ormonde Jayne',
+    'Pantheon Roma', 'Paradis des Sens', 'Parfums de Marly', "Penhaligon's", 'Rajani', 'Roja',
+    'Rosendo Mateus', 'Salum Parfums', 'Scentologia', 'Sospiro', 'Stephane Humbert Lucas 777', 'Thameen',
+    'The House of Oud', 'Thomas Kosmala', 'Tiziana Terenzi', 'Tom Ford', 'Unique Luxury',
+    'Van Cleef & Arpels', 'Vertus', 'Vilhelm', 'Xerjoff'
+  ]);
+  add('disenador', [
+    'Abercrombie & Fitch', 'Agatha Paris', 'Agua Brava', 'Alviero Martini', 'Animale', 'Antonio Banderas',
+    'Ariana Grande', 'Arrogance', 'Arsenal', 'Axis', 'Azzaro', 'Benetton', 'Bentley', 'Billie Eilish',
+    'Blauer', 'Blumarine', 'Brioni', 'Britney Spears', 'Brut', 'Burberry', 'Bvlgari', 'Cacharel',
+    'Calvin Klein', 'Carolina Herrera', 'Cartier', 'Chanel', 'Chloe', 'Chopard', 'Christian Dior',
+    'Clinique', 'Coach', 'Cool & Cool', 'Cuba Paris', 'David Beckham', 'Davidoff', 'Diesel',
+    'Dolce&Gabbana', 'Donna Karan', 'Elie Saab', 'Elizabeth Arden', 'Elodie Roy', 'Enrico Coveri', 'Escada',
+    'Faconnable', 'Ferrari', 'Fred Hayman', 'Furla', 'Giorgio Armani', 'Giorgio Beverly Hills', 'Givenchy',
+    'Gres', 'Gucci', 'Guerlain', 'Halloween', 'Hermes Paris', 'Hugo Boss', 'Issey Miyake', 'J.Arthe',
+    'Jacomo', 'Jacques Bogart', 'Jaguar', 'Jean Paul Gaultier', 'Jennifer Lopez', 'Jimmy Choo', 'Joop',
+    'Juicy Couture', 'Karl Lagerfeld', 'Kate Spade', 'Katy Perry', 'Kenzo', 'La Rive', 'Lacoste', 'Lalique',
+    'Lancome', 'Lanvin', 'Loewe', 'Lolita Lempicka', 'Lomani', 'Lonkoom', 'Lotto', 'Louis Vuitton',
+    'Mandarina Duck', 'Marc Jacobs', 'Marina de Bourbon', 'Mauboussin', 'Max & Co', 'Mercedes-Benz',
+    'Michael Kors', 'Missoni', 'Moncler', 'Montblanc', 'Moschino', 'Nadia Ferreira', 'Narciso Rodriguez',
+    'Nautica', 'Nazareno Gabrielli', 'New Brand', 'Nina Ricci', 'One Direction', 'Oscar de la Renta',
+    'Paco Rabanne', 'Paloma Picasso', 'Paris Bleu', 'Paris Hilton', 'Pascal Morabito', 'Pepe Jeans',
+    'Perry Ellis', 'Pino Silvestre', 'Pitbull', 'Police', 'Porsche Design', 'Prada', 'Puccini',
+    'Ralph Lauren', 'Reebok', 'Replay', 'Rochas', 'Sabrina Carpenter', 'Salvador Dali',
+    'Salvatore Ferragamo', 'Sarah Jessica Parker', 'Shakira', 'Skil', 'Sorvella', 'Stella Dustin',
+    'Ted Lapidus', 'Thierry Mugler', 'Tiffany & Co', 'Tommy Hilfiger', 'Tous', 'Trussardi',
+    'Ulric de Varens', 'Valentino', 'Versace', 'Victorinox Swiss Army', 'Victorio & Lucchino',
+    'Viktor&Rolf', "Women'Secret", 'Yves Saint Laurent'
+  ]);
+  add('arabe', [
+    'Adyan', 'Afnan', 'Ahmed Al Maghribi', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Amaran',
+    'Arabian Oud', 'Arabiyat', 'Ard Al Zaafaran', 'Armaf', 'Arqus', 'Asdaaf', 'Aurora', 'Bespoke', 'Bharara',
+    'Borouj', 'By Charisma', 'Camara', 'Dar Al Ward', 'Dumont', 'Emper', 'Fragrance World',
+    'French Avenue', 'Hamidi', 'Karen Low', 'Khadlaj', 'Khalis', 'Krip', 'Lattafa', 'Laverne',
+    'Maison Alhambra', 'Maison Asrar', 'Marina Royal', 'Maryaj', 'Mawwal', 'My Perfumes', 'Nasma', 'Nejma',
+    'Nusuk', 'Oriarome', 'Orientica', 'Paris Corner', 'Rasasi', 'Rayhaan', 'Riiffs', 'Sahari',
+    'Thoq Al Hawamer', 'Tubbees', 'Zakat', 'Zirconia'
+  ]);
+  return map;
+})();
+
+// Líneas exclusivas de casas de diseñador que se venden como nicho (los proveedores las ponen en la
+// lista de nicho): Armani Privé, la Collection Privée de Dior, Gucci Alchemist's Garden, Bvlgari Le Gemme.
+const PL_CATEGORY_PRODUCT_RULES = [
+  { re: /\bARMANI\b.*\bPRIVE\b/i, cat: 'nicho' },
+  { re: /\bDIOR\b.*\b(BOIS D'ARGENT|EDEN-ROC|ESCALE A PORTOFINO|OUD ISPAHAN|AMBRE NUIT|GRIS DIOR|LA COLLECTION PRIVEE)\b/i, cat: 'nicho' },
+  { re: /\bGUCCI\b.*\b(LOVE AT YOUR DARKEST|MOONLIGHT SERENADE|WINTER'S SPRING|A SONG FOR THE ROSE|THE VOICE OF THE SNAKE)\b/i, cat: 'nicho' },
+  { re: /\bBVLGARI\b.*\bLE GEMME\b/i, cat: 'nicho' }
+];
+
+// Para marcas sin clasificar (nuevas o corregidas a mano), la categoría sale del nombre de la lista
+// de la que vino el producto: "NICHOS PRECIO MAYORISTA…", "Texto pegado · Nicho (…)", etc.
+function plCategoryFromSource(label) {
+  const s = String(label || '').toUpperCase();
+  if (/NICHO/.test(s)) return 'nicho';
+  if (/DISE[ÑN]ADOR|INTERNACION/.test(s)) return 'disenador';
+  if (/[ÁA]RABE/.test(s)) return 'arabe';
+  return '';
+}
+
+function plCategoryFor(it) {
+  const rule = PL_CATEGORY_PRODUCT_RULES.find(r => r.re.test(it.name));
+  if (rule) return rule.cat;
+  return BRAND_CATEGORY[it.brand] || plCategoryFromSource(it.sourceLabel);
+}
 
 // Categorías que no son perfume y aparecen mezcladas en algunos proveedores (ej. "VARIOS" 2026-08-10):
 // extensiones/productos de cabello ("C "), maquillaje MAC, productos infantiles con licencia, envases vacíos.
@@ -2441,7 +2538,11 @@ function importPastedText() {
     alert('No se encontraron productos en el texto pegado. Revisá que tenga el formato con viñetas ▪ y precios $.');
     return;
   }
-  plSources.push({ id: plNextSourceId++, name: `Texto pegado (${items.length})`, items });
+  // El encabezado del mensaje ("PERFUMES DE NICHO", "PERFUMES ÁRABES"…) queda en el nombre de la
+  // fuente para que plCategoryFromSource pueda usarlo con las marcas sin clasificar.
+  const section = plCategoryFromSource((text.match(/PERFUMES\s+(DE\s+NICHO|INTERNACIONA\w*|[ÁA]RABES)/i) || [''])[0]);
+  const sectionLabel = section ? ` · ${PL_CATEGORY_LABELS[section]}` : '';
+  plSources.push({ id: plNextSourceId++, name: `Texto pegado${sectionLabel} (${items.length})`, items });
   ta.value = '';
   savePlSources();
   renderPlSourceTags();
@@ -3331,7 +3432,8 @@ function buildCatalogHtml() {
   const data = sorted.map(it => ({
     brand: it.brand || 'Sin categoría',
     name: it.displayName,
-    price: Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs)
+    price: Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs),
+    cat: plCategoryFor(it) // 'nicho' | 'disenador' | 'arabe' | '' (sin clasificar)
   }));
   const dataJson = JSON.stringify(data).replace(/</g, '\\u003c');
   const fecha = new Date().toLocaleDateString('es-AR');
@@ -3398,6 +3500,14 @@ function buildCatalogHtml() {
   header input, header select { width: 100%; padding: 12px 15px; border: 1px solid transparent; border-radius: 3px; font-family: 'Mulish', sans-serif; font-size: .95rem; background: var(--lino); color: var(--tinta); }
   header input::placeholder { color: var(--humo); }
   header input:focus, header select:focus { outline: none; border-color: var(--vino); box-shadow: 0 0 0 2px rgba(110,42,57,.25); }
+  header .cat-filter { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+  header .cat-filter::-webkit-scrollbar { display: none; }
+  header .cat-filter[hidden] { display: none; }
+  header .cat-filter button { flex: 0 0 auto; padding: 7px 13px; border: 1px solid rgba(246,241,233,.35); border-radius: 999px; background: transparent; color: var(--lino); font-family: 'Mulish', sans-serif; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+  header .cat-filter button:hover { border-color: var(--lino); }
+  header .cat-filter button:focus-visible { outline: 2px solid var(--lino); outline-offset: 2px; }
+  header .cat-filter button[aria-pressed="true"] { background: var(--lino); border-color: var(--lino); color: var(--tinta); }
+  header .cat-filter .n { opacity: .65; font-weight: 400; margin-left: 3px; }
   header .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   header .custom-range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
   header .custom-range[hidden] { display: none; }
@@ -3466,6 +3576,7 @@ function buildCatalogHtml() {
   </div>
   <div class="sub">Lista de precios · Actualizado ${esc(fecha)} · ${data.length} productos</div>
   <input id="q" type="search" placeholder="Buscar por marca o producto…" autocomplete="off" />
+  <div class="cat-filter" id="catFilter" role="group" aria-label="Filtrar por categoría" hidden></div>
   <div class="filters">
     <select id="brandFilter" aria-label="Filtrar por marca"></select>
     <select id="priceFilter" aria-label="Filtrar por precio"></select>
@@ -3701,16 +3812,45 @@ document.getElementById('results').addEventListener('click', function(e) {
   if (btn) handleCartAction(btn.getAttribute('data-action'), btn.getAttribute('data-key'));
 });
 
-// ── Filtro de marca (dropdown, combina con la búsqueda de texto) ──
-var ALL_BRANDS = Array.from(new Set(DATA.map(function(d) { return d.brand; }))).sort(function(a, b) { return a.localeCompare(b); });
-(function populateBrandFilter() {
-  var sel = document.getElementById('brandFilter');
-  var countByBrand = {};
-  DATA.forEach(function(d) { countByBrand[d.brand] = (countByBrand[d.brand] || 0) + 1; });
-  var options = '<option value="">Todas las marcas (' + DATA.length + ')</option>' +
-    ALL_BRANDS.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + ' (' + countByBrand[b] + ')</option>'; }).join('');
-  sel.innerHTML = options;
+// ── Filtro de categoría (Nicho / Diseñador / Árabe) ──
+// Los productos sin categoría solo aparecen en "Todas". Si la publicación tiene una sola categoría,
+// el filtro no aporta nada y se oculta.
+var CAT_LABELS = { nicho: 'Nicho', disenador: 'Diseñador', arabe: 'Árabe' };
+var catSel = '';
+(function populateCatFilter() {
+  var box = document.getElementById('catFilter');
+  var countByCat = {};
+  DATA.forEach(function(d) { if (d.cat) countByCat[d.cat] = (countByCat[d.cat] || 0) + 1; });
+  var cats = ['nicho', 'disenador', 'arabe'].filter(function(c) { return countByCat[c]; });
+  if (cats.length < 2) return;
+  box.innerHTML = '<button type="button" data-cat="" aria-pressed="true">Todas</button>' +
+    cats.map(function(c) {
+      return '<button type="button" data-cat="' + c + '" aria-pressed="false">' + CAT_LABELS[c] + '<span class="n">' + countByCat[c] + '</span></button>';
+    }).join('');
+  box.hidden = false;
 })();
+document.getElementById('catFilter').addEventListener('click', function(e) {
+  var btn = e.target.closest('button[data-cat]');
+  if (!btn) return;
+  catSel = btn.getAttribute('data-cat');
+  Array.prototype.forEach.call(this.querySelectorAll('button'), function(b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+  populateBrandFilter(); // el desplegable de marcas muestra solo las de la categoría elegida
+  render(document.getElementById('q').value);
+});
+
+// ── Filtro de marca (dropdown, combina con la búsqueda de texto y la categoría) ──
+function populateBrandFilter() {
+  var sel = document.getElementById('brandFilter');
+  var prev = sel.value;
+  var pool = catSel ? DATA.filter(function(d) { return d.cat === catSel; }) : DATA;
+  var countByBrand = {};
+  pool.forEach(function(d) { countByBrand[d.brand] = (countByBrand[d.brand] || 0) + 1; });
+  var brands = Object.keys(countByBrand).sort(function(a, b) { return a.localeCompare(b); });
+  sel.innerHTML = '<option value="">Todas las marcas (' + pool.length + ')</option>' +
+    brands.map(function(b) { return '<option value="' + esc(b) + '">' + esc(b) + ' (' + countByBrand[b] + ')</option>'; }).join('');
+  sel.value = countByBrand[prev] ? prev : ''; // si la marca elegida no está en la categoría, vuelve a "Todas"
+}
+populateBrandFilter();
 document.getElementById('brandFilter').addEventListener('change', function() { render(document.getElementById('q').value); });
 
 // ── Filtro de precio (rangos calculados de esta publicación) ──
@@ -3778,6 +3918,7 @@ function render(query) {
   var brandSel = document.getElementById('brandFilter').value;
   var priceRange = currentPriceRange();
   var filtered = DATA.filter(function(d) {
+    if (catSel && d.cat !== catSel) return false;
     if (brandSel && d.brand !== brandSel) return false;
     if (priceRange && !inPriceRange(d.price, priceRange)) return false;
     if (q && d.brand.toLowerCase().indexOf(q) === -1 && d.name.toLowerCase().indexOf(q) === -1) return false;
@@ -3786,7 +3927,7 @@ function render(query) {
   var groups = {};
   filtered.forEach(function(d) { (groups[d.brand] = groups[d.brand] || []).push(d); });
   var brands = Object.keys(groups).sort(function(a, b) { return a.localeCompare(b); });
-  document.getElementById('count').textContent = (q || brandSel || priceRange) ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
+  document.getElementById('count').textContent = (q || catSel || brandSel || priceRange) ? (filtered.length + ' resultado' + (filtered.length !== 1 ? 's' : '')) : '';
   var out = '';
   if (brands.length === 0) {
     out = '<div class="empty">No se encontraron productos.</div>';
