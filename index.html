@@ -2623,29 +2623,50 @@ function parseExcelPriceList(rows2d) {
   return items;
 }
 
-// ── Parsing: PDF de la tienda (grilla de tarjetas: nombre en 1-3 líneas, "U$ 36.0", "Cod: …", "Stock: …") ──
-// El texto de cada tarjeta viene en orden dentro del PDF (nombre → precio → código → stock), así que
-// alcanza con leerlo en secuencia: todo lo que aparece antes de "U$" es el nombre, y "Stock:" cierra la tarjeta.
-// Código y stock se ignoran (el PDF ya trae solo productos con stock).
+// ── Parsing: PDFs de catálogo en grilla de tarjetas ──
+// Dos formatos reales, ambos con el texto de cada tarjeta en orden (nombre → … → precio):
+//  - la tienda: nombre en 1-3 líneas, "U$ 36.0", "Cod: …", "Stock: …"
+//  - catálogos por sección ("1846 - MONTALE" como título): nombre cortado con "…" que termina en un
+//    código de 4 dígitos ("…EDP 100ML 5657"), y "$94.00" como última línea.
+// Alcanza con leer en secuencia: lo que aparece antes del precio es el nombre, y la tarjeta se cierra
+// con "Stock:" o cuando empieza el nombre siguiente. Código y stock se ignoran.
 function plCleanPdfName(raw) {
-  return raw.replace(/\s+/g, ' ').trim()
+  let s = raw.replace(/…/g, ' ').replace(/\s+/g, ' ').trim()
     .replace(/^P\.TT\.\s*/i, 'TESTER ') // "P.TT." = tester — "TESTER" es la palabra que usa PL_CONDITION_RE
     .replace(/^P\.\s*/i, '');            // "P." = perfume, no aporta nada y tapa la marca
+  // Código de producto de 4 dígitos al final, en las formas que aparecen cuando el nombre viene cortado:
+  // "100ML 5657", "90M1377", "50ML1034", "EDP75M4648" → tamaño en ml sin código;
+  // "OVERD 100 2614" (se cortó la "ML") → "100ML"; "120M EDP1086" → "120ML EDP".
+  // Solo se toca un número final de 4 dígitos pegado a un tamaño, para no comer números del nombre.
+  s = s.replace(/(\d{2,3})\s*ML?\s*\d{4}$/i, '$1ML');
+  if (!/\d\s*ML\b/i.test(s)) s = s.replace(/\b(\d{2,3})\s+\d{4}$/, '$1ML');
+  if (/\d\s*ML?\b/i.test(s)) s = s.replace(/([A-Z])\d{4}$/i, '$1');
+  s = s.replace(/\b(\d{2,3})M\b/gi, '$1ML');
+  s = s.replace(/([A-Z])(\d{2,3}ML)\b/gi, '$1 $2');
+  return s.trim();
 }
 
-function parsePdfPriceListPage(textItems) {
+// state se comparte entre páginas: el título de sección ("1846 - MONTALE") vale para las tarjetas que
+// siguen aunque pasen a la página siguiente.
+function parsePdfPriceListPage(textItems, state = {}) {
   const items = [];
   let nameParts = [], price = NaN;
   const flush = () => {
     const name  = plCleanPdfName(nameParts.join(' '));
-    const brand = detectKnownBrand(name);
+    const brand = detectKnownBrand(name) || state.sectionBrand || '';
     if (name && !isNaN(price) && price > 0) items.push({ name, brand, price });
     nameParts = []; price = NaN;
   };
   for (const it of textItems) {
     const s = it.str.trim();
-    if (!s || /^Grupo de Produto/i.test(s)) continue;
-    const pm = s.match(/^U\$\s*([\d.,]+)$/);
+    if (!s || /^Grupo de Produto/i.test(s) || /^generado por\b/i.test(s) || /^Precio\s*·/i.test(s) || /^PERFUMES\b/i.test(s)) continue;
+    const section = s.match(/^\d+\s*-\s*(.+)$/);
+    if (section) {
+      flush();
+      state.sectionBrand = detectKnownBrand(` ${section[1]} `) || section[1].trim();
+      continue;
+    }
+    const pm = s.match(/^U?\$\s*([\d.,]+)$/);
     if (pm) { price = parsePrice(pm[1]); continue; }
     if (/^Cod:/i.test(s)) continue;
     if (/^Stock:/i.test(s)) { flush(); continue; }
@@ -2662,12 +2683,13 @@ async function importPlPdf(file) {
   try {
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
     const items = [];
+    const state = {};
     for (let i = 1; i <= doc.numPages; i++) {
       const content = await (await doc.getPage(i)).getTextContent();
-      items.push(...parsePdfPriceListPage(content.items));
+      items.push(...parsePdfPriceListPage(content.items, state));
     }
     if (items.length === 0) {
-      alert(`No se encontraron productos en "${file.name}". El PDF tiene que tener texto seleccionable con precios "U$" (no sirve uno escaneado).`);
+      alert(`No se encontraron productos en "${file.name}". El PDF tiene que tener texto seleccionable con precios en "U$" o "$" (no sirve uno escaneado).`);
       return;
     }
     plSources.push({ id: plNextSourceId++, name: file.name.replace(/\.[^.]+$/, ''), items });
