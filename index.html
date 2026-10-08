@@ -1297,7 +1297,7 @@ function addRow(data = {}) {
     tipo: data.tipo ?? 'cliente',
     cliente: data.cliente ?? '',
     pedido: data.pedido ?? '',
-    modo: data.modo ?? 'pix',
+    modo: data.modo ?? 'usdt', // USDT por defecto; cada fila lo puede cambiar con su botón de modo
     gananciaUSDOverride: data.gananciaUSDOverride ?? null,
   });
   renderTable();
@@ -1475,6 +1475,10 @@ function roundUpToStep(value, step) {
 
 // Lee tasas + config de negocio una sola vez y precalcula lo que depende de TODAS las filas
 // (comisión, fee de transferencia USDT por unidad). Se llama una vez por recálculo, no por fila.
+// Una fila sin precio es un renglón vacío esperando producto: no cuenta para unidades, comisión,
+// fee USDT ni envío real (si no, "Reset" dejaba el resumen con montos aunque no hubiera nada).
+function rowHasProduct(r) { return r.price > 0; }
+
 function getCostingContext() {
   const pixRate    = getRate('r-pix');
   const pixUsdRate = getRate('r-pix-usd');
@@ -1491,7 +1495,7 @@ function getCostingContext() {
   // Transferencias USDT = nombres de "Pedido" distintos entre filas en modo usdt (default 1
   // si hay filas usdt pero ninguna tiene pedido cargado — nunca 0 transferencias si hay filas).
   // Mismo patrón que el auto-conteo de Clientes (:1512 aprox.), aplicado a `pedido`.
-  const filasUsdt = rows.filter(r => (r.modo || 'pix') === 'usdt');
+  const filasUsdt = rows.filter(r => rowHasProduct(r) && (r.modo || 'usdt') === 'usdt');
   const pedidoNameSet = new Set(
     filasUsdt.filter(r => (r.pedido ?? '').trim()).map(r => r.pedido.trim().toLowerCase())
   );
@@ -1510,7 +1514,7 @@ function getCostingContext() {
 // Costo real de una fila (sin precio de venta todavía). `ctx` = getCostingContext().
 function computeRowCosting(row, ctx) {
   const isStock = row.tipo === 'stock';
-  const rowMode = row.modo || 'pix';
+  const rowMode = row.modo || 'usdt';
 
   let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
   if (rowMode === 'usdt') {
@@ -1573,7 +1577,7 @@ function showCompareCard(rowId, iconEl) {
   const row = rows.find(r => r.id === rowId);
   if (!row) return;
 
-  const rowMode = row.modo || 'pix';
+  const rowMode = row.modo || 'usdt';
   const costs = computeAllModeCosts(row);
   const validCosts = Object.values(costs).filter(v => v > 0);
   const minCost = validCosts.length ? Math.min(...validCosts) : 0;
@@ -1669,9 +1673,10 @@ function cancelHideCompareCard() {
 function recalculate() {
   const ctx = getCostingContext();
   const { blue, roundStep } = ctx;
-  const envioRealTotal = getRate('r-envio');
+  const productRows = rows.filter(rowHasProduct);
+  const envioRealTotal = productRows.length ? getRate('r-envio') : 0;
 
-  const totalUnits = rows.reduce((s, r) => s + r.qty, 0);
+  const totalUnits = productRows.reduce((s, r) => s + r.qty, 0);
 
   // Auto-derive clientes from distinct non-empty client names in CLI rows
   const clienteNameSet = new Set(
@@ -1737,7 +1742,9 @@ function recalculate() {
       precioListaUSD = blue > 0 ? precioARS / blue : 0;
     }
 
-    // Accumulate totals
+    // Accumulate totals (las filas vacías no suman — ver rowHasProduct)
+    const hasProduct = rowHasProduct(row);
+    if (hasProduct) {
     totalBRL        += rowMode !== 'usdt' ? brlUnid * row.qty : 0;
     totalUSD1       += usdUnid   * row.qty;
     totalARS1       += costoARS1 * row.qty;
@@ -1754,6 +1761,7 @@ function recalculate() {
       clientStats[cname].venta    += precioARS  * row.qty;
       clientStats[cname].ganancia += ganancia   * row.qty;
     }
+    }
 
     // Update cells
     const qty = row.qty || 1;
@@ -1761,8 +1769,8 @@ function recalculate() {
     setCell(`brl-${row.id}`,  rowMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
     setCell(`usd-${row.id}`,  rowMode === 'ars'  ? '—' : (usdUnid > 0 ? fmt_usd(usdUnid * qty) : '—'));
     setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');
-    setCell(`com-${row.id}`,  fmt_ars(ctx.comisionARS * qty));
-    setCell(`env-${row.id}`,  fmt_ars((envioFijoUnid + feeUsdtUnid) * qty));
+    setCell(`com-${row.id}`,  hasProduct ? fmt_ars(ctx.comisionARS * qty) : '—');
+    setCell(`env-${row.id}`,  hasProduct ? fmt_ars((envioFijoUnid + feeUsdtUnid) * qty) : '—');
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal * qty) : '—');
     setCell(`vars-${row.id}`,  precioARS     > 0 ? fmt_ars(precioARS    * qty) : '—');
     setCell(`lista-${row.id}`, (!isStock && precioLista    > 0) ? fmt_ars(precioLista    * qty) : '—');
@@ -1918,9 +1926,8 @@ function resetCurrentList() {
   if (!confirm('¿Borrar todos los productos de esta lista?')) return;
   rows.length = 0;
   nextId = 1;
-  renderTable();
-  recalculate();
-  addRow(); addRow(); addRow();
+  addRow(); // queda una sola fila vacía; las demás se agregan a mano
+  persistSave();
 }
 
 // ── localStorage persistence ──
@@ -4271,13 +4278,14 @@ function exportNotes() {
   // función tenía su propia copia de la fórmula y había quedado desalineada (ignoraba
   // row.modo y gananciaUSDOverride). Ver card 04.
   const ctx          = getCostingContext();
-  const envioRealTotal = getRate('r-envio');
+  const filled        = rows.filter(rowHasProduct);
+  const envioRealTotal = filled.length ? getRate('r-envio') : 0;
   const pixService    = document.getElementById('pix-usd-provider').textContent;
-  const totalUnits    = rows.reduce((s, r) => s + r.qty, 0);
+  const totalUnits    = filled.reduce((s, r) => s + r.qty, 0);
   const fecha         = new Date().toLocaleString('es-AR');
 
   let totalCostoReal = 0, totalVenta = 0, totalGanancia = 0;
-  const productRows = rows.map(row => {
+  const productRows = filled.map(row => {
     const { costoTotal } = computeRowCosting(row, ctx);
     let precioARS = 0, precioUSD = 0, ganancia = 0;
     if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0 && costoTotal > 0) {
@@ -4294,7 +4302,7 @@ function exportNotes() {
     return { row, costoTotal, precioARS, precioUSD, ganancia };
   });
   // Costo/ROI real del embarque — envío y fee USDT reales, no los fijos cobrados al cliente
-  totalCostoReal = rows.reduce((s, row) => s + computeRowCosting(row, ctx).costoARS1 * row.qty, 0)
+  totalCostoReal = filled.reduce((s, row) => s + computeRowCosting(row, ctx).costoARS1 * row.qty, 0)
     + ctx.comisionARS * totalUnits + envioRealTotal + ctx.feeUsdtTotal;
   const roi = totalCostoReal > 0 ? (totalGanancia / totalCostoReal * 100).toFixed(1) : 0;
 
