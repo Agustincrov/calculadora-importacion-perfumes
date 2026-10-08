@@ -2187,12 +2187,12 @@ const KNOWN_BRANDS = [
   ['Clive Christian'], ['Creed'], ['Diptyque'], ['Essential Parfums'], ['Fragrance du Bois'],
   ['Frederic Malle'], ['Giorgio Armani', 'ARMANI'], ['Gritti'], ['Haute Fragrance Company', 'HFC'],
   ['Initio'], ['Jo Malone'], ['Jo Milano'], ['Juliette Has a Gun'], ['Kajal'], ['Kilian'],
-  ['Le Labo'], ['Maison Crivelli'], ['Maison Margiela'], ['Mancera Paris', 'MANCERA'],
+  ['Le Labo'], ['Maison Crivelli'], ['Maison Margiela', 'REPLICA'], ['Mancera Paris', 'MANCERA'],
   ['Matiere Premiere'], ['Memo Paris', 'MEMO'], ['Mizensir'], ['Montale'], ['New Notes'], ['Nishane'],
   ['Ormonde Jayne'], ['Paradis des Sens'], ['Parfums de Marly', 'MARLY', 'PDM'], ['Roja'], ['Scentologia'],
   ['Sospiro'], ['Stephane Humbert Lucas 777', 'STEPHANE HUMBERT LUCAS', 'STEPHANE HUMBERT'],
   ['Thameen'], ['The House of Oud', 'THOO HOUSE', 'THOO'],
-  ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford'], ['Vertus'], ['Vilhelm'], ['Xerjoff'],
+  ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford', 'TOM FOR'], ['Vertus'], ['Vilhelm'], ['Xerjoff', 'XEREJOFF'],
   ['Kayali'], ['Abercrombie & Fitch', 'ABERCROMBIE & FITCH', 'ABERCROMBIE FITCH', 'ABERCROMBIE'], ['Amouage'],
   ['Argos'], ['Ariana Grande', 'ARIANA G'], ['BDK Parfums', 'BDK'], ['Boadicea the Victorious', 'BOADICEA'],
   ['Born to Stand Out'], ['Cartier'], ['Chopard'], ['Coach'], ['Dumont'],
@@ -2207,9 +2207,9 @@ const KNOWN_BRANDS = [
   ['Cacharel'], ['Calvin Klein', 'CK'], ['Carolina Herrera', 'CAROLINA', 'CH'], ['Chanel'], ['Chloe'], ['Clinique'],
   ['Davidoff'], ['Diesel'], ['Dolce&Gabbana', 'DOLCE&GABBANA', 'DOLCE & GABBANA', 'D&G', 'DOLCE GAB', 'DOLCE G'],
   ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV', 'ELIZ A'], ['Ferrari'], ['Giorgio Beverly Hills'],
-  ['Givenchy', 'GIV'], ['Gres'], ['Gucci'], ['Guerlain'], ['Halloween', 'HALLOWEN'], ['Hermes Paris', 'HERMES'],
+  ['Givenchy', 'GIV'], ['Gres'], ['Gucci'], ['Guerlain'], ['Halloween', 'HALLOWEN'], ['Hermes Paris', 'HERMES', 'UN JARDIN EN'],
   ['Hugo Boss', 'HUGO'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G', 'JPG'],
-  ['Jimmy Choo'], ['Joop'], ['Juicy Couture'], ['Kenzo'], ['Lacoste'], ['Lancome'], ['Lomani'],
+  ['Jimmy Choo'], ['Joop'], ['Juicy Couture', 'J COUTURE'], ['Kenzo'], ['Lacoste'], ['Lancome'], ['Lomani'],
   ['Marc Jacobs'], ['Marina de Bourbon', 'MARINA'], ['Michael Kors'], ['Montblanc', 'MONT BLANC'], ['Moschino'],
   ['Narciso Rodriguez'], ['Nina Ricci', 'NINA'], ['Paco Rabanne', 'PACO'], ['Paloma Picasso'], ['Prada'],
   ['Ralph Lauren', 'RALPH L', 'RL'], ['Sabrina Carpenter', 'SAB CARPENTER'], ['Sarah Jessica Parker'], ['Shakira'],
@@ -2226,7 +2226,7 @@ const KNOWN_BRANDS = [
   ['La Rive'], ['Lanvin'], ['Ted Lapidus', 'LAPIDUS'], ['Loewe'], ['Lonkoom'], ['Lotto'],
   ['Mandarina Duck'], ['Mauboussin'], ['Max & Co'], ['Moncler'], ['Nadia Ferreira'],
   ['Nazareno Gabrielli', 'NAZARENO'], ['One Direction'], ['Pascal Morabito'], ['Perry Ellis'],
-  ['Pino Silvestre'], ['Pitbull'], ['Porsche Design'], ['Puccini'], ['Reebok'],
+  ['Pino Silvestre', 'PINO'], ['Pitbull'], ['Porsche Design'], ['Puccini'], ['Reebok'],
   ['Salvador Dali', 'SAL DALI'], ['Skil'], ['Sorvella'], ['Stella Dustin'],
   ['Ulric de Varens', 'UDV'], ["Women'Secret", 'WOMEN ST', 'WOMEN SECRET'],
   ['Police'], ['Paris Bleu'], ['David Beckham'], ['Pepe Jeans'], ['Bharara'],
@@ -2240,8 +2240,8 @@ const KNOWN_BRANDS = [
   // Marcas árabes/de Medio Oriente detectadas en el proveedor "VARIOS" — se agregan para que
   // se etiqueten bien, y están en EXCLUDED_BRANDS más abajo para sacarlas de la lista generada.
   ['Adyan'], ['Afnan'], ['Ajmal'], ["Al A'raaf", "AL A'RAAF", 'AL ARAAF'], ['Al Haramain'],
-  ['Al Wataniah'], ['Armaf'], ['Dar Al Ward', 'DAR EL WARD', 'DAR AL WARD'], ['Lattafa'],
-  ['Maison Alhambra'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
+  ['Al Wataniah', 'WATANIAH', 'SULTAN AL LAIL'], ['Armaf', 'MANDARIN SKY'], ['Dar Al Ward', 'DAR EL WARD', 'DAR AL WARD'], ['Lattafa', 'QAED AL FURSAN', 'YARA ELIXIR'],
+  ['Maison Alhambra', 'ALHAMBRA', 'MAISON AL', 'MAISON ALL', 'DELILAH BLANC'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
   ['Rayhaan'], ['Sahari'],
   // Confianza media (revisar) — sí se agregan para detectarlas, pero confirmá si van también excluidas
   ['Borouj'], ['Mawwal'], ['French Avenue'], ['Zirconia'], ['Arqus'], ['Bespoke'], ['Marina Royal'], ['Amaran'],
@@ -2255,7 +2255,12 @@ const KNOWN_BRANDS = [
   ['Ahmed Al Maghribi', 'AHMED'], ['Arabiyat'], ['Ard Al Zaafaran'], ['Asdaaf'], ['Aurora'], ['By Charisma'],
   ['Camara'], ['Emper'], ['Fragrance World', 'FRAGANCE WORLD'], ['Hamidi'], ['Karen Low'],
   ['Khadlaj'], ['Khalis'], ['Krip'], ['Laverne'], ['Maison Asrar'], ['My Perfumes', 'MPF'], ['Nusuk'],
-  ['Oriarome'], ['Paris Corner'], ['Riiffs'], ['Thoq Al Hawamer'], ['Tubbees'], ['Zakat']
+  ['Oriarome'], ['Paris Corner'], ['Riiffs'], ['Thoq Al Hawamer'], ['Tubbees'], ['Zakat'],
+  // Agregadas al revisar productos sin marca (2026-10-08)
+  ["Victoria's Secret", "VICTORIA'S SECRET", 'VICTORIAS SECRET'], ['Shaikh Saeed'], ['Jessica Twain'],
+  ['Volare'], ['Choice Selection'], ['Nayaat'], ['Le Falcone'], ['Rue Broca'], ['Mast Rome'],
+  ['Gulf Orchid', 'G ORCHID'], ['Gian Marco Venturi', 'GMV'], ['Gabriela Sabatini', 'GABRIELA'], ['Via Paris'],
+  ['LPDO'] // sin categoría: "Jardin Imperial" es de Atelier Rebul, LPDO parece una imitación, no está claro qué es
   // Flavia (Armaf) y Zimaya (Afnan) quedan afuera a propósito: aparecen como "ARMAF FLAVIA …" /
   // "AFNAN ZIMAYA …", y como marca propia le ganarían a Armaf/Afnan y se saltearían EXCLUDED_BRANDS.
 ];
@@ -2299,7 +2304,7 @@ const BRAND_CATEGORY = (() => {
     'Calvin Klein', 'Carolina Herrera', 'Cartier', 'Chanel', 'Chloe', 'Chopard', 'Christian Dior',
     'Clinique', 'Coach', 'Cool & Cool', 'Cuba Paris', 'David Beckham', 'Davidoff', 'Diesel',
     'Dolce&Gabbana', 'Donna Karan', 'Elie Saab', 'Elizabeth Arden', 'Elodie Roy', 'Enrico Coveri', 'Escada',
-    'Faconnable', 'Ferrari', 'Fred Hayman', 'Furla', 'Giorgio Armani', 'Giorgio Beverly Hills', 'Givenchy',
+    'Faconnable', 'Ferrari', 'Fred Hayman', 'Furla', 'Gabriela Sabatini', 'Gian Marco Venturi', 'Giorgio Armani', 'Giorgio Beverly Hills', 'Givenchy',
     'Gres', 'Gucci', 'Guerlain', 'Halloween', 'Hermes Paris', 'Hugo Boss', 'Issey Miyake', 'J.Arthe',
     'Jacomo', 'Jacques Bogart', 'Jaguar', 'Jean Paul Gaultier', 'Jennifer Lopez', 'Jimmy Choo', 'Joop',
     'Juicy Couture', 'Karl Lagerfeld', 'Kate Spade', 'Katy Perry', 'Kenzo', 'La Rive', 'Lacoste', 'Lalique',
@@ -2312,14 +2317,15 @@ const BRAND_CATEGORY = (() => {
     'Ralph Lauren', 'Reebok', 'Replay', 'Rochas', 'Sabrina Carpenter', 'Salvador Dali',
     'Salvatore Ferragamo', 'Sarah Jessica Parker', 'Shakira', 'Skil', 'Sorvella', 'Stella Dustin',
     'Ted Lapidus', 'Thierry Mugler', 'Tiffany & Co', 'Tommy Hilfiger', 'Tous', 'Trussardi',
-    'Ulric de Varens', 'Valentino', 'Versace', 'Victorinox Swiss Army', 'Victorio & Lucchino',
-    'Viktor&Rolf', "Women'Secret", 'Yves Saint Laurent'
+    'Ulric de Varens', 'Valentino', 'Versace', 'Via Paris', 'Victorinox Swiss Army', 'Victorio & Lucchino',
+    "Victoria's Secret", 'Viktor&Rolf', "Women'Secret", 'Yves Saint Laurent'
   ]);
   add('arabe', [
     'Adyan', 'Afnan', 'Ahmed Al Maghribi', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Amaran',
     'Arabian Oud', 'Arabiyat', 'Ard Al Zaafaran', 'Armaf', 'Arqus', 'Asdaaf', 'Aurora', 'Bespoke', 'Bharara',
-    'Borouj', 'By Charisma', 'Camara', 'Dar Al Ward', 'Dumont', 'Emper', 'Fragrance World',
-    'French Avenue', 'Hamidi', 'Karen Low', 'Khadlaj', 'Khalis', 'Krip', 'Lattafa', 'Laverne',
+    'Borouj', 'By Charisma', 'Camara', 'Choice Selection', 'Jessica Twain', 'Le Falcone', 'Mast Rome',
+    'Nayaat', 'Rue Broca', 'Shaikh Saeed', 'Volare', 'Dar Al Ward', 'Dumont', 'Emper', 'Fragrance World',
+    'French Avenue', 'Gulf Orchid', 'Hamidi', 'Karen Low', 'Khadlaj', 'Khalis', 'Krip', 'Lattafa', 'Laverne',
     'Maison Alhambra', 'Maison Asrar', 'Marina Royal', 'Maryaj', 'Mawwal', 'My Perfumes', 'Nasma', 'Nejma',
     'Nusuk', 'Oriarome', 'Orientica', 'Paris Corner', 'Rasasi', 'Rayhaan', 'Riiffs', 'Sahari',
     'Thoq Al Hawamer', 'Tubbees', 'Zakat', 'Zirconia'
@@ -2360,6 +2366,9 @@ const NON_PERFUME_PATTERNS = [
   /^MAC\s/i,      // maquillaje MAC Cosmetics
   /^(KIT\s)?INFANTIL\b/i, // productos infantiles con licencia (Disney, Batman, etc.), sueltos o en kit
   /^FRASCO\b/i,   // envases/frascos vacíos, no es un producto terminado
+  /^(DISNEY|EAU MY UNICORN)\b/i, // infantiles con licencia, igual que INFANTIL (el PDF de la tienda no usa esa palabra)
+  // Lociones y cremas sueltas. Los kits quedan afuera de la regla: "PERFUME 100ML + BODY LOTION" sí es perfume.
+  /^(?!.*(\bKIT\b|\+)).*\b(LOTION|BODY CREAM|HAND CREAM|CREME POTE)\b/i,
 ];
 
 function plIsNonPerfumeCategory(name) {
@@ -2736,7 +2745,11 @@ const PL_PREFIX_WORDS = new Set([
   'PERF','UNI','FEM','MASC','KIT','NOVO','MAS','UNISEX','NEW'
 ]);
 
-function plNormalizeCore(name) {
+// EDP, Parfum y Extrait son productos distintos (Sauvage EDP / Sauvage Parfum, Outcast Blue EDP /
+// Extrait), así que solo se unifican las formas de escribir cada uno. legacy = la normalización
+// anterior, que mezclaba los tres como EDP: se usa únicamente para encontrar decisiones de duplicados
+// guardadas antes de este cambio (su clave se armó con ella).
+function plNormalizeCore(name, legacy = false) {
   let s = String(name).toUpperCase();
   s = s.replace(/\([0-9][0-9-]*\)/g, ' '); // códigos SKU entre paréntesis, ej. "(522)", "(436-979)"
   s = s.replace(/[’'".()\/]/g, ' ');
@@ -2744,16 +2757,24 @@ function plNormalizeCore(name) {
   const sizeMatch = s.match(PL_SIZE_RE);
   const ml = sizeMatch ? parseFloat(sizeMatch[1].replace(',', '.')) : null;
   s = s.replace(PL_SIZE_RE, ' ');
-  s = s.replace(/\bEXDP\b|\bEXTDP\b|\bEXTRAIT DE PARFUM\b|\bPARFUM\b/g, 'EDP');
+  if (legacy) {
+    s = s.replace(/\bEXDP\b|\bEXTDP\b|\bEXTRAIT DE PARFUM\b|\bPARFUM\b/g, 'EDP');
+  } else {
+    s = s.replace(/\bEAU DE PARFUM\b/g, 'EDP');
+    s = s.replace(/\bEXTRAIT DE PARFUM\b|\bEXDP\b|\bEXTDP\b|\bEXTRAIT\b/g, 'EXTRAIT');
+  }
   s = s.replace(/[^A-Z0-9 ]/g, ' ');
   const tokens = s.split(/\s+/).filter(t => t && !PL_PREFIX_WORDS.has(t));
   const core = tokens.slice().sort().join(' ');
   return { core, ml };
 }
 
+// Agrupa como "el mismo producto" sin preguntar. Incluye el género porque plNormalizeCore descarta
+// FEM/MAS: sin esto "LIGHT BLUE FEM EDP 100ML" y "LIGHT BLUE MAS EDP 100ML" quedaban en una sola
+// fila con el precio del más barato.
 function plItemKey(item) {
   const { core, ml } = plNormalizeCore(item.name);
-  return `${core}__${ml ?? 'NA'}`;
+  return `${core}__${ml ?? 'NA'}__${plGenderOf(item.name) || ''}`;
 }
 
 function plTokenSet(core) { return new Set(core.split(' ').filter(Boolean)); }
@@ -2785,35 +2806,137 @@ const PL_CONDITION_RE = /\bTESTER\b|CAIXA\/|AMASSAD|AMASAD|\bFEIA\b|\bBASADO\b|S
 // misma línea (ej. "Sauvage" vs "Sauvage Eau Forte", "Stronger With You" vs "...Absolutely").
 // Si aparecen en un solo lado del par, nunca se sugiere como candidato — no es ruido de
 // formato, es una diferencia de producto real que ningún algoritmo de texto puede resolver solo.
-const PL_QUALIFIER_RE = /\bINTENSE\b|\bINTENSO\b|\bINTENSELY\b|\bELIXIR\b|\bEXTREME\b|\bABSOLU\b|\bABSOLUTELY\b|\bPOWERFULLY\b|\bEXTRADOSE\b|\bEAU FORTE\b|\bOVERDOSE\b/i;
+const PL_QUALIFIER_RE = /\bINTENSE\b|\bINTENSO\b|\bINTENSELY\b|\bELIXIR\b|\bEXTREME\b|\bABSOL(U|UTE)?\b|\bABSOLUTELY\b|\bPOWERFULLY\b|\bEXTRADOSE\b|\bEAU FORTE\b|\bOVERDOSE\b/i;
+
+// Recargable / refill es otro SKU (otro frasco y otro precio: Angel EDP 100ML recargable vs normal),
+// así que tampoco se sugiere si solo uno de los dos lo dice.
+const PL_REFILL_RE = /\bREFIL|\bRECAR/i; // REFILL, REFILLABLE, RECARGABLE, RECARRE, "RECAR."
 
 // Marcadores de género en conflicto real (no solo etiqueta de formato) — cuando un lado dice
-// femenino y el otro masculino, puede ser el mismo producto mal etiquetado por un proveedor,
-// o puede ser una fragancia "his/hers" genuinamente distinta (ej. Amouage Epic Man/Woman,
-// Versace Eros/Eros Pour Femme). Nunca se auto-fusiona; siempre queda para revisión manual.
-const PL_FEM_RE = /\bFEM\b|\bF\b|\bWOMAN\b|\bWOMEN\b|\bMUJER\b/;
-const PL_MASC_RE = /\bMASC\b|\bMAS\b|\bM\b|\bMEN\b|\bMAN\b|\bHOMME\b|\bHOMBRE\b/;
+// femenino y el otro masculino es casi siempre una fragancia "his/hers" distinta (ej. Amouage
+// Epic Man/Woman, Light Blue F/MAS, 212 NYC/212 MEN), así que ni se sugiere como duplicado.
+// "H" (hombre) y "ELLA"/"HER"/"HIM" son como los marca el PDF de la tienda. "H." con punto no cuenta:
+// es la abreviatura de "CAROLINA H." (Herrera) en VARIOS.
+const PL_FEM_RE = /\bFEM\b|\bF\b|\bWOMAN\b|\bWOMEN\b|\bMUJER\b|\bELLA\b|\bHER\b/;
+const PL_MASC_RE = /\bMASC\b|\bMAS\b|\bM\b|\bH\b(?!\.)|\bMEN\b|\bMAN\b|\bHOMME\b|\bHOMBRE\b|\bHIM\b/;
+function plGenderOf(name) {
+  const isFem = PL_FEM_RE.test(name), isMasc = PL_MASC_RE.test(name);
+  return isFem && !isMasc ? 'F' : (isMasc && !isFem ? 'M' : null);
+}
+
 function plGenderConflict(nameA, nameB) {
-  const isFemA = PL_FEM_RE.test(nameA), isMascA = PL_MASC_RE.test(nameA);
-  const isFemB = PL_FEM_RE.test(nameB), isMascB = PL_MASC_RE.test(nameB);
-  const gA = isFemA && !isMascA ? 'F' : (isMascA && !isFemA ? 'M' : null);
-  const gB = isFemB && !isMascB ? 'F' : (isMascB && !isFemB ? 'M' : null);
+  const gA = plGenderOf(nameA), gB = plGenderOf(nameB);
   return gA && gB && gA !== gB;
+}
+
+// Palabras que distinguen versiones de una misma línea (Born in Roma / Born in Roma Green / Coral
+// Fantasy, Luna Rossa Carbon / Ocean / Sport, CK One / CK One Gold). Si el par no tiene exactamente
+// las mismas, no se sugiere. Puede dejar pasar algún duplicado real donde un proveedor omite el
+// color (ej. "Club de Nuit Iconic" vs "Iconic Blue"), pero eso solo deja dos filas en la lista;
+// sugerir de más llenaba la revisión de pares que no eran el mismo producto.
+const PL_VARIANT_WORDS = new Set([
+  'BLACK','NOIR','NERO','WHITE','BLANC','BLANCHE','BIANCO','BLUE','BLEU','RED','ROUGE','ROSSO','PINK',
+  'GREEN','VERDE','GOLD','GOLDEN','ORO','SILVER','PLATINUM','CORAL','CARBON','OCEAN','AQUA','SPORT',
+  'FRESH','FRAICHE','NIGHT','NUIT','MIDNIGHT','SUMMER','PASSIONE','PRIVE','ROYAL','SUGAR','GARDEN',
+  'CHERRY','VANILLA','VANILLE','OUD','LEATHER','CRYSTAL','DIAMOND','VELVET','ICE','ICED','ELECTRIC',
+  'PURE','TOBACCO','AMBER','MUSK','SPICY','WOOD','PARADISE','BLOOM','BLOSSOM','FLORAL','LOVE','DREAM',
+  'STAR','SECRET','GLITTER','SHINE','BRIGHT','DARK','LIGHT'
+]);
+
+// Relleno de formato que no distingue productos — se ignora al buscar "palabras propias" de cada lado.
+const PL_DUP_NOISE_WORDS = new Set([
+  'EDP','EDT','EDC','EDPI','PARFUM','EXTRAIT','ML','UNI','UNIS','UNISEX','FEM','MASC','MAS','TESTER','KIT',
+  'CX','FEIA','AMASSADA','AMASADA','NOVO','NEW','NUEVO','NEGRO','ROSA','AZUL','COLLECTION','EDITION','EDIT','SPECIAL','FOR','POUR','HER','HIM','HOMME','FEMME','MEN','MAN',
+  'WOMAN','WOMEN','PERFUME','PERF','VENTA','TAPA','CAJA','EAU','DE','DI','LA','LE','EL','THE','OF','NYC',
+  'EMB','RUBBER','INT','INTENSE','PRIDE'
+]);
+
+// Abreviaturas de proveedor ("ABSOL" = "ABSOLUTE", "PLATIN" = "PLATINUM") y errores de tipeo de una
+// letra en palabras largas ("MUSAMAN" = "MUSAMAM").
+function plSameWord(a, b) {
+  if (a === b) return true;
+  const [short, long] = a.length < b.length ? [a, b] : [b, a];
+  if (short.length >= 4 && long.startsWith(short)) return true;
+  if (a.length === b.length && a.length >= 5) {
+    let diff = 0;
+    for (let i = 0; i < a.length && diff < 2; i++) if (a[i] !== b[i]) diff++;
+    return diff === 1;
+  }
+  return false;
+}
+
+// Palabras de nombre que tiene un lado y el otro no (sin marca, alias de marca, género ni relleno).
+// Si los DOS lados tienen alguna — "CLUB DE NUIT MALEKA" vs "CLUB DE NUIT URBAN", "LE BEAU" vs
+// "LE MALE" — son productos distintos de la misma línea. Si solo un lado tiene palabras extra
+// ("HAWAS" vs "HAWAS MALIBU") sí se sugiere: puede ser variante o un proveedor más detallado.
+function plBothSidesHaveOwnWords(a, b, coreA, coreB) {
+  const entry = KNOWN_BRANDS.find(e => e[0] === (a.brand || b.brand)) || [];
+  const brandTokens = plBrandTokenSet(entry.join(' '));
+  const words = core => core.split(' ').filter(t =>
+    t.length >= 2 && !/^\d+$/.test(t) && !PL_DUP_NOISE_WORDS.has(t) && !brandTokens.has(t));
+  const wa = words(coreA), wb = words(coreB);
+  const ownA = wa.filter(t => !wb.some(u => plSameWord(t, u)));
+  const ownB = wb.filter(t => !wa.some(u => plSameWord(t, u)));
+  return ownA.length > 0 && ownB.length > 0;
+}
+
+// Concentración (EDT / EDP / Parfum / Extrait / EDC). Si los dos nombres la dicen y no coincide, son
+// productos distintos; si un proveedor la omite, no se descarta el par. "PARFUM" a veces es parte del
+// nombre y no la concentración ("MYSLF LE PARFUM", "BOTTLED ELIXIR PARFUM INTENSE … EDP"): se ignora
+// en "LE PARFUM" y cuando el nombre ya dice EDP/EDT. En los "ELIXIR" cada proveedor pone la
+// concentración que quiere ("LE MALE ELIXIR EDP" / "LE MALE ELIXIR PARFUM"), así que no se usa.
+function plConcentration(name) {
+  if (/\bELIXIR\b/i.test(name)) return '';
+  const s = ' ' + String(name).toUpperCase().replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\bLE PARFUM\b/g, ' ')
+    .replace(/\bEAU DE PARFUM\b/g, ' EDP ')
+    .replace(/\bEAU DE TOILETTE\b/g, ' EDT ')
+    .replace(/\bEXTRAIT DE PARFUM\b|\bEXDP\b|\bEXTDP\b/g, ' EXTRAIT ') + ' ';
+  const found = new Set(['EDT', 'EDP', 'EDPI', 'EDC', 'PARFUM', 'EXTRAIT'].filter(c => s.includes(' ' + c + ' ')));
+  if (found.has('PARFUM') && (found.has('EDP') || found.has('EDT') || found.has('EDPI'))) found.delete('PARFUM');
+  return [...found].sort().join(' ');
+}
+
+function plVariantKey(core) {
+  return core.split(' ').filter(t => PL_VARIANT_WORDS.has(t)).sort().join(' ');
 }
 
 function detectFuzzyDuplicates(items) {
   // Un mismo proveedor no repite el mismo producto dos veces en su propia planilla —
   // los duplicados reales aparecen solo al cruzar varias listas distintas.
   const pairs = [];
+  // Normalizado una vez por producto: el doble loop recorre millones de pares con listas grandes.
+  const norms = items.map(it => plNormalizeCore(it.name));
+  const legacyCores = items.map(it => plNormalizeCore(it.name, true).core);
+  const concs = items.map(it => plConcentration(it.name));
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
       const a = items[i], b = items[j];
       if (a.sourceLabel === b.sourceLabel) continue; // solo entre listas distintas
+      const na = norms[i], nb = norms[j];
       if (a.brand && b.brand && a.brand !== b.brand) continue; // deben ser la misma marca
       if (PL_CONDITION_RE.test(a.name) !== PL_CONDITION_RE.test(b.name)) continue; // tester/caja dañada asimétrico
       if (PL_QUALIFIER_RE.test(a.name) !== PL_QUALIFIER_RE.test(b.name)) continue; // variante real asimétrica
-      const na = plNormalizeCore(a.name), nb = plNormalizeCore(b.name);
+      if (PL_REFILL_RE.test(a.name) !== PL_REFILL_RE.test(b.name)) continue; // recargable vs normal
       if (na.ml !== nb.ml) continue; // never suggest merging different sizes
+      // Género antes que la decisión: la clave de la decisión descarta FEM/MAS, así que un "es el mismo"
+      // entre dos versiones masculinas se aplicaría también a la femenina.
+      if (plGenderConflict(a.name, b.name)) continue; // femenino vs masculino
+      // Lo que ya decidiste a mano manda sobre las reglas automáticas de abajo — si no, una regla
+      // nueva podría des-fusionar un par que confirmaste como "el mismo producto". Va después del
+      // chequeo de tamaño y género a propósito: la clave de la decisión (misma que plDuplicateKey) no
+      // incluye los ml, así que sin ese chequeo un "es el mismo" de 100ML se aplicaría también al de 50ML.
+      const ca = concs[i], cb = concs[j];
+      const sameConc = !ca || !cb || ca === cb;
+      // La clave vieja mezclaba EDP/Parfum/Extrait: una decisión guardada con ella solo vale para
+      // pares de la misma concentración (si no, un "es el mismo" entre dos EDP pasaría al Parfum).
+      const decision = plDuplicateDecisions[[na.core, nb.core].sort().join('::')]
+        ?? (sameConc ? plDuplicateDecisions[[legacyCores[i], legacyCores[j]].sort().join('::')] : undefined);
+      if (decision === 'different') continue;
+      if (decision === 'same') { pairs.push({ a: a.id, b: b.id, sim: 1, resolved: false, remembered: true }); continue; }
+      if (!sameConc) continue; // EDP vs Parfum, EDT vs EDP…
+      if (plVariantKey(na.core) !== plVariantKey(nb.core)) continue; // Green vs Coral, Carbon vs Ocean…
+      if (plBothSidesHaveOwnWords(a, b, na.core, nb.core)) continue; // Maleka vs Urban, Le Beau vs Le Male…
       // La similitud se calcula SIN los tokens de marca — si no, marcas largas
       // ("STEPHANE HUMBERT LUCAS 777") inflan la similitud entre productos
       // totalmente distintos de esa misma línea (ej. "PANTHEA" vs "PINK BOA").
@@ -2821,12 +2944,9 @@ function detectFuzzyDuplicates(items) {
       const tb = plCoreTokensExcludingBrand(b, nb.core);
       const sim = plJaccard(new Set(ta), new Set(tb));
       if (sim >= 0.6) {
-        const decision = plDuplicateDecisions[plDuplicateKey(a.name, b.name)];
-        if (decision === 'different') continue; // ya dijiste que no son el mismo — no se vuelve a preguntar
-        // Similitud perfecta (sin marca ni letras sueltas queda un nombre idéntico) y sin
-        // conflicto de género = fusión automática, sin pedir confirmación.
-        const autoSame = sim === 1 && !plGenderConflict(a.name, b.name);
-        pairs.push({ a: a.id, b: b.id, sim, resolved: false, remembered: decision === 'same' || autoSame });
+        // Similitud perfecta (sin marca ni letras sueltas queda un nombre idéntico) = fusión
+        // automática, sin pedir confirmación (el conflicto de género ya se descartó arriba).
+        pairs.push({ a: a.id, b: b.id, sim, resolved: false, remembered: sim === 1 });
       }
     }
   }
@@ -2905,7 +3025,14 @@ function renderPlSharedConfigPreview() {
 // ── Generate pipeline ──
 function generatePriceList() {
   const all = [];
-  plSources.forEach(src => src.items.forEach(it => all.push({ ...it, sourceLabel: src.name })));
+  // La marca se vuelve a detectar acá (no solo al importar): así las marcas y alias agregados
+  // después también aplican a listas ya cargadas. Si no se detecta nada, queda la marca que vino
+  // con la lista (encabezado del texto pegado o columna "marca" del Excel).
+  plSources.forEach(src => src.items.forEach(it => all.push({
+    ...it,
+    brand: detectKnownBrand(it.name) || it.brand || '',
+    sourceLabel: src.name
+  })));
   if (all.length === 0) {
     alert('Importá al menos una lista de proveedor primero.');
     return;
