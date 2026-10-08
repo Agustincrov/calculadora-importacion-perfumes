@@ -119,7 +119,9 @@ El panel de resumen muestra el total de la operación:
 
 ## Catálogos de productos (opcional)
 
-Si la tienda te manda una planilla Excel con sus productos y precios, podés importarla con el botón **Importar catálogo**. A partir de ahí, al escribir el nombre de un producto en la tabla, te aparecen sugerencias para completar el nombre y el precio automáticamente.
+Si la tienda te manda una planilla Excel o un PDF con sus productos y precios, podés importarlo con el botón **Importar catálogo**. A partir de ahí, al escribir el nombre de un producto en la tabla, te aparecen sugerencias para completar el nombre y el precio automáticamente.
+
+El PDF tiene que tener texto seleccionable (no sirve uno escaneado o sacado como foto). Los productos marcados como tester ("TT") se cargan con la palabra TESTER adelante del nombre.
 
 Podés importar catálogos de varias tiendas al mismo tiempo. Cada archivo que importás se suma al pool de búsqueda sin reemplazar los anteriores. Cada catálogo cargado aparece como una etiqueta con el nombre del archivo y la cantidad de productos. Para quitar un catálogo, hacé clic en la **×** de su etiqueta.
 
@@ -172,4 +174,4 @@ Cada vez que abrís la calculadora o apretás "Actualizar cotizaciones". No se a
 Sí. Usá el botón **+** para crear una pestaña por cliente o por compra. Todas se guardan automáticamente.
 
 **¿Puedo usar los catálogos de varias tiendas a la vez?**
-Sí. Cada vez que importás un archivo Excel se agrega al pool de búsqueda. Podés tener varios catálogos activos al mismo tiempo y la búsqueda de productos los recorre todos.
+Sí. Cada vez que importás un archivo Excel o PDF se agrega al pool de búsqueda. Podés tener varios catálogos activos al mismo tiempo y la búsqueda de productos los recorre todos.

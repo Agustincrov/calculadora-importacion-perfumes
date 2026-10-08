@@ -6,6 +6,7 @@
   <link rel="icon" type="image/webp" href="calculator-flat-icon-pixel-perfect-for-mobile-and-web.webp">
   <title>Calculadora de Importación — Ciudad del Este</title>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -612,7 +613,7 @@
           </svg>
           Importar catálogo
         </button>
-        <input type="file" id="catalog-file" accept=".xls,.xlsx" multiple style="display:none"
+        <input type="file" id="catalog-file" accept=".xls,.xlsx,.pdf" multiple style="display:none"
           onchange="importPlExcel(this.files); this.value=''" />
         <div id="catalog-tags" class="catalog-tags"></div>
         <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
@@ -817,9 +818,9 @@
             <polyline points="14 2 14 8 20 8"/>
             <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
           </svg>
-          Importar Excel/Numbers
+          Importar Excel/Numbers/PDF
         </button>
-        <input type="file" id="pl-file" accept=".xls,.xlsx" multiple style="display:none"
+        <input type="file" id="pl-file" accept=".xls,.xlsx,.pdf" multiple style="display:none"
           onchange="importPlExcel(this.files); this.value=''" />
         <button class="btn btn-outline" onclick="clearAllPlSources()" style="color:var(--danger);border-color:var(--danger);" title="Borra las listas cargadas y el resultado generado, para empezar de cero">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -2187,7 +2188,7 @@ const KNOWN_BRANDS = [
   ['Initio'], ['Jo Malone'], ['Jo Milano'], ['Juliette Has a Gun'], ['Kajal'], ['Kilian'],
   ['Le Labo'], ['Maison Crivelli'], ['Maison Margiela'], ['Mancera Paris', 'MANCERA'],
   ['Matiere Premiere'], ['Memo Paris', 'MEMO'], ['Mizensir'], ['Montale'], ['New Notes'], ['Nishane'],
-  ['Ormonde Jayne'], ['Paradis des Sens'], ['Parfums de Marly', 'MARLY'], ['Roja'], ['Scentologia'],
+  ['Ormonde Jayne'], ['Paradis des Sens'], ['Parfums de Marly', 'MARLY', 'PDM'], ['Roja'], ['Scentologia'],
   ['Sospiro'], ['Stephane Humbert Lucas 777', 'STEPHANE HUMBERT LUCAS', 'STEPHANE HUMBERT'],
   ['Thameen'], ['The House of Oud', 'THOO HOUSE', 'THOO'],
   ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford'], ['Vertus'], ['Vilhelm'], ['Xerjoff'],
@@ -2201,16 +2202,16 @@ const KNOWN_BRANDS = [
   ['Rosendo Mateus', 'ROSENDO MATUE', 'ROSENDO MATEUS'], ['Salvatore Ferragamo', 'SAL FERRAG'],
   ['Victorinox Swiss Army', 'SWISS ARMY'],
   ['Van Cleef & Arpels', 'VAN CLEEF & ARPELS', 'VAN CLEEF ARPELS'],
-  ['Animale'], ['Antonio Banderas', 'ANTONIO'], ['Azzaro'], ['Billie Eilish'], ['Britney Spears', 'BRITNEY'], ['Burberry'],
-  ['Cacharel'], ['Calvin Klein', 'CK'], ['Carolina Herrera', 'CAROLINA'], ['Chanel'], ['Chloe'], ['Clinique'],
+  ['Animale'], ['Antonio Banderas', 'ANTONIO', 'AB'], ['Azzaro'], ['Billie Eilish'], ['Britney Spears', 'BRITNEY'], ['Burberry'],
+  ['Cacharel'], ['Calvin Klein', 'CK'], ['Carolina Herrera', 'CAROLINA', 'CH'], ['Chanel'], ['Chloe'], ['Clinique'],
   ['Davidoff'], ['Diesel'], ['Dolce&Gabbana', 'DOLCE&GABBANA', 'DOLCE & GABBANA', 'D&G', 'DOLCE GAB'],
   ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV'], ['Ferrari'], ['Giorgio Beverly Hills'],
   ['Givenchy', 'GIV'], ['Gres'], ['Gucci'], ['Guerlain'], ['Halloween', 'HALLOWEN'], ['Hermes Paris', 'HERMES'],
-  ['Hugo Boss'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G'],
+  ['Hugo Boss'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G', 'JPG'],
   ['Jimmy Choo'], ['Joop'], ['Juicy Couture'], ['Kenzo'], ['Lacoste'], ['Lancome'], ['Lomani'],
   ['Marc Jacobs'], ['Marina de Bourbon', 'MARINA'], ['Michael Kors'], ['Montblanc', 'MONT BLANC'], ['Moschino'],
   ['Narciso Rodriguez'], ['Nina Ricci', 'NINA'], ['Paco Rabanne', 'PACO'], ['Paloma Picasso'], ['Prada'],
-  ['Ralph Lauren', 'RALPH L'], ['Sabrina Carpenter', 'SAB CARPENTER'], ['Sarah Jessica Parker'], ['Shakira'],
+  ['Ralph Lauren', 'RALPH L', 'RL'], ['Sabrina Carpenter', 'SAB CARPENTER'], ['Sarah Jessica Parker'], ['Shakira'],
   ['Thierry Mugler', 'T MUGLER'],
   ['Tiffany & Co'], ['Tommy Hilfiger', 'TOMMY'], ['Valentino'], ['Versace'],
   ['Viktor&Rolf', 'VIKTOR&ROLF', 'VIKTOR & ROLF', 'VIKTOR ROLF'], ['Yves Saint Laurent', 'YVES SAINT LAURENT', 'YSL'],
@@ -2219,7 +2220,7 @@ const KNOWN_BRANDS = [
   ['Agatha Paris', 'AGATHA'], ['Agua Brava'], ['Alviero Martini'], ['Arrogance'],
   ['Arsenal'], ['Axis'], ['Benetton', 'UNITED COLORS OF BENETTON'], ['Blauer'], ['Blumarine'],
   ['Cuba Paris', 'CUBA'], ['Elodie Roy'], ['Enrico Coveri'], ['Escentric Molecules', 'ESCENTRIC'],
-  ['Faconnable'], ['Fragluxe'], ['Fred Hayman', "FRED HAYMAN'S"], ['Furla'], ['Gisada'], ['J.Arthe', 'J ARTHE'],
+  ['Faconnable'], ['Fragluxe'], ['Fred Hayman', "FRED HAYMAN'S"], ['Furla'], ['Gisada'], ['J.Arthe', 'J ARTHE', 'JEANNE ARTHES'],
   ['Jacomo'], ['Jaguar'], ['Jennifer Lopez', 'JENNIFER L'], ['Kate Spade'], ['Katy Perry'],
   ['La Rive'], ['Lanvin'], ['Ted Lapidus', 'LAPIDUS'], ['Loewe'], ['Lonkoom'], ['Lotto'],
   ['Mandarina Duck'], ['Mauboussin'], ['Max & Co'], ['Moncler'], ['Nadia Ferreira'],
@@ -2231,6 +2232,9 @@ const KNOWN_BRANDS = [
   ['Oscar de la Renta', 'OSCAR DL'], ['Tous'], ['Trussardi'], ['Replay'], ['Rochas'],
   ['Escada'], ['Cool & Cool', 'COOL&COOL'], ['Brut'], ['Nautica'], ['Paris Hilton'],
   ['Victorio & Lucchino', 'VICTORIO &', 'VICTORIO&LUCCHINO'],
+
+  // Agregadas por el PDF de la tienda (2026-10-07) — las abreviaturas CH/AB/JPG/RL/PDM van como alias arriba
+  ['Acqua di Parma'], ['Bentley'], ['Brioni'], ['Lalique'], ['Lolita Lempicka'], ['Missoni'],
 
   // Marcas árabes/de Medio Oriente detectadas en el proveedor "VARIOS" — se agregan para que
   // se etiqueten bien, y están en EXCLUDED_BRANDS más abajo para sacarlas de la lista generada.
@@ -2471,8 +2475,64 @@ function parseExcelPriceList(rows2d) {
   return items;
 }
 
+// ── Parsing: PDF de la tienda (grilla de tarjetas: nombre en 1-3 líneas, "U$ 36.0", "Cod: …", "Stock: …") ──
+// El texto de cada tarjeta viene en orden dentro del PDF (nombre → precio → código → stock), así que
+// alcanza con leerlo en secuencia: todo lo que aparece antes de "U$" es el nombre, y "Stock:" cierra la tarjeta.
+// Código y stock se ignoran (el PDF ya trae solo productos con stock).
+function plCleanPdfName(raw) {
+  return raw.replace(/\s+/g, ' ').trim()
+    .replace(/^P\.TT\.\s*/i, 'TESTER ') // "P.TT." = tester — "TESTER" es la palabra que usa PL_CONDITION_RE
+    .replace(/^P\.\s*/i, '');            // "P." = perfume, no aporta nada y tapa la marca
+}
+
+function parsePdfPriceListPage(textItems) {
+  const items = [];
+  let nameParts = [], price = NaN;
+  const flush = () => {
+    const name  = plCleanPdfName(nameParts.join(' '));
+    const brand = detectKnownBrand(name);
+    if (name && !isNaN(price) && price > 0) items.push({ name, brand, price });
+    nameParts = []; price = NaN;
+  };
+  for (const it of textItems) {
+    const s = it.str.trim();
+    if (!s || /^Grupo de Produto/i.test(s)) continue;
+    const pm = s.match(/^U\$\s*([\d.,]+)$/);
+    if (pm) { price = parsePrice(pm[1]); continue; }
+    if (/^Cod:/i.test(s)) continue;
+    if (/^Stock:/i.test(s)) { flush(); continue; }
+    if (!isNaN(price)) flush(); // tarjeta sin línea de Stock: cerrarla antes de arrancar el próximo nombre
+    nameParts.push(s);
+  }
+  flush();
+  return items;
+}
+
+async function importPlPdf(file) {
+  if (typeof pdfjsLib === 'undefined') { alert('No se pudo cargar el lector de PDF. Revisá la conexión y recargá la página.'); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  try {
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const items = [];
+    for (let i = 1; i <= doc.numPages; i++) {
+      const content = await (await doc.getPage(i)).getTextContent();
+      items.push(...parsePdfPriceListPage(content.items));
+    }
+    if (items.length === 0) {
+      alert(`No se encontraron productos en "${file.name}". El PDF tiene que tener texto seleccionable con precios "U$" (no sirve uno escaneado).`);
+      return;
+    }
+    plSources.push({ id: plNextSourceId++, name: file.name.replace(/\.[^.]+$/, ''), items });
+    savePlSources();
+    renderPlSourceTags();
+  } catch (err) {
+    alert(`No se pudo leer "${file.name}": ${err.message}`);
+  }
+}
+
 function importPlExcel(fileList) {
   Array.from(fileList).forEach(file => {
+    if (/\.pdf$/i.test(file.name)) { importPlPdf(file); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
       const wb     = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });

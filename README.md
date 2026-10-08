@@ -31,7 +31,7 @@ Importo fetches all rates automatically and computes every number in real time a
 - Gain per unit and real margin displayed with color-coded badges (green ≥20%, yellow ≥10%, red <10%)
 
 **Usability**
-- Excel catalog import — product names and prices auto-fill on search, tier-based margin applied automatically by original cost
+- Excel and PDF catalog import — product names and prices auto-fill on search, tier-based margin applied automatically by original cost
 - Real shipping cost tracked separately from the flat fee charged to clients, for accurate cost/ROI reporting
 - Results split across two tables — real cost above, selling price (margin/price/gain) in a compact table below, next to the summary panel
 - Export full purchase summary as `.txt`
