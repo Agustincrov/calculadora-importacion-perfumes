@@ -2085,6 +2085,7 @@ async function fetchAllRates() {
   }
 
   recalculate();
+  refreshPlPricing();
 }
 
 // ─────────────────────────────────────────────
@@ -2777,6 +2778,10 @@ function plGetConfig() {
       usdtFeeUsd: getRate('r-usdt-fee')
     }
   };
+}
+
+function refreshPlPricing() {
+  if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
 }
 
 function recomputePlPricing() {
@@ -3891,13 +3896,11 @@ document.getElementById('pl-modo').addEventListener('change', () => {
   saveBusinessConfig();
   if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
 });
-// Envío fijo, fee USDT y redondeo son compartidos con la Calculadora (rates-grid principal) —
-// cualquier cambio ahí también tiene que recalcular la lista de precios ya generada.
+// Envío fijo, fee USDT y redondeo son compartidos con la Calculadora (rates-grid principal).
+// El recálculo de la lista ya generada lo hace el listener de BUSINESS_CONFIG_IDS (refreshPlPricing);
+// acá solo se refresca el resumen que muestra el generador.
 ['r-envio-fijo', 'r-usdt-fee', 'r-round-step'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    renderPlSharedConfigPreview();
-    if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
-  });
+  document.getElementById(id).addEventListener('input', renderPlSharedConfigPreview);
 });
 renderPlSharedConfigPreview();
 
@@ -4019,13 +4022,16 @@ function copyPrices(mode = 'individual') {
 // ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
+// La lista de precios ya generada también depende de estas tasas y de la config de negocio —
+// sin refreshPlPricing() quedaría con las tasas del momento de "Generar" (ej. los defaults si se
+// generó antes de que terminara fetchAllRates) y publicaría precios distintos a la calculadora.
 ['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt'].forEach(id => {
-  document.getElementById(id).addEventListener('input', recalculate);
+  document.getElementById(id).addEventListener('input', () => { recalculate(); refreshPlPricing(); });
 });
 // Config de negocio: recalcula igual que las tasas de mercado, pero además se persiste
 // (a diferencia de las tasas, que siempre se refrescan de la API al recargar).
 BUSINESS_CONFIG_IDS.filter(id => id !== 'pl-modo').forEach(id => {
-  document.getElementById(id).addEventListener('input', () => { saveBusinessConfig(); recalculate(); });
+  document.getElementById(id).addEventListener('input', () => { saveBusinessConfig(); recalculate(); refreshPlPricing(); });
 });
 
 // ─────────────────────────────────────────────
