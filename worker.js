@@ -1,6 +1,7 @@
 // Cloudflare Worker — comparapi-proxy
 // Handles: comparapix, USDT/ARS (via CriptoYa), dólar blue Córdoba (infodolar.com),
-// dólar oficial (via dolarapi.com), PIX rate — valor do PIX (madridcenterimportados.com BFF)
+// dólar oficial (via dolarapi.com), PIX rate — valor do PIX (madridcenterimportados.com BFF),
+// catálogo de perfumes de Ponto Com (pontocom.com, scraping del listado paginado)
 //
 // Deploy: paste this into the Cloudflare Worker dashboard at
 // https://dash.cloudflare.com → Workers & Pages → comparapi-proxy → Edit Code
@@ -27,6 +28,10 @@ async function handle(req) {
     if (path === '/binance-usdt')  return await fetchBinanceUSDT();
     if (path === '/dolar-blue')    return await fetchDolarBlue();
     if (path === '/dolar-oficial') return await fetchDolarOficial();
+    if (path === '/pontocom') {
+      const q = new URL(req.url).searchParams;
+      return await fetchPontocomPage(q.get('cat') || PONTOCOM_MAIN, parseInt(q.get('page'), 10));
+    }
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
   } catch (e) {
@@ -118,6 +123,70 @@ async function fetchDolarOficial() {
   });
   const data = await r.json();
   return jsonResp({ price: typeof data?.venta === 'number' ? data.venta : null });
+}
+
+// ── Ponto Com — catálogo de perfumes ─────────────────────────────
+// El sitio no manda CORS, así que el navegador no puede leerlo directo. Una página por request:
+// el plan free de Workers corta en 50 fetch externos por invocación y el catálogo tiene 127+ páginas.
+//  - Paginación: SOLO funciona `categoria/<slug>/or-cod_desc/paginaN.html`. `/paginaN` a secas
+//    devuelve la página 1 sin error. Y el orden por defecto ("relevância") se reacomoda mientras se
+//    recorre (duplica y pierde productos) — por eso siempre or-cod_desc.
+//  - Charset ISO-8859-1: r.text() asume UTF-8 y rompe los acentos de las marcas.
+//  - Cada tarjeta trae data-product='{"name","code","price":"U$ 16,00","stock"}' (entidades escapadas);
+//    las agotadas ("indisponível") tienen stock 0 y la clase label-out.
+// Solo se aceptan estas categorías, para no ser un proxy abierto.
+const PONTOCOM_MAIN = 'perfumes-body-splash-perfume-feminino-masculino-unissex';
+const PONTOCOM_CATS = new Set([
+  PONTOCOM_MAIN,
+  'perfumes-arabes', 'perfumes-nicho',                              // señal de categoría
+  'body-splash', 'spray-corporal', 'spray', 'perfume-para-cabelo',  // se excluyen del import
+]);
+
+async function fetchPontocomPage(cat, page) {
+  if (!PONTOCOM_CATS.has(cat)) return jsonResp({ error: 'categoría no permitida' }, 400);
+  if (!Number.isInteger(page) || page < 1 || page > 300) return jsonResp({ error: 'page inválida' }, 400);
+  const r = await fetch(`https://www.pontocom.com/categoria/${cat}/or-cod_desc/pagina${page}.html`, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'pt-BR,pt;q=0.9',
+    },
+    cf: { cacheTtl: 900, cacheEverything: true }, // 15 min: dos importaciones seguidas no le pegan 200 veces al sitio
+  });
+  if (!r.ok) return jsonResp({ error: `pontocom ${r.status}` }, 502);
+  const html = new TextDecoder('iso-8859-1').decode(await r.arrayBuffer());
+
+  const items = [];
+  for (const card of html.split('<div class="product-wrap">').slice(1)) {
+    const m = card.match(/data-product='([^']*)'/);
+    if (!m) continue;
+    let p;
+    try { p = JSON.parse(decodeEntities(m[1])); } catch { continue; }
+    items.push({
+      code:  String(p.code),
+      name:  decodeEntities(String(p.name || '')).replace(/\s+/g, ' ').trim(),
+      price: parseArNum(String(p.price || '').replace(/^\s*U\$\s*/, '')), // "1.250,00" → 1250
+      stock: Number(p.stock) || 0,
+      out:   /label-out/.test(card),
+    });
+  }
+
+  const out = { page, items };
+  if (cat === PONTOCOM_MAIN && page === 1) {
+    // Filtro de marcas del sidebar: <input … id="brand_id_2070"> <label …> MAX&CO</label>
+    out.brands = [...html.matchAll(/id="brand_id_\d+">\s*<label[^>]*>\s*([^<]+?)\s*<\/label>/g)]
+      .map(x => decodeEntities(x[1]));
+  }
+  return jsonResp(out);
+}
+
+function decodeEntities(s) {
+  return String(s)
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)))
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&'); // último: si no, "&amp;quot;" terminaría como comilla
 }
 
 // ── Publicar catalogo.html en GitHub Pages ─────────────────────────
