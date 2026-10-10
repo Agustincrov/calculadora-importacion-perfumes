@@ -797,7 +797,7 @@
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">1. Importar listas de proveedor</div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
-        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪) o subí uno o más Excel/Numbers.
+        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪), subí uno o más Excel/Numbers/PDF, o traé el catálogo de Ponto Com directo del sitio.
         Podés importar varias listas — si un mismo producto aparece repetido, se resuelve automáticamente al generar la lista.
       </div>
 
@@ -822,6 +822,13 @@
         </button>
         <input type="file" id="pl-file" accept=".xls,.xlsx,.pdf" multiple style="display:none"
           onchange="importPlExcel(this.files); this.value=''" />
+        <button class="btn btn-outline" id="pl-pontocom-btn" onclick="importPontocom()" title="Trae los perfumes y kits con stock de pontocom.com (sin body splash, sprays corporales ni decants). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Traer catálogo Ponto Com
+        </button>
         <button class="btn btn-outline" onclick="clearAllPlSources()" style="color:var(--danger);border-color:var(--danger);" title="Borra las listas cargadas y el resultado generado, para empezar de cero">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="3 6 5 6 21 6"/>
@@ -2239,7 +2246,7 @@ const KNOWN_BRANDS = [
   ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford', 'TOM FOR'], ['Vertus'], ['Vilhelm'], ['Xerjoff', 'XEREJOFF'],
   ['Kayali'], ['Abercrombie & Fitch', 'ABERCROMBIE & FITCH', 'ABERCROMBIE FITCH', 'ABERCROMBIE'], ['Amouage'],
   ['Argos'], ['Ariana Grande', 'ARIANA G'], ['BDK Parfums', 'BDK'], ['Boadicea the Victorious', 'BOADICEA'],
-  ['Born to Stand Out'], ['Cartier'], ['Chopard'], ['Coach'], ['Dumont'],
+  ['Born to Stand Out', 'BORNTOSTANDOUT'], ['Cartier'], ['Chopard'], ['Coach'], ['Dumont'],
   ['Goldfield & Banks', 'GOLDFIELD & BANKS', 'GOLDFIELD BANKS'],
   ['Karl Lagerfeld'], ['Lorenzo Pazzaglia'], ['Louis Vuitton'],
   ['Maison Francis Kurkdjian', 'MAISON FRANCIS KURKDJIAN', 'MFK'],
@@ -2304,9 +2311,21 @@ const KNOWN_BRANDS = [
   ["Victoria's Secret", "VICTORIA'S SECRET", 'VICTORIAS SECRET'], ['Shaikh Saeed'], ['Jessica Twain'],
   ['Volare'], ['Choice Selection'], ['Nayaat'], ['Le Falcone'], ['Rue Broca'], ['Mast Rome'],
   ['Gulf Orchid', 'G ORCHID'], ['Gian Marco Venturi', 'GMV'], ['Gabriela Sabatini', 'GABRIELA'], ['Via Paris'],
-  ['LPDO'] // sin categoría: "Jardin Imperial" es de Atelier Rebul, LPDO parece una imitación, no está claro qué es
-  // Flavia (Armaf) y Zimaya (Afnan) quedan afuera a propósito: aparecen como "ARMAF FLAVIA …" /
-  // "AFNAN ZIMAYA …", y como marca propia le ganarían a Armaf/Afnan y se saltearían EXCLUDED_BRANDS.
+  ['LPDO'], // sin categoría: "Jardin Imperial" es de Atelier Rebul, LPDO parece una imitación, no está claro qué es
+  // Flavia (Armaf) queda afuera a propósito: aparece como "ARMAF FLAVIA …" y como marca propia le ganaría a Armaf.
+
+  // Agregadas por el catálogo de Ponto Com (2026-10-09), sacadas del filtro de marcas del sitio.
+  // Zimaya es marca propia (distinta de Afnan): "AFNAN ZIMAYA …" de otros proveedores queda como Zimaya,
+  // y por eso también está en EXCLUDED_BRANDS junto a Afnan. Milestone NO va acá aunque tenga categoría:
+  // también es nombre de perfume de otras marcas ("ARMAF CLUB DE NUIT MILESTONE", "CUBA … MILESTONE") y
+  // les ganaría la detección; en Ponto Com la marca le llega del sidebar del sitio.
+  ['Pendora Scents'], ['Anfar'], ['Asten'], ['Love Collection'], ['Fariis'], ['Le Bonheur'], ['Reef'],
+  ['Mamlakat Al Oud'], ['Chris Adams'], ['Ansam'], ['Paris Secret'], ['Maison de Milan'], ['Mykonos'],
+  ['Ajyad'], ['Le Chameau'], ['Dignite'], ['Matin Martin'], ['Attri'], ['Grandeur Elite'], ['Sultan'],
+  ['Zimaya'], ['Folie Pure'], ['Brand Collection'], ['NYC Scents'],
+  ['Regalien'], ['The Fragrance'], ['Fabbrica della Musa'], ['M. Micallef', 'M MICALLEF'], ['Electimuss'],
+  ['Adidas'], ['Cristiano Ronaldo'], ['Estee Lauder'], ['Roberto Capucci'], ['Lulu Castagnette'],
+  ['Armand Basi'], ['Kylie Minogue'], ['Roccobarocco'], ['Morgan'], ['Guy Laroche'], ['Acquadì']
 ];
 
 // Marcas que se excluyen automáticamente de la lista generada (perfumes árabes/de Medio Oriente
@@ -2314,7 +2333,7 @@ const KNOWN_BRANDS = [
 const EXCLUDED_BRANDS = new Set([
   'Adyan', 'Afnan', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Armaf',
   'Dar Al Ward', 'Lattafa', 'Maison Alhambra', 'Maryaj', 'Nasma', 'Nejma',
-  'Orientica', 'Rasasi', 'Rayhaan', 'Sahari'
+  'Orientica', 'Rasasi', 'Rayhaan', 'Sahari', 'Zimaya'
 ]);
 
 // ── Categoría de marca (nicho / diseñador / árabe) — alimenta el filtro de la lista publicada ──
@@ -2339,7 +2358,8 @@ const BRAND_CATEGORY = (() => {
     'Pantheon Roma', 'Paradis des Sens', 'Parfums de Marly', "Penhaligon's", 'Rajani', 'Roja',
     'Rosendo Mateus', 'Salum Parfums', 'Scentologia', 'Sospiro', 'Stephane Humbert Lucas 777', 'Thameen',
     'The House of Oud', 'Thomas Kosmala', 'Tiziana Terenzi', 'Tom Ford', 'Unique Luxury',
-    'Van Cleef & Arpels', 'Vertus', 'Vilhelm', 'Xerjoff'
+    'Van Cleef & Arpels', 'Vertus', 'Vilhelm', 'Xerjoff',
+    'Regalien', 'The Fragrance', 'Fabbrica della Musa', 'M. Micallef', 'Electimuss' // Ponto Com (2026-10-09)
   ]);
   add('disenador', [
     'Abercrombie & Fitch', 'Agatha Paris', 'Agua Brava', 'Alviero Martini', 'Animale', 'Antonio Banderas',
@@ -2362,7 +2382,10 @@ const BRAND_CATEGORY = (() => {
     'Salvatore Ferragamo', 'Sarah Jessica Parker', 'Shakira', 'Skil', 'Sorvella', 'Stella Dustin',
     'Ted Lapidus', 'Thierry Mugler', 'Tiffany & Co', 'Tommy Hilfiger', 'Tous', 'Trussardi',
     'Ulric de Varens', 'Valentino', 'Versace', 'Via Paris', 'Victorinox Swiss Army', 'Victorio & Lucchino',
-    "Victoria's Secret", 'Viktor&Rolf', "Women'Secret", 'Yves Saint Laurent'
+    "Victoria's Secret", 'Viktor&Rolf', "Women'Secret", 'Yves Saint Laurent',
+    // Ponto Com (2026-10-09)
+    'Adidas', 'Cristiano Ronaldo', 'Estee Lauder', 'Roberto Capucci', 'Lulu Castagnette', 'Armand Basi',
+    'Kylie Minogue', 'Roccobarocco', 'Morgan', 'Guy Laroche', 'Acquadì'
   ]);
   add('arabe', [
     'Adyan', 'Afnan', 'Ahmed Al Maghribi', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Amaran',
@@ -2372,7 +2395,14 @@ const BRAND_CATEGORY = (() => {
     'French Avenue', 'Gulf Orchid', 'Hamidi', 'Karen Low', 'Khadlaj', 'Khalis', 'Krip', 'Lattafa', 'Laverne',
     'Maison Alhambra', 'Maison Asrar', 'Marina Royal', 'Maryaj', 'Mawwal', 'My Perfumes', 'Nasma', 'Nejma',
     'Nusuk', 'Oriarome', 'Orientica', 'Paris Corner', 'Rasasi', 'Rayhaan', 'Riiffs', 'Sahari',
-    'Thoq Al Hawamer', 'Tubbees', 'Zakat', 'Zirconia'
+    'Thoq Al Hawamer', 'Tubbees', 'Zakat', 'Zirconia',
+    // Ponto Com (2026-10-09). Mykonos es de Indonesia: va como árabe a propósito, para que tome los tramos
+    // árabes (compite por precio en ese rango). Folie Pure / Brand Collection / NYC Scents son clones
+    // baratos numerados sin casa clara — mismo criterio.
+    'Pendora Scents', 'Anfar', 'Asten', 'Love Collection', 'Fariis', 'Le Bonheur', 'Reef', 'Mamlakat Al Oud',
+    'Chris Adams', 'Milestone', 'Ansam', 'Paris Secret', 'Maison de Milan', 'Mykonos', 'Ajyad', 'Le Chameau',
+    'Dignite', 'Matin Martin', 'Attri', 'Grandeur Elite', 'Sultan', 'Zimaya', 'Folie Pure', 'Brand Collection',
+    'NYC Scents'
   ]);
   return map;
 })();
@@ -2469,10 +2499,15 @@ function plMergeDuplicate(idA, idB) {
   return { cheap, exp }; // para que quien llame sepa qué filas tocar sin reconstruir toda la tabla
 }
 
+// Sin acentos: "Lancôme", "Chloé", "Volaré" (Ponto Com los escribe así) tienen que calzar con LANCOME/CHLOE/VOLARE.
+function plStripAccents(s) {
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function plNormalizeForBrandMatch(name) {
   // separadores como "P.MARCA", "CAIXA/AMASADA", "BASADO/INITIO" no llevan espacio —
   // hay que partirlos antes de buscar, si no la marca nunca calza aunque esté en la lista.
-  return ' ' + String(name).toUpperCase()
+  return ' ' + plStripAccents(name).toUpperCase()
     .replace(/[’']/g, "'")
     .replace(/[.\/,_()\-]/g, ' ')
     .replace(/\s+/g, ' ').trim() + ' ';
@@ -2487,7 +2522,7 @@ function detectStaticBrand(norm) {
     const label = entry[0];
     const candidates = [label.toUpperCase(), ...entry.slice(1)];
     for (const cand of candidates) {
-      const c = ' ' + cand.toUpperCase() + ' ';
+      const c = ' ' + plStripAccents(cand).toUpperCase() + ' ';
       if (cand.length > bestLen && norm.includes(c)) { best = label; bestLen = cand.length; }
     }
   }
@@ -2507,7 +2542,7 @@ function detectKnownBrand(name) {
   const norm = plNormalizeForBrandMatch(name);
   let { label: best, len: bestLen } = detectStaticBrand(norm);
   for (const custom of customBrands) {
-    const c = ' ' + custom.toUpperCase() + ' ';
+    const c = ' ' + plStripAccents(custom).toUpperCase() + ' ';
     if (custom.length > bestLen && norm.includes(c)) { best = custom; bestLen = custom.length; }
   }
   return best;
@@ -2723,6 +2758,130 @@ function importPlExcel(fileList) {
     };
     reader.readAsArrayBuffer(file);
   });
+}
+
+// ── Import: catálogo de Ponto Com (pontocom.com) ──
+// El sitio no tiene CORS → se lee a través del Worker (/pontocom), una página por request.
+// Además de la categoría principal se recorren categorías auxiliares del propio sitio, de las que solo
+// se usan los códigos: perfumes-arabes / perfumes-nicho como señal de categoría (siteCat, la usa la
+// clasificación de marcas nuevas), y body-splash / spray-corporal / spray / perfume-para-cabelo para
+// excluir lo que no es perfume aunque el nombre lo parezca ("Perfume Spray Mawwal … 250ml").
+const PONTOCOM_MAIN_CAT = 'perfumes-body-splash-perfume-feminino-masculino-unissex';
+const PONTOCOM_EXCLUDE_CATS = ['body-splash', 'spray-corporal', 'spray', 'perfume-para-cabelo'];
+const PONTOCOM_SIGNAL_CATS = ['perfumes-arabes', 'perfumes-nicho'];
+// Por nombre: decants (su categoría del sitio está vacía) y kits de body splash/mist. Anclado al principio a
+// propósito: "Kit Perfume X 100ml + Spray Corporal 50ml" es un kit de perfume y sí entra.
+const PONTOCOM_EXCLUDE_RE = /^(Kit\s+(de\s+)?)?(Body|Spray Corporal|Mist|Decant)\b|^Kit Sol de Janeiro\b/i;
+// Marcas descartadas (2026-10-09), comparadas contra la marca del filtro del sitio.
+const PONTOCOM_EXCLUDE_BRANDS = new Set(['ICANDY', 'PIERRE BERNARD', 'SISTELLE', 'MIRADA', 'MONTANA COLLECTION', 'PARIS ROYALE', 'BEAUTIK LONDON']);
+
+// Lleva el nombre al formato de los otros proveedores: mayúsculas sin acentos, sin la palabra "Perfume"
+// adelante y con el género como código (MASC/FEM/UNI) — plGenderOf lo necesita para no mezclar versiones
+// masculina y femenina al buscar duplicados, y plCleanName lo saca al mostrar.
+function plCleanPontocomName(raw) {
+  return plStripAccents(raw).toUpperCase()
+    .replace(/^(TESTER\s+|KIT\s+(?:MINI\s+)?)?PERFUMES?\s+/, '$1')
+    .replace(/\bMASCULINO\b/g, 'MASC')
+    .replace(/\bFEMININO\b/g, 'FEM')
+    .replace(/\bUNI(?:SSEX|SEX)\b/g, 'UNI')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// "MAISON DE MILAN" (como viene en el filtro del sitio) → "Maison de Milan"
+function plTitleCaseBrand(s) {
+  return String(s).toLowerCase().split(' ').map((w, i) =>
+    i > 0 && /^(de|di|du|da|del|della|la|le|al|el)$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ');
+}
+
+// Marca del filtro del sitio que aparece dentro del nombre (la más larga, por palabra completa).
+function plMatchSiteBrand(name, siteBrands) {
+  const norm = plNormalizeForBrandMatch(name);
+  let best = null, bestLen = 0;
+  for (const b of siteBrands) {
+    const c = plNormalizeForBrandMatch(b);
+    if (c.length > bestLen && norm.includes(c)) { best = b; bestLen = c.length; }
+  }
+  return best;
+}
+
+// Recorre una categoría con `concurrency` requests en paralelo hasta la primera página vacía.
+// Devuelve las páginas en orden, sin las posteriores a la vacía que hayan llegado igual.
+async function plFetchPontocomCategory(cat, concurrency, onPage) {
+  const pages = {};
+  let next = 1, end = Infinity;
+  const worker = async () => {
+    while (true) {
+      const page = next++;
+      if (page > end || page > 300) return;
+      const r = await fetch(`${WORKER}/pontocom?cat=${encodeURIComponent(cat)}&page=${page}`);
+      if (!r.ok) throw new Error(`Ponto Com respondió ${r.status} (${cat}, página ${page})`);
+      const data = await r.json();
+      if (!Array.isArray(data.items) || data.items.length === 0) { end = Math.min(end, page - 1); return; }
+      pages[page] = data;
+      onPage(data);
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, worker));
+  const out = [];
+  for (let p = 1; p <= end && pages[p]; p++) out.push(pages[p]);
+  return out;
+}
+
+async function importPontocom() {
+  const btn = document.getElementById('pl-pontocom-btn');
+  const label = btn.innerHTML;
+  btn.disabled = true;
+  let read = 0;
+  const progress = data => { read += data.items.length; btn.textContent = `Ponto Com: ${read.toLocaleString('es-AR')} leídos…`; };
+  try {
+    const mainPages = await plFetchPontocomCategory(PONTOCOM_MAIN_CAT, 6, progress);
+    if (mainPages.length === 0) throw new Error('el listado vino vacío (¿cambió el sitio?)');
+    const auxCats = [...PONTOCOM_EXCLUDE_CATS, ...PONTOCOM_SIGNAL_CATS];
+    const auxPages = await Promise.all(auxCats.map(cat => plFetchPontocomCategory(cat, 2, progress)));
+    const codesIn = {};
+    auxCats.forEach((cat, i) => { codesIn[cat] = new Set(auxPages[i].flatMap(pg => pg.items.map(it => it.code))); });
+
+    const siteBrands = mainPages[0].brands || [];
+    const seen = new Set();
+    const items = [];
+    const newBrands = {};
+    for (const it of mainPages.flatMap(pg => pg.items)) {
+      if (seen.has(it.code)) continue;
+      seen.add(it.code);
+      if (!(it.stock > 0) || it.out || !(it.price > 0)) continue; // agotado ("indisponível")
+      if (PONTOCOM_EXCLUDE_CATS.some(cat => codesIn[cat].has(it.code))) continue;
+      if (PONTOCOM_EXCLUDE_RE.test(it.name)) continue;
+      const siteBrand = plMatchSiteBrand(it.name, siteBrands);
+      if (siteBrand && PONTOCOM_EXCLUDE_BRANDS.has(plStripAccents(siteBrand).toUpperCase())) continue;
+
+      const name = plCleanPontocomName(it.name);
+      const brand = detectKnownBrand(name) || (siteBrand ? plTitleCaseBrand(siteBrand) : '');
+      if (brand && !BRAND_CATEGORY[brand] && !plIsNonPerfumeCategory(name)) newBrands[brand] = (newBrands[brand] || 0) + 1;
+      const siteCat = codesIn['perfumes-arabes'].has(it.code) ? 'arabe'
+                    : codesIn['perfumes-nicho'].has(it.code) ? 'nicho' : '';
+      items.push({ name, brand, price: it.price, code: it.code, stock: it.stock, siteCat });
+    }
+    if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
+
+    // Reemplaza la carga anterior: si no, al refrescar cada producto aparecería dos veces.
+    const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    plSources = plSources.filter(s => !s.pontocom);
+    plSources.push({ id: plNextSourceId++, name: `Ponto Com · ${date}`, pontocom: true, items });
+    savePlSources();
+    renderPlSourceTags();
+
+    const nb = Object.entries(newBrands).sort((a, b) => b[1] - a[1]);
+    if (nb.length > 0) {
+      alert(`Ponto Com: ${nb.length} marca(s) nueva(s) sin categoría — se van a preciar con los tramos generales:\n\n` +
+        nb.map(([b, n]) => `• ${b} (${n})`).join('\n'));
+    }
+  } catch (err) {
+    alert(`No se pudo traer el catálogo de Ponto Com: ${err.message}. No se agregó nada.`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = label;
+  }
 }
 
 function removePlSource(id) {
@@ -3284,6 +3443,10 @@ const PL_PROTECTED_NAMES = [
   'TOMMY GIRL', 'TOMMY NOW', 'TOMMY FOREVER',
 ];
 
+// Líneas que son marca propia pero que algunos proveedores escriben precedidas de la casa madre
+// ("AFNAN ZIMAYA TIRAMISU…"): al sacar la marca del nombre también se saca la casa madre.
+const PL_PARENT_BRANDS = { 'Zimaya': ['AFNAN'] };
+
 function plCleanName(name, brand) {
   const base = plTranslatePt(
     String(name)
@@ -3301,7 +3464,7 @@ function plCleanName(name, brand) {
   if (isProtected) return base;
 
   const kb = KNOWN_BRANDS.find(e => e[0] === brand);
-  const candidates = kb ? [kb[0], ...kb.slice(1)] : [brand];
+  const candidates = [...(kb ? [kb[0], ...kb.slice(1)] : [brand]), ...(PL_PARENT_BRANDS[brand] || [])];
   let stripped = base;
   for (const cand of candidates) {
     const escaped  = cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
