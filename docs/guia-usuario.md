@@ -125,6 +125,10 @@ El PDF tiene que tener texto seleccionable (no sirve uno escaneado o sacado como
 
 Podés importar catálogos de varias tiendas al mismo tiempo. Cada archivo que importás se suma al pool de búsqueda sin reemplazar los anteriores. Cada catálogo cargado aparece como una etiqueta con el nombre del archivo y la cantidad de productos. Para quitar un catálogo, hacé clic en la **×** de su etiqueta.
 
+### Catálogo de Ponto Com
+
+En el Generador de listas, el botón **Traer catálogo Ponto Com** carga directo desde pontocom.com todos los perfumes y kits de perfume que tienen stock, sin tener que descargar nada. Tarda entre 10 y 30 segundos. Los productos agotados ("indisponível"), los body splash, sprays corporales, perfumes para cabello y decants no se cargan. Si ya lo habías traído antes, se reemplaza por la versión nueva en vez de duplicarse. Si aparecen marcas que la calculadora todavía no conoce, te avisa cuáles son, porque se van a preciar con los tramos de margen generales.
+
 ---
 
 ## Copiar precios
