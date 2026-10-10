@@ -1,56 +1,49 @@
 # Importo — Guía de uso
 
-**Herramienta para importadores de Ciudad del Este, Paraguay.**
-Calculá el costo real de cada producto y su precio de venta en segundos.
+**Calculadora propia para compras en Ciudad del Este, Paraguay.**
+Calculá el costo real de cada producto y su precio de venta en segundos, y armá tu lista de precios para clientes a partir de las listas de tus proveedores.
 
 ---
 
 ## ¿Para qué sirve?
 
-Cuando comprás productos en Ciudad del Este, el precio final que pagás depende de varios factores: la tasa del día de la tienda, el servicio que usás para mandar el dinero, el dólar oficial, la comisión del shipper y el envío. Esta calculadora une todo eso automáticamente y te muestra cuánto te costó cada producto y a cuánto tenés que venderlo para ganar lo que querés.
+Cuando comprás productos en Ciudad del Este, el precio final que pagás depende de varios factores: el precio en dólares, la cotización del USDT con que le pagás a la tienda, la comisión del shipper, la fee de transferencia y el envío. Esta calculadora une todo eso automáticamente y te muestra cuánto te costó cada producto y a cuánto tenés que venderlo para ganar lo que querés.
+
+La app tiene dos pestañas:
+
+- **Calculadora** — para un pedido concreto: cargás los productos y ves costo, precio de venta y ganancia de cada uno.
+- **Generador de listas** — para tu lista de precios: juntás las listas de tus proveedores, la app les pone precio a todos y publicás un catálogo para tus clientes.
 
 ---
 
 ## Paso 1 — Tasas y configuración
 
-Al abrir la calculadora, los valores se actualizan solos desde internet. Aun así, podés editarlos manualmente si los datos del día son distintos.
+Todas las compras se pagan en **USDT directo a la tienda** (1 USDT ≈ 1 USD), así que la única cotización que importa es la del USDT. Se actualiza sola al abrir la calculadora; si el dato del día es distinto, podés editarla a mano.
 
 | Campo | Qué es |
 |---|---|
-| **Valor do PIX** | La tasa que te manda la tienda ese día. Ej: "5,32 valor do pix aquí na loja hoje". Se autocompleta desde Madrid Center. |
-| **Mejor PIX (BRL/USD)** | El mejor servicio disponible para mandar dólares y que lleguen en reales (Brubank o Astropay vía comparapix.ar). Se completa solo. |
-| **Dólar Oficial** | Cotización oficial Córdoba (BBVA). Se usa para calcular cuánto te cuestan los productos en pesos y para la comisión del shipper. Se autocompleta. |
-| **Dólar Blue** | Cotización blue Córdoba. Se autocompleta. Se usa solo para mostrarte el precio de venta equivalente en dólares blue. |
-| **USDT** | Cotización USDT en Binance P2P. Se autocompleta. Se usa para calcular la comisión del shipper y la fee de transferencia en pesos. |
-| **Comisión/producto** | Lo que cobra el shipper por producto, en USD. Generalmente $4. |
-| **Envío total (real)** | Lo que de verdad le pagás al fletero por todo el embarque. No se le cobra así al cliente — se usa solo para que la calculadora te muestre tu costo y ROI reales en el resumen. |
-| **Clientes** | Se calcula solo, contando nombres distintos en el campo "Cliente" de las filas. Informativo — ya no afecta el precio. |
+| **USDT (ARS)** | Cotización del USDT en pesos: el precio de Binance P2P, tomado de dolarapi.com (difiere por centavos). Se autocompleta. Con esto se calcula el costo de los productos, la comisión del shipper, la fee de transferencia y todos los valores en dólares. |
+| **Comisión/producto** | Lo que cobra el shipper por producto, en USD. Se paga al valor del USDT. Generalmente 4. |
+| **Envío total (ARS)** | Lo que de verdad le pagás al fletero por todo el embarque. No se le cobra así al cliente: se usa solo para mostrarte tu costo y ROI reales en el resumen. |
 | **Envío fijo/producto** | Lo que le cobrás al cliente por cada producto, sin importar el costo real del embarque (por eso "fijo"). Si el cliente pide varios productos, cada uno suma este monto. |
-| **Fee transferencia USDT** | Fee fija (en USDT) que cobra el exchange por cada transferencia real que hacés al pagar en modo USDT directo. Se cuenta una vez por cada nombre distinto que cargues en el campo "Pedido" de las filas USDT (ver más abajo). |
-| **Redondeo precio** | Los precios de venta se redondean hacia arriba a este número, para que coincidan con los precios publicados en el catálogo. |
+| **Fee transferencia USDT** | Fee fija (en USDT) por cada transferencia real que hacés. Se cuenta una vez por cada nombre distinto del campo "Pedido" (ver más abajo). |
+| **Redondeo precio** | Los precios de venta se redondean hacia arriba a este número. Es el mismo que usa el Generador de listas, así los precios de la calculadora y los del catálogo coinciden. |
 
-> El botón **Actualizar cotizaciones** refresca las tasas de mercado (oficial, blue, USDT, PIX) desde internet en cualquier momento. La comisión, los envíos, la fee USDT y el redondeo son configuración tuya — se guardan solos y no se pierden al recargar la página.
+> El botón **Actualizar cotizaciones** vuelve a buscar el USDT en cualquier momento. La comisión, los envíos, la fee USDT y el redondeo son configuración tuya: se guardan solos y no se pierden al recargar la página.
 
----
+### Cómo se calcula el costo
 
-## Modo de pago
-
-Arriba de la tabla hay un selector para elegir cómo se paga a la tienda. Elegí el modo antes de cargar los productos.
-
-### PIX (USD oficial)
-Comprás dólares al tipo de cambio oficial usando apps como Brubank o AstroPay. Luego usás un servicio BRLUSD para enviar esos dólares y que lleguen en reales directamente a la tienda. Es el modo por defecto.
-
-**Cadena de cálculo:**
 ```
-precio_usd × valor_pix     = BRL que quiere la tienda
-BRL ÷ mejor_pix            = USD que enviás al servicio
-USD × dólar_oficial        = costo en ARS
+precio_usd × cotización_usdt = costo del producto en ARS
++ comisión (USD × USDT)
++ envío fijo (solo productos para clientes)
++ parte de la fee de transferencia
+= costo total
 ```
 
-### USDT directo
-Mandás USDT directamente a la tienda, sin pasar por la conversión a BRL — no interviene ningún valor en reales en este modo. Requiere que la tienda acepte cripto. Evita un paso en la cadena y puede resultar más barato dependiendo de la cotización del momento.
+### Pedido (transferencias)
 
-En las filas con este modo aparece un campo extra, **"Pedido"**: escribí ahí un nombre que identifique cada transferencia real que vas a hacer. Si varios productos van en la misma transferencia, ponéles el mismo nombre — así la calculadora cobra la fee de transferencia una sola vez entre esos productos. Si vas a transferir en momentos distintos (por ejemplo, mismo pedido pero repartido en dos días), usá nombres distintos: cada uno cuenta como una transferencia con su propia fee.
+Cada fila tiene un campo **"Pedido"** debajo del cliente: escribí ahí un nombre que identifique cada transferencia real que vas a hacer. Si varios productos van en la misma transferencia, poneles el mismo nombre, así la calculadora cobra la fee de transferencia una sola vez entre esos productos. Si vas a transferir en momentos distintos (por ejemplo, el mismo pedido repartido en dos días), usá nombres distintos: cada uno cuenta como una transferencia con su propia fee. Si no completás ningún pedido, se cuenta una sola transferencia.
 
 ---
 
@@ -61,8 +54,8 @@ Encima de la tabla aparecen pestañas. Cada pestaña es una lista de productos i
 - **Crear lista:** hacé clic en el botón **+** para agregar una pestaña nueva.
 - **Renombrar:** doble clic sobre el nombre de la pestaña.
 - **Eliminar:** hacé clic en la **×** de la pestaña. Necesitás al menos una lista.
-- **Guardado automático:** todas las listas se guardan en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, las listas siguen ahí.
-- **Resetear:** el botón de reset limpia los productos de la lista activa sin borrar las demás.
+- **Guardado automático:** todas las listas se guardan en el navegador. Al cerrar y volver a abrir la calculadora, las listas siguen ahí.
+- **Reset:** limpia los productos de la lista activa (queda una fila vacía) sin tocar las demás.
 
 Usá una lista por cliente o por compra para mantener todo organizado.
 
@@ -70,35 +63,36 @@ Usá una lista por cliente o por compra para mantener todo organizado.
 
 ## Paso 3 — Cargá tus productos
 
-Hacé clic en **Agregar producto** para sumar una fila a la tabla. Cada fila representa un producto.
+Hacé clic en **Agregar producto** para sumar una fila. Cada fila representa un producto.
 
 Completá los campos editables:
 
-- **Producto** — El nombre del perfume u artículo. Si cargaste un catálogo, escribí parte del nombre y te aparecen sugerencias para completar nombre y precio automáticamente.
+- **Tipo** — **CLI** si el producto es para un cliente (paga envío fijo) o **STOCK** si es para vos (sin envío). Hacé clic para cambiarlo.
+- **Cliente** — El nombre del cliente (solo en filas CLI). Sirve para contar clientes y para el desglose por cliente del resumen.
+- **Producto** — El nombre del perfume. Si tenés listas cargadas, escribí parte del nombre y te aparecen sugerencias con precio y proveedor (si está en varios proveedores, se muestra el más barato). Al elegir una, se completan el nombre, el precio y el margen según los tramos del Generador de listas.
 - **Precio USD** — El precio en dólares que te cobra la tienda.
-- **Cantidad** — Cuántas unidades de ese producto estás comprando.
-- **Margen %** — El margen de ganancia que querés aplicar. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).
+- **Cantidad** — Cuántas unidades de ese producto comprás.
+- **Margen %** (en la tabla de abajo) — El margen de ganancia que querés. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).
+- **Gan. USD/unid** (en la tabla de abajo) — Si preferís, escribí directamente cuántos dólares (al valor del USDT) querés ganar por unidad, y el margen se calcula solo.
 
-Los resultados están repartidos en **dos tablas** para que no haya que scrollear horizontalmente para relacionar costo con venta: la tabla de arriba (costo real) y una tabla más chica debajo, junto al Resumen (precio de venta). Las dos muestran los mismos productos, en el mismo orden — cruzalas por el nombre del producto. Todas las columnas de resultados muestran el valor total (precio × cantidad).
+Los resultados están repartidos en **dos tablas**: la de arriba (costo real) y una más chica debajo, junto al Resumen (precio de venta). Las dos muestran los mismos productos en el mismo orden. Todas las columnas de resultados muestran el valor total (precio × cantidad).
 
 **Tabla de arriba — Fase 1, costo del producto (azul):**
-- **BRL total** — Cuántos reales cuesta ese producto en total.
-- **USD total** (o **USDT/unid** en modo USDT directo) — Cuántos dólares o USDT enviás en total.
-- **Costo ARS total** — Lo que te cuesta en pesos argentinos al dólar oficial.
+- **USDT total** — Cuántos USDT le mandás a la tienda por esa fila.
+- **Costo ARS total** — Lo que te cuesta en pesos solo el producto, al valor del USDT.
 
 **Tabla de arriba — Fase 2, gastos del shipper (verde):**
 - **Comisión total** — La comisión del shipper por todas las unidades, en pesos.
-- **Envío + fee total** — El envío fijo que le cobrás al cliente por ese producto, más (en modo USDT) la parte proporcional de la fee de transferencia. Las filas de tipo STOCK no llevan envío (no hay cliente que lo pague), pero sí llevan la fee USDT si corresponde.
-- **Costo total** — El costo real final, sumando producto + comisión + envío/fee.
+- **Envío + fee total** — El envío fijo que le cobrás al cliente, más la parte proporcional de la fee de transferencia. Las filas STOCK no llevan envío, pero sí la fee USDT si corresponde.
+- **Costo total** — El costo real final: producto + comisión + envío/fee.
 
 **Tabla de abajo — Precio de venta (violeta), junto al Resumen:**
-- **Margen %** — El mismo campo editable que en la tabla de arriba, movido acá para que quede junto al resto de los números de venta.
-- **Precio ARS** — El precio al que tenés que venderlo para lograr el margen que pediste, ya redondeado hacia arriba (Redondeo precio).
-- **Precio lista** — Con el envío fijo por producto, hoy coincide con "Precio ARS" (antes eran distintos porque el envío se prorrateaba; ver Ejemplo rápido).
-- **USD lista** — Ese mismo precio expresado en dólares blue (útil para publicar).
+- **Margen %** — Editable.
+- **Precio ARS** — El precio de venta para lograr ese margen, redondeado hacia arriba (Redondeo precio).
+- **Precio USD** — Ese precio en dólares, al valor del USDT.
 - **Ganancia** — Cuánto ganás en pesos después de cubrir todos los costos.
-- **Ganancia USD** — La ganancia expresada en dólares blue.
-- **Margen real** — El margen real que te queda, con colores: verde (20% o más), amarillo (entre 10% y 20%), rojo (menos del 10%).
+- **Gan. USD/unid** — La ganancia por unidad en dólares, al valor del USDT. Editable (ver arriba).
+- **Margen real** — El margen que te queda después de redondear, con colores: verde (20% o más), amarillo (entre 10% y 20%), rojo (menos del 10%).
 
 ---
 
@@ -106,76 +100,114 @@ Los resultados están repartidos en **dos tablas** para que no haya que scrollea
 
 El panel de resumen muestra el total de la operación:
 
-- BRL o USDT a enviar en total.
-- USD pagados en total.
-- Costo ARS Fase 1 (solo producto).
-- Total de comisiones y envío.
-- Costo total de la operación.
-- Precio de venta total y ganancia total.
-- Ganancia en USD blue.
-- ROI — cuánto ganás por cada peso invertido.
+- Unidades totales, USDT a mandar y costo en pesos del producto.
+- Comisiones y envío **real** (el que le pagás al fletero).
+- Costo total real: producto + comisiones + envío real + fees USDT.
+- Venta y ganancia de los productos para clientes (las filas STOCK no suman venta).
+- Ganancia en USD (al valor del USDT).
+- ROI: ganancia sobre costo total real.
+- Si hay más de un cliente, un desglose por cliente con unidades, costo, venta y ganancia.
 
 ---
 
-## Catálogos de productos (opcional)
+## Catálogos en la calculadora
 
-Si la tienda te manda una planilla Excel o un PDF con sus productos y precios, podés importarlo con el botón **Importar catálogo**. A partir de ahí, al escribir el nombre de un producto en la tabla, te aparecen sugerencias para completar el nombre y el precio automáticamente.
+El botón **Importar catálogo** de la calculadora carga una planilla Excel o un PDF de un proveedor. Desde ahí, al escribir un producto en la tabla te aparecen sugerencias con nombre y precio.
 
-El PDF tiene que tener texto seleccionable (no sirve uno escaneado o sacado como foto). Los productos marcados como tester ("TT") se cargan con la palabra TESTER adelante del nombre.
+Las listas que cargás desde la calculadora y las que cargás desde el Generador de listas son **las mismas**: se ven en las dos pestañas y las dos las usan. Cada lista aparece como una etiqueta con su nombre y cantidad de productos; para quitarla, hacé clic en la **×**.
 
-Podés importar catálogos de varias tiendas al mismo tiempo. Cada archivo que importás se suma al pool de búsqueda sin reemplazar los anteriores. Cada catálogo cargado aparece como una etiqueta con el nombre del archivo y la cantidad de productos. Para quitar un catálogo, hacé clic en la **×** de su etiqueta.
-
-### Catálogo de Ponto Com
-
-En el Generador de listas, el botón **Traer catálogo Ponto Com** carga directo desde pontocom.com todos los perfumes y kits de perfume que tienen stock, sin tener que descargar nada. Tarda entre 10 y 30 segundos. Los productos agotados ("indisponível"), los body splash, sprays corporales, perfumes para cabello y decants no se cargan. Si ya lo habías traído antes, se reemplaza por la versión nueva en vez de duplicarse. Si aparecen marcas que la calculadora todavía no conoce, te avisa cuáles son, porque se van a preciar con los tramos de margen generales.
+El PDF tiene que tener texto seleccionable (no sirve uno escaneado o sacado como foto). Los productos marcados como tester ("P.TT.") se cargan con la palabra TESTER adelante del nombre.
 
 ---
 
-## Copiar precios
+## Generador de listas
 
-Hay dos modos para copiar los precios al portapapeles:
+En la pestaña **Generador de listas** armás tu lista de precios para clientes a partir de las listas de tus proveedores.
 
-- **Copiar individual** — Precio por producto ("Precio lista").
-- **Copiar bundle** — Precio por producto ("Precio ARS").
+### 1. Importar listas de proveedor
 
-Con el envío fijo por producto, hoy los dos dan el mismo número (antes diferían porque el envío se prorrateaba distinto según si el cliente compraba uno o varios productos).
+Podés cargar varias listas, de cualquiera de estas formas:
+
+- **Texto de WhatsApp:** pegá el mensaje del proveedor (con las marcas en negrita y viñetas ▪) y apretá **Procesar texto pegado**.
+- **Excel/Numbers/PDF:** uno o varios archivos a la vez.
+- **Traer catálogo Ponto Com:** carga directo desde pontocom.com todos los perfumes y kits de perfume con stock, sin descargar nada. Tarda entre 10 y 30 segundos. No se cargan los agotados ("indisponível"), los body splash, sprays corporales, perfumes para cabello ni decants. Si ya lo habías traído antes, se reemplaza por la versión nueva en vez de duplicarse. Si aparecen marcas que la app todavía no conoce, te avisa cuáles son, porque se van a preciar con los tramos de margen generales.
+
+**Borrar todo** quita todas las listas cargadas y el resultado.
+
+**Marcas conocidas:** la marca de cada producto se detecta buscando su nombre dentro del nombre del producto (la app ya conoce más de 300 marcas). Si falta una, agregala acá, o corregila directamente en la tabla de revisión: la próxima vez la reconoce sola.
+
+### 2. Configuración de precios
+
+- **Costo:** se calcula igual que en la calculadora (USDT directo), asumiendo una sola transferencia.
+- **Envío fijo y redondeo:** se toman de la pestaña Calculadora, así los precios coinciden.
+- **Tramos de margen:** el margen depende de cuánto cuesta el producto en dólares (por ejemplo, hasta USD 60 → 32%). Hay un juego de tramos general y otro para las **marcas árabes**, que compiten por precio y llevan menos margen. Podés editar, agregar o quitar tramos.
+
+Apretá **Generar lista de precios**.
+
+### 3. Posibles duplicados
+
+El mismo perfume suele venir escrito distinto en cada proveedor. Si un producto está igual en varias listas, la app se queda con el más barato. Si dos nombres se parecen pero no son iguales, te los muestra en **Posibles duplicados a revisar**: elegí **Es el mismo** o **Son distintos**. La app recuerda tu respuesta y no te lo vuelve a preguntar.
+
+Nunca se mezclan tamaños distintos, versiones masculina y femenina, testers con productos normales, ni variantes como Intense, Elixir o recargable.
+
+### 4. Revisión final
+
+La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios), costo, margen, precio final y ganancia (en pesos y en dólares al USDT).
+
+- Podés **corregir la marca** (queda recordada para la próxima vez).
+- Podés **cambiar el precio final** a mano (↺ vuelve al calculado).
+- **+** agrega el producto como fila en la lista activa de la Calculadora.
+- **×** lo excluye de la lista. Los productos que no son perfume (cremas, productos para el cabello, infantiles) se excluyen solos 🚫. Podés verlos y restaurarlos con **Mostrar excluidos**.
+- **Filtro de marcas para publicar:** destildá las marcas que no querés publicar. Se recuerda, y las marcas que aparecen por primera vez se marcan como "nueva".
+
+### 5. Publicar
+
+- **Publicar catálogo:** sube la lista como una página buscable a `agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html`, siempre el mismo link. La primera vez hay que configurar la clave de publicación (abajo del botón).
+- **Descargar página buscable:** descarga ese mismo archivo (`catalogo.html`) en vez de publicarlo.
+- **Exportar Excel:** descarga la lista con marca, producto y precio.
+
+En el catálogo, tus clientes pueden buscar, filtrar por categoría (nicho, diseñador, árabe), marca y rango de precio, armar un carrito y mandarte el pedido por WhatsApp. El carrito descuenta $10.000 por cada unidad extra ("Descuento envío combinado").
+
+Los precios del catálogo quedan fijos al momento de publicar: si cambian las cotizaciones, volvé a generar y publicar.
 
 ---
 
 ## Exportar resumen
 
-**Exportar resumen** descarga un archivo de texto con todos los datos de la compra: tasas del día, detalle por producto y totales. Ideal para guardar como registro o compartir por WhatsApp.
+**Exportar resumen** descarga un archivo de texto con todos los datos de la compra: USDT y configuración del día, detalle por producto (costo, precio de venta y ganancia) y totales. Sirve para guardar como registro o compartir por WhatsApp.
 
 ---
 
 ## Ejemplo rápido
 
-Querés comprar un perfume que cuesta **USD 170**, la tienda te manda que el valor do PIX es **5,32**, el dólar oficial está en **$1.395**, la comisión es **$4 USD** y tenés cargado un envío fijo de **$10.000/producto**.
+Querés comprar un perfume que cuesta **USD 50**. El USDT está en **$1.500**, la comisión es **4 USD**, el envío fijo es **$10.000/producto** y la fee de transferencia es **3 USDT**.
 
-1. Verificá que "Valor do PIX" diga 5,32 (se autocompleta desde Madrid Center).
-2. Cargá el producto con precio 170 y cantidad 1.
-3. Elegí un margen del 30%.
+1. Verificá que "USDT" diga 1.500.
+2. Cargá el producto con precio 50 y cantidad 1.
+3. Poné un margen del 30%.
 
-La calculadora te muestra al instante el costo real, el precio de venta sugerido (redondeado según "Redondeo precio") y cuánto ganás por unidad. Si además cargás más productos para el mismo cliente en la misma lista, cada uno suma su propio envío fijo — si te parece mucho para un pedido grande, podés hacerle un descuento manual vos mismo, la calculadora no lo hace sola.
+Costo: 50 × 1.500 = $75.000 + comisión $6.000 + envío $10.000 + fee $4.500 = **$95.500**. Precio de venta: $95.500 ÷ 0,70 = $136.428, redondeado a **$136.500**. Ganancia: **$41.000** (USD 27,33).
+
+Si cargás más productos para el mismo cliente, cada uno suma su propio envío fijo, y la fee de transferencia se reparte entre todos los productos del mismo pedido.
 
 ---
 
 ## Preguntas frecuentes
 
 **¿Tengo que instalar algo?**
-No. La calculadora funciona directo desde el navegador, sin instalación ni registro.
+No. La calculadora funciona directo desde el navegador.
 
 **¿Funciona en el celular?**
-Sí, aunque se ve mejor en computadora por la cantidad de columnas en la tabla.
+Sí, aunque se ve mejor en computadora por la cantidad de columnas.
 
 **¿Los datos se guardan?**
-Sí, las listas de productos y tu configuración (comisión, envíos, fee USDT, redondeo) se guardan automáticamente en el navegador (localStorage). Al cerrar y volver a abrir la calculadora, todo sigue ahí. Solo las cotizaciones de mercado (oficial, blue, USDT, PIX) no se guardan — se vuelven a buscar al abrir.
+Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, los tramos de margen, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.
 
-**¿Con qué frecuencia se actualizan las cotizaciones?**
+**¿Con qué frecuencia se actualiza el USDT?**
 Cada vez que abrís la calculadora o apretás "Actualizar cotizaciones". No se actualizan solas mientras la tenés abierta.
 
 **¿Puedo tener listas para distintos clientes?**
-Sí. Usá el botón **+** para crear una pestaña por cliente o por compra. Todas se guardan automáticamente.
+Sí. Usá el botón **+** para crear una pestaña por cliente o por compra, o cargá varios clientes en la misma lista con el campo "Cliente".
 
 **¿Puedo usar los catálogos de varias tiendas a la vez?**
-Sí. Cada vez que importás un archivo Excel o PDF se agrega al pool de búsqueda. Podés tener varios catálogos activos al mismo tiempo y la búsqueda de productos los recorre todos.
+Sí. Cada lista que importás se suma a las anteriores, y tanto la búsqueda de la calculadora como el Generador de listas las recorren todas.
