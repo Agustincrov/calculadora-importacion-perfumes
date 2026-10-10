@@ -258,36 +258,6 @@
     }
     .del-btn:hover { color: var(--danger); }
 
-    /* ── Compare card ── */
-    #compare-card {
-      position: fixed; z-index: 9998;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: 0 8px 28px rgba(0,0,0,.14);
-      min-width: 250px;
-      padding: 12px 10px 8px;
-      display: none;
-    }
-    .compare-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 7px 10px; border-radius: 7px;
-      cursor: pointer; gap: 10px;
-      transition: background .1s;
-    }
-    .compare-row:hover { background: var(--accent-light); }
-    .compare-row.active { background: var(--accent-light); }
-    .compare-cost { font-weight: 700; font-size: .88rem; white-space: nowrap; }
-    .compare-row.cheapest .compare-cost { color: var(--success); }
-
-    .compare-btn {
-      background: none; border: none; cursor: pointer;
-      font-size: .8rem; padding: 2px 4px; border-radius: 4px;
-      color: #94a3b8; line-height: 1;
-      transition: color .12s, background .12s;
-      display: block; margin: 3px auto 0;
-    }
-    .compare-btn:hover { color: var(--accent); background: var(--accent-light); }
 
     .tipo-btn {
       font-size: .63rem; font-weight: 800;
@@ -405,22 +375,11 @@
       color: var(--accent);
     }
 
-    /* ── Payment mode toggle ── */
-    .mode-toggle { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-    .mode-btn {
-      padding: 6px 14px; font-size: .8rem; font-weight: 600;
-      border: none; cursor: pointer; background: transparent;
-      color: var(--muted); transition: background .15s, color .15s;
-    }
-    .mode-btn.active { background: var(--accent); color: #fff; }
-    .table-wrap.mode-usdt .col-brl { display: none; }
-    .table-wrap.mode-ars  .col-usd { display: none; }
   </style>
 </head>
 <body>
 <div class="autocomplete-list" id="ac-global"></div>
 <div id="col-tooltip"></div>
-<div id="compare-card" onmouseenter="cancelHideCompareCard()" onmouseleave="hideCompareCard()"></div>
 <div class="container">
 
   <header style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -449,66 +408,13 @@
       <div class="card-title">Tasas y configuración</div>
       <div class="rates-grid">
 
-        <!-- Valor do PIX -->
-        <div class="rate-item" id="ri-pix">
-          <label>Valor do PIX <span class="pill pill-p1">FASE 1</span></label>
-          <div class="rate-input-wrap">
-            <span class="prefix">R$/USD</span>
-            <input type="number" id="r-pix" value="5.32" step="0.01"
-              style="padding-left:54px" title="Tasa que manda la tienda, ej: '5,32 valor do pix aquí na loja hoje'" />
-          </div>
-          <div id="pix-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Madrid Center…</div>
-        </div>
-
-        <!-- USD → BRL (auto-fetch, manual fallback) -->
-        <div class="rate-item" id="ri-pix-usd">
-          <label>Mejor PIX (BRL/USD) <span class="pill pill-p1">FASE 1</span></label>
-          <div class="rate-input-wrap">
-            <span class="prefix">R$</span>
-            <input type="number" id="r-pix-usd" value="0" step="0.001"
-              style="padding-left:36px" placeholder="auto"
-              title="BRL que recibís por cada USD que mandás. Se completa desde comparapix.ar." />
-          </div>
-          <div id="pix-usd-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
-        </div>
-
-        <!-- BRL → ARS (auto-fetch from comparapix BRLARS) -->
-        <div class="rate-item" id="ri-brl-ars">
-          <label>PIX en $ARS (ARS/BRL) <span class="pill pill-p1">FASE 1</span></label>
-          <div class="rate-input-wrap">
-            <span class="prefix">$</span>
-            <input type="number" id="r-brl-ars" value="0" step="0.01"
-              placeholder="auto"
-              title="Pesos que pagás por cada real. Ej: 280.06. Se completa desde comparapix.ar (modo pesos)." />
-          </div>
-          <div id="brl-ars-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando comparapix.ar…</div>
-        </div>
-
-        <!-- Dólar Oficial -->
-        <div class="rate-item" id="ri-oficial">
-          <label>Dólar Oficial (ARS) <span class="pill pill-p1">FASE 1</span><span class="pill pill-p2">FASE 2</span></label>
-          <div class="rate-input-wrap">
-            <span class="prefix">$</span>
-            <input type="number" id="r-oficial" value="1410" step="1" />
-          </div>
-        </div>
-
-        <!-- Dólar Blue -->
-        <div class="rate-item" id="ri-blue">
-          <label>Dólar Blue (ARS)</label>
-          <div class="rate-input-wrap">
-            <span class="prefix">$</span>
-            <input type="number" id="r-blue" value="1435" step="1" />
-          </div>
-        </div>
-
         <!-- USDT -->
-        <div class="rate-item" id="ri-usdt">
-          <label>USDT (ARS) <span class="pill pill-p2">FASE 2</span></label>
+        <div class="rate-item">
+          <label>USDT (ARS) <span class="pill pill-p1">FASE 1</span><span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
             <input type="number" id="r-usdt" value="1490" step="1"
-              title="Cotización USDT en pesos — usada para convertir la comisión al shipper" />
+              title="Cotización USDT en pesos (Binance P2P vía dolarapi.com) — costo de los productos, comisión y fee de transferencia" />
           </div>
           <div id="usdt-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Binance P2P…</div>
         </div>
@@ -531,17 +437,6 @@
           </div>
         </div>
 
-        <!-- Clientes (auto-derivado de nombres en filas CLI) -->
-        <div class="rate-item">
-          <label>Clientes <span class="pill pill-p2">FASE 2</span></label>
-          <div class="rate-input-wrap">
-            <span class="prefix">#</span>
-            <input type="number" id="r-clientes" value="1" min="1" step="1" style="padding-left:28px;background:#f8fafc;color:var(--muted);" readonly
-              title="Se calcula automáticamente a partir de los nombres de cliente ingresados en las filas CLI." />
-          </div>
-          <div style="font-size:.68rem;color:var(--muted);margin-top:3px;" id="clientes-hint">Auto — ingresá nombres en las filas</div>
-        </div>
-
         <!-- Envío fijo cobrado al cliente (reemplaza el prorrateo real en el precio de venta) -->
         <div class="rate-item">
           <label>Envío fijo/producto (ARS) <span class="pill pill-sell">VENTA</span>
@@ -556,7 +451,7 @@
         <!-- Fee por transferencia USDT -->
         <div class="rate-item">
           <label>Fee transferencia USDT <span class="pill pill-p2">FASE 2</span>
-            <span class="col-tip" data-tip="Fee fija de red/exchange por cada transferencia USDT que hacés (no por producto). Se cuenta 1 por cada nombre de Pedido distinto entre filas en modo USDT."></span>
+            <span class="col-tip" data-tip="Fee fija de red/exchange por cada transferencia USDT que hacés (no por producto). Se cuenta 1 por cada nombre de Pedido distinto entre las filas."></span>
           </label>
           <div class="rate-input-wrap">
             <span class="prefix">USDT</span>
@@ -575,10 +470,6 @@
           </div>
         </div>
 
-      </div>
-
-      <div style="margin-top:14px;font-size:.75rem;color:var(--muted);">
-        El método de pago se elige <strong>por fila</strong> — pasá el cursor sobre el botón de modo (<strong>PIX / USDT / ARS</strong>) en cada fila para comparar costos y cambiar.
       </div>
 
       <div class="rates-bottom">
@@ -623,18 +514,6 @@
           </svg>
           Reset
         </button>
-        <button class="btn btn-outline" onclick="copyPrices('individual')" title="Precio por producto como si el cliente comprara solo ese ítem (envío completo por producto)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-          Copiar individual
-        </button>
-        <button class="btn btn-outline" onclick="copyPrices('bundle')" title="Precio con envío compartido entre todos los productos (cliente lleva todo)">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
-          Copiar bundle
-        </button>
         <button class="btn btn-success" onclick="exportNotes()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -655,22 +534,21 @@
         <thead>
           <tr class="phase-headers">
             <th class="ph-input" colspan="6"></th>
-            <th id="ph-p1-label" class="ph-p1" colspan="3">Fase 1 — Costo producto</th>
+            <th id="ph-p1-label" class="ph-p1" colspan="2">Fase 1 — Costo producto</th>
             <th class="ph-p2" colspan="3">Fase 2 — Gastos al shipper</th>
             <th class="ph-del"></th>
           </tr>
           <tr class="col-headers">
             <th class="bg-input">#</th>
             <th class="bg-input">Tipo <span class="col-tip" data-tip="CLI = producto para un cliente (paga el envío). STOCK = para vos, sin envío asignado."></span></th>
-            <th class="bg-input">Cliente <span class="col-tip" data-tip="Nombre del cliente. Se usa para dividir el envío automáticamente entre distintos clientes."></span></th>
+            <th class="bg-input">Cliente <span class="col-tip" data-tip="Nombre del cliente que compra este producto. Arma el desglose por cliente del Resumen."></span></th>
             <th class="bg-input">Producto <span class="col-tip" data-tip="Nombre del producto. Si cargaste un catálogo, escribí para buscar y autocompletar nombre y precio."></span></th>
             <th class="bg-input">Precio USD <span class="col-tip" data-tip="Precio en dólares que cobra la tienda por una unidad."></span></th>
             <th class="bg-input">Cantidad <span class="col-tip" data-tip="Unidades que comprás de este producto. Todos los valores de la fila muestran el total para esta cantidad."></span></th>
-            <th class="bg-p1 col-brl">BRL total <span class="col-tip" data-tip="Total en reales que necesitás enviar a la tienda por esta fila (precio × tipo PIX × cantidad)."></span></th>
-            <th class="bg-p1 col-usd" id="col-usd-head">USD / USDT total <span class="col-tip" data-tip="Total en dólares o USDT que enviás al servicio de pago (depende del método elegido por fila)."></span></th>
-            <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos argentinos solo el producto, al dólar oficial. Sin comisión ni envío aún."></span></th>
+            <th class="bg-p1">USDT total <span class="col-tip" data-tip="USDT que le mandás a la tienda por esta fila (precio × cantidad)."></span></th>
+            <th class="bg-p1">Costo ARS total <span class="col-tip" data-tip="Lo que te cuesta en pesos solo el producto, al valor del USDT. Sin comisión ni envío aún."></span></th>
             <th class="bg-p2">Comisión total <span class="col-tip" data-tip="Comisión del shipper en pesos para esta fila (USD comisión × cotización USDT × cantidad)."></span></th>
-            <th class="bg-p2">Envío + fee total <span class="col-tip" data-tip="Envío fijo que se le cobra al cliente por esta fila (Envío fijo/producto × cantidad; $0 en filas STOCK) más, si el modo es USDT, la parte proporcional de la fee de transferencia."></span></th>
+            <th class="bg-p2">Envío + fee total <span class="col-tip" data-tip="Envío fijo que se le cobra al cliente por esta fila (Envío fijo/producto × cantidad; $0 en filas STOCK) más la parte proporcional de la fee de transferencia USDT."></span></th>
             <th class="bg-p2">Costo total <span class="col-tip" data-tip="Costo real final para esta fila: producto + comisión + envío. Lo que realmente invertís."></span></th>
             <th class="bg-del"></th>
           </tr>
@@ -683,8 +561,8 @@
   <div class="note">
     <strong>Nota:</strong>
     Las filas <em>CLI</em> son para clientes y pagan el envío fijo por producto. Las filas <em>STOCK</em> son para tu inventario y tienen envío $0 (pero sí pagan la fee de transferencia USDT si corresponde).
-    El número de <em>Clientes</em> se calcula automáticamente por nombres distintos ingresados en filas CLI — es informativo, no divide ningún costo.
-    En modo USDT, el campo <em>Pedido</em> agrupa filas pagadas en la misma transferencia.
+    El nombre de <em>Cliente</em> arma el desglose por cliente del Resumen.
+    El campo <em>Pedido</em> agrupa filas pagadas en la misma transferencia USDT.
     La comisión se paga al shipper en USD al tipo <em>USDT</em> para todas las filas.
   </div>
 
@@ -700,10 +578,9 @@
               <th class="bg-sell">Producto</th>
               <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
               <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado."></span></th>
-              <th class="bg-sell">Precio lista (total) <span class="col-tip" data-tip="Con el envío fijo por producto, coincide con 'Precio ARS' — ya no depende de si el cliente compra uno o varios productos."></span></th>
-              <th class="bg-sell">USD lista (total) <span class="col-tip tip-left" data-tip="Precio lista expresado en dólares blue. Útil para publicar en grupos o catálogos."></span></th>
+              <th class="bg-sell">Precio USD (total) <span class="col-tip tip-left" data-tip="Precio de venta expresado en dólares, al valor del USDT."></span></th>
               <th class="bg-sell">Ganancia (total) <span class="col-tip tip-left" data-tip="Lo que ganás en pesos por esta fila después de cubrir todos los costos."></span></th>
-              <th class="bg-sell">Gan. USD/unid <span class="col-tip tip-left" data-tip="Ganancia por unidad en dólares. Podés escribir directamente el valor deseado y el margen se recalcula solo."></span></th>
+              <th class="bg-sell">Gan. USD/unid <span class="col-tip tip-left" data-tip="Ganancia por unidad en dólares, al valor del USDT. Podés escribir directamente el valor deseado y el margen se recalcula solo."></span></th>
               <th class="bg-sell">Margen real <span class="col-tip tip-left" data-tip="Margen efectivo resultante. Verde = 20% o más. Amarillo = entre 10% y 20%. Rojo = menos del 10%."></span></th>
             </tr>
           </thead>
@@ -721,18 +598,14 @@
       <div class="summary-sections">
 
         <div>
-          <div class="sum-section-label p1">Fase 1 — Costo producto vía PIX</div>
+          <div class="sum-section-label p1">Fase 1 — Costo producto</div>
           <div class="stat-row">
             <span class="lbl">Unidades totales</span>
             <span class="val" id="s-qty">0</span>
           </div>
           <div class="stat-row">
-            <span class="lbl">BRL a mandar</span>
-            <span class="val accent" id="s-brl">R$ 0</span>
-          </div>
-          <div class="stat-row">
-            <span class="lbl">USD / USDT total</span>
-            <span class="val accent" id="s-usd1">USD 0</span>
+            <span class="lbl">USDT a mandar</span>
+            <span class="val accent" id="s-usd1">USDT 0</span>
           </div>
           <div class="stat-row">
             <span class="lbl">Costo en ARS</span>
@@ -857,15 +730,6 @@
       <div class="card-title">2. Configuración de precios</div>
 
       <div class="rates-grid" style="margin-bottom:16px;">
-        <div class="rate-item">
-          <label>Modo de pago</label>
-          <select id="pl-modo" style="width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:6px;
-                  font-size:.9rem;font-weight:600;background:var(--bg);color:var(--text);">
-            <option value="pix">PIX (USD oficial)</option>
-            <option value="usdt">USDT directo</option>
-            <option value="ars">Pesos (ARS)</option>
-          </select>
-        </div>
         <div class="rate-item" style="justify-content:center;">
           <label>Envío fijo y redondeo <span class="col-tip" data-tip="Usa los mismos valores de 'Envío fijo/producto' y 'Redondeo precio' configurados en la Calculadora, para que el precio publicado coincida con el que arma la Calculadora."></span></label>
           <div style="font-size:.82rem;color:var(--muted);padding:8px 0;">
@@ -886,12 +750,6 @@
         <span class="col-tip" data-tip="Se aplican solo a productos de categoría Árabe (Lattafa, Armaf, Rayhaan…), en el generador y en el autocompletado de la calculadora. Los valores iniciales salen de comparar con precios de la competencia: quedan unos puntos por debajo. Si borrás todos los tramos menos el último, los árabes usan los tramos generales."></span>
       </div>
       <div id="pl-tiers-arabe"></div>
-
-      <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:.85rem;cursor:pointer;">
-        <input type="checkbox" id="pl-exclude-arabic" checked style="width:16px;height:16px;" />
-        Excluir automáticamente marcas árabes/de Medio Oriente
-        <span class="col-tip" data-tip="Lattafa, Afnan, Ajmal, Al Haramain y otras marcas del golfo que suelen venir mezcladas con las occidentales en listas de proveedores. Desmarcá esto si para este proveedor sí las querés incluir."></span>
-      </label>
 
       <div class="btn-group" style="margin-top:16px;">
         <button class="btn btn-success" onclick="generatePriceList()">
@@ -997,7 +855,7 @@
               <th class="bg-p2">Costo total ARS</th>
               <th class="bg-sell">Margen</th>
               <th class="bg-sell">Precio final ARS</th>
-              <th class="bg-sell">Ganancia <span class="col-tip tip-left" data-tip="Precio final menos costo total, en pesos y en USD blue. Se actualiza si cambiás el precio a mano."></span></th>
+              <th class="bg-sell">Ganancia <span class="col-tip tip-left" data-tip="Precio final menos costo total, en pesos y en USD (al USDT). Se actualiza si cambiás el precio a mano."></span></th>
               <th class="bg-del"></th>
             </tr>
           </thead>
@@ -1019,7 +877,6 @@
 // ─────────────────────────────────────────────
 let rows = [];
 let nextId = 1;
-// payMode removed — each row now has its own row.modo
 let knownClients = []; // persisted list of known client names
 
 // ── Multi-list state ──
@@ -1029,12 +886,12 @@ let nextListId = 2;
 
 function getRate(id) { return parseFloat(document.getElementById(id).value) || 0; }
 
-// ── Config de negocio persistente (comisión, envíos, fee USDT, redondeo, modo del generador) ──
-// A diferencia de las tasas de mercado (oficial/blue/usdt/pix), que siempre se refrescan desde
+// ── Config de negocio persistente (comisión, envíos, fee USDT, redondeo) ──
+// A diferencia de la cotización USDT, que siempre se refresca desde
 // la API al cargar, esto es configuración propia del usuario y no debe perderse al recargar.
 // Se declara acá arriba (no junto al resto de la persistencia, más abajo) para poder restaurarla
 // ANTES que cualquier otra cosa la lea — ver la llamada a loadBusinessConfig() unas líneas abajo.
-const BUSINESS_CONFIG_IDS = ['r-comision', 'r-envio', 'r-envio-fijo', 'r-usdt-fee', 'r-round-step', 'pl-modo'];
+const BUSINESS_CONFIG_IDS = ['r-comision', 'r-envio', 'r-envio-fijo', 'r-usdt-fee', 'r-round-step'];
 function saveBusinessConfig() {
   try {
     const cfg = {};
@@ -1063,19 +920,6 @@ function switchView(view) {
   document.getElementById('view-pricelist').style.display  = view === 'pricelist' ? '' : 'none';
   document.getElementById('vtab-calc').classList.toggle('active', view === 'calc');
   document.getElementById('vtab-pricelist').classList.toggle('active', view === 'pricelist');
-}
-
-const MODE_LABELS = { pix: 'PIX', usdt: 'USDT', ars: 'ARS' };
-const MODE_LABELS_FULL = { pix: 'PIX (USD oficial)', usdt: 'USDT directo', ars: 'Pesos (ARS)' };
-
-function setRowMode(rowId, mode) {
-  const row = rows.find(r => r.id === rowId);
-  if (!row) return;
-  row.modo = mode;
-  // Re-render: el campo "Pedido" (transferencias USDT) solo se muestra en modo USDT
-  renderTable();
-  recalculate();
-  hideCompareCard(true);
 }
 
 // ─────────────────────────────────────────────
@@ -1250,9 +1094,8 @@ function selectAcItem(rowId, idx) {
 // Crea una fila nueva en la lista activa de la calculadora a partir de un producto —
 // la usan tanto el botón "+ Calculadora" del Generador como (potencialmente) otros flujos futuros.
 function addRowFromProduct(p) {
-  const modo   = document.getElementById('pl-modo')?.value || 'pix';
   const margin = marginForPriceUsd(p.priceUsd, p.category || '');
-  addRow({ name: p.name, price: p.priceUsd, qty: 1, margin, modo });
+  addRow({ name: p.name, price: p.priceUsd, qty: 1, margin });
 }
 
 function onNameKeydown(e, rowId) {
@@ -1304,7 +1147,6 @@ function addRow(data = {}) {
     tipo: data.tipo ?? 'cliente',
     cliente: data.cliente ?? '',
     pedido: data.pedido ?? '',
-    modo: data.modo ?? 'usdt', // USDT por defecto; cada fila lo puede cambiar con su botón de modo
     gananciaUSDOverride: data.gananciaUSDOverride ?? null,
   });
   renderTable();
@@ -1336,9 +1178,6 @@ function renderCostTable() {
     tr.innerHTML = `
       <td style="color:var(--muted);font-size:.72rem;text-align:center;vertical-align:middle;">
         ${idx + 1}
-        <button class="compare-btn" title="Comparar modos de pago — elegí el más barato"
-          onmouseenter="showCompareCard(${row.id}, this)"
-          onmouseleave="hideCompareCard()">${MODE_LABELS[row.modo] || 'PIX'}</button>
       </td>
       <td style="text-align:center;white-space:nowrap;">
         <button class="tipo-btn ${isStock ? 'tipo-stock' : 'tipo-cli'}" onclick="toggleTipo(${row.id})" title="Cambiar tipo">
@@ -1353,13 +1192,10 @@ function renderCostTable() {
               oninput="onClienteInput(${row.id}, this.value)"
               onblur="onClienteBlur(${row.id}, this.value)" />`
         }
-        ${row.modo === 'usdt'
-          ? `<input type="text" id="pedido-${row.id}" value="${esc(row.pedido ?? '')}"
-              placeholder="Pedido (transferencia)…" style="min-width:90px;margin-top:4px;"
-              title="Agrupa filas pagadas en la misma transferencia USDT (incluye STOCK — también se compra con esa transferencia). Nombres distintos = transferencias distintas."
-              oninput="updateField(${row.id},'pedido',this.value)" />`
-          : ''
-        }
+        <input type="text" id="pedido-${row.id}" value="${esc(row.pedido ?? '')}"
+          placeholder="Pedido (transferencia)…" style="min-width:90px;margin-top:4px;"
+          title="Agrupa filas pagadas en la misma transferencia USDT (incluye STOCK — también se compra con esa transferencia). Nombres distintos = transferencias distintas."
+          oninput="updateField(${row.id},'pedido',this.value)" />
       </td>
       <td>
         <input type="text" id="name-${row.id}" value="${esc(row.name)}"
@@ -1372,8 +1208,7 @@ function renderCostTable() {
           oninput="updateField(${row.id},'price',+this.value)" /></td>
       <td><input type="number" value="${row.qty}" min="0" step="1"
           oninput="updateField(${row.id},'qty',+this.value)" /></td>
-      <td class="cell-computed bg-p1 col-brl" id="brl-${row.id}">—</td>
-      <td class="cell-computed bg-p1 col-usd" id="usd-${row.id}">—</td>
+      <td class="cell-computed bg-p1" id="usd-${row.id}">—</td>
       <td class="cell-computed bg-p1" id="ars1-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="com-${row.id}">—</td>
       <td class="cell-computed bg-p2" id="env-${row.id}">—</td>
@@ -1406,7 +1241,6 @@ function renderSellTable() {
       <td class="bg-sell"><input type="number" id="margin-${row.id}" value="${row.margin}" min="0" max="99" step="0.5"
           oninput="updateField(${row.id},'margin',+this.value)" /></td>
       <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
-      <td class="cell-computed bg-sell" id="lista-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="vusd-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="gan-${row.id}">—</td>
       <td class="bg-sell" style="padding:4px 6px;">
@@ -1472,7 +1306,7 @@ function updateClientDatalist() {
 }
 
 // ─────────────────────────────────────────────
-// Shared costing — una sola fórmula para recalculate(), computeAllModeCosts() y exportNotes(),
+// Shared costing — una sola fórmula para recalculate() y exportNotes(),
 // para que no vuelvan a divergir entre sí (ver card 04).
 // ─────────────────────────────────────────────
 function roundUpToStep(value, step) {
@@ -1487,22 +1321,16 @@ function roundUpToStep(value, step) {
 function rowHasProduct(r) { return r.price > 0; }
 
 function getCostingContext() {
-  const pixRate    = getRate('r-pix');
-  const pixUsdRate = getRate('r-pix-usd');
-  const oficial    = getRate('r-oficial');
-  const blue       = getRate('r-blue');
   const usdt       = getRate('r-usdt');
-  const brlArsRate = getRate('r-brl-ars');
   const comUSD     = getRate('r-comision');
   const envioFijo  = getRate('r-envio-fijo');
   const usdtFeeUsd = getRate('r-usdt-fee');
   const roundStep  = getRate('r-round-step') || 1;
   const comisionARS = comUSD * usdt;
 
-  // Transferencias USDT = nombres de "Pedido" distintos entre filas en modo usdt (default 1
-  // si hay filas usdt pero ninguna tiene pedido cargado — nunca 0 transferencias si hay filas).
-  // Mismo patrón que el auto-conteo de Clientes (:1512 aprox.), aplicado a `pedido`.
-  const filasUsdt = rows.filter(r => rowHasProduct(r) && (r.modo || 'usdt') === 'usdt');
+  // Transferencias USDT = nombres de "Pedido" distintos entre las filas con producto (default 1
+  // si ninguna tiene pedido cargado — nunca 0 transferencias si hay filas).
+  const filasUsdt = rows.filter(rowHasProduct);
   const pedidoNameSet = new Set(
     filasUsdt.filter(r => (r.pedido ?? '').trim()).map(r => r.pedido.trim().toLowerCase())
   );
@@ -1512,216 +1340,81 @@ function getCostingContext() {
   const feeUsdtPerUnit = unidadesUsdt > 0 ? feeUsdtTotal / unidadesUsdt : 0;
 
   return {
-    pixRate, pixUsdRate, oficial, blue, usdt, brlArsRate,
+    usdt,
     comisionARS, envioFijo, usdtFeeUsd, roundStep,
     transferencias, unidadesUsdt, feeUsdtTotal, feeUsdtPerUnit,
   };
 }
 
 // Costo real de una fila (sin precio de venta todavía). `ctx` = getCostingContext().
+// Se paga siempre en USDT directo a la tienda: 1 USDT ≈ 1 USD, sin pasar por reales.
 function computeRowCosting(row, ctx) {
   const isStock = row.tipo === 'stock';
-  const rowMode = row.modo || 'usdt';
+  const usdtUnid  = row.price;
+  const costoARS1 = row.price * ctx.usdt;
 
-  let brlUnid = 0, usdUnid = 0, costoARS1 = 0;
-  if (rowMode === 'usdt') {
-    usdUnid   = row.price;
-    costoARS1 = row.price * ctx.usdt;
-  } else if (rowMode === 'ars') {
-    brlUnid   = row.price * ctx.pixRate;
-    costoARS1 = ctx.brlArsRate > 0 ? brlUnid * ctx.brlArsRate : 0;
-  } else {
-    brlUnid   = row.price * ctx.pixRate;
-    usdUnid   = ctx.pixUsdRate > 0 ? brlUnid / ctx.pixUsdRate : 0;
-    costoARS1 = usdUnid * ctx.oficial;
-  }
-
-  // Envío fijo POR UNIDAD (se multiplica × qty más abajo, igual que costoARS1/comisionARS —
-  // todo en esta función es "por unidad", nunca total de la fila). Se le cobra al cliente, por
-  // eso las filas STOCK no lo tienen (no hay cliente que lo pague).
+  // Envío fijo POR UNIDAD (se multiplica × qty al mostrar, igual que costoARS1/comisionARS).
+  // Se le cobra al cliente, por eso las filas STOCK no lo tienen (no hay cliente que lo pague).
   const envioFijoUnid = isStock ? 0 : ctx.envioFijo;
 
-  // Fee de transferencia USDT por unidad — costo real de comprar en ese modo, aplica a toda
-  // fila usdt (stock incluido, es costo de compra, no algo exclusivo del cliente).
-  const feeUsdtUnid = rowMode === 'usdt' ? ctx.feeUsdtPerUnit : 0;
+  // Fee de transferencia USDT por unidad — costo real de compra, aplica a toda fila (stock incluido).
+  const feeUsdtUnid = ctx.feeUsdtPerUnit;
 
   const costoTotal = costoARS1 + ctx.comisionARS + envioFijoUnid + feeUsdtUnid;
 
-  return { isStock, rowMode, brlUnid, usdUnid, costoARS1, envioFijoUnid, feeUsdtUnid, costoTotal };
-}
-
-// ─────────────────────────────────────────────
-// Payment mode compare card
-// ─────────────────────────────────────────────
-let _compareHideTimer = null;
-
-function computeAllModeCosts(row) {
-  const ctx = getCostingContext();
-  const isStock = row.tipo === 'stock';
-  const envioFijoUnid = isStock ? 0 : ctx.envioFijo;
-
-  const brlUnid = row.price * ctx.pixRate;
-
-  const usdPix  = ctx.pixUsdRate > 0 ? brlUnid / ctx.pixUsdRate : 0;
-  const ars1Pix = usdPix * ctx.oficial;
-  const costoPix = ars1Pix > 0 ? ars1Pix + ctx.comisionARS + envioFijoUnid : 0;
-
-  // USDT directo: el fee de transferencia de ESTA fila si ya está en modo usdt (usa la
-  // fee/unidad ya prorrateada entre las filas usdt reales); si la fila no está en ese modo,
-  // se muestra "como si" fuera la única transferencia (mejor estimación posible al comparar).
-  const feeUsdtEstim = row.modo === 'usdt' ? ctx.feeUsdtPerUnit : (ctx.usdtFeeUsd * ctx.usdt);
-  const ars1Usdt  = row.price * ctx.usdt;
-  const costoUsdt = ars1Usdt + ctx.comisionARS + envioFijoUnid + feeUsdtEstim;
-
-  const ars1Ars  = ctx.brlArsRate > 0 ? brlUnid * ctx.brlArsRate : 0;
-  const costoArs = ars1Ars > 0 ? ars1Ars + ctx.comisionARS + envioFijoUnid : 0;
-
-  return { pix: costoPix, usdt: costoUsdt, ars: costoArs };
-}
-
-function showCompareCard(rowId, iconEl) {
-  cancelHideCompareCard();
-  const row = rows.find(r => r.id === rowId);
-  if (!row) return;
-
-  const rowMode = row.modo || 'usdt';
-  const costs = computeAllModeCosts(row);
-  const validCosts = Object.values(costs).filter(v => v > 0);
-  const minCost = validCosts.length ? Math.min(...validCosts) : 0;
-
-  const modes = [
-    { key: 'pix',  label: 'PIX (USD oficial)' },
-    { key: 'usdt', label: 'USDT directo' },
-    { key: 'ars',  label: 'Pesos (ARS)' },
-  ];
-
-  const card = document.getElementById('compare-card');
-  card.innerHTML = `
-    <div style="font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;padding:0 6px;">
-      Costo/unid — elegí el método
-    </div>
-    ${modes.map(({ key, label }) => {
-      const cost       = costs[key];
-      const isActive   = key === rowMode;
-      const isCheapest = cost > 0 && cost === minCost && validCosts.length > 1;
-      return `
-        <div class="compare-row ${isActive ? 'active' : ''} ${isCheapest ? 'cheapest' : ''}"
-          onclick="setRowMode(${rowId},'${key}')">
-          <span style="display:flex;align-items:center;gap:7px;">
-            <span style="width:12px;text-align:center;color:var(--accent);font-weight:800;">
-              ${isActive ? '✓' : ''}
-            </span>
-            <span style="font-size:.83rem;">${label}</span>
-          </span>
-          <span class="compare-cost">
-            ${cost > 0 ? fmt_ars(cost) : '<span style="color:var(--muted)">—</span>'}
-            ${isCheapest ? '<span style="color:var(--success);margin-left:3px;font-size:.8rem;">★</span>' : ''}
-          </span>
-        </div>`;
-    }).join('')}
-  `;
-
-  card.style.display = 'block';
-  const rect   = iconEl.getBoundingClientRect();
-  const cardW  = card.offsetWidth || 260;
-  const cardH  = card.offsetHeight || 140;
-  let left = rect.left + rect.width / 2 - cardW / 2;
-  left = Math.max(8, Math.min(left, window.innerWidth - cardW - 8));
-  const spaceBelow = window.innerHeight - rect.bottom;
-  if (spaceBelow < cardH + 12) {
-    card.style.top    = '';
-    card.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
-  } else {
-    card.style.bottom = '';
-    card.style.top    = (rect.bottom + 6) + 'px';
-  }
-  card.style.left = left + 'px';
-}
-
-function hideCompareCard(immediate = false) {
-  if (immediate) {
-    document.getElementById('compare-card').style.display = 'none';
-    return;
-  }
-  _compareHideTimer = setTimeout(() => {
-    document.getElementById('compare-card').style.display = 'none';
-  }, 160);
-}
-
-function cancelHideCompareCard() {
-  clearTimeout(_compareHideTimer);
+  return { isStock, usdtUnid, costoARS1, envioFijoUnid, feeUsdtUnid, costoTotal };
 }
 
 // ─────────────────────────────────────────────
 // Calculations
 //
-// FASE 1 — Pay with USD at official rate via BRLUSD PIX service:
-//   brl_unid    = price_usd × store_pix_rate       (BRL the store wants)
-//   usd_unid    = brl_unid / pix_usd_rate           (USD you send to the PIX service)
-//   costo_ars1  = usd_unid × oficial                (what those USD cost you in ARS)
+// FASE 1 — Pago en USDT directo a la tienda:
+//   costo_ars1  = price_usd × usdt
 //
-// FASE 2 (paid to shipper / exchange):
-//   comision_ars   = commission_usd × usdt
+// FASE 2:
+//   comision_ars    = commission_usd × usdt
 //   envio_fijo_fila = r-envio-fijo × qty            (lo que se le cobra al cliente; $0 en STOCK)
-//   fee_usdt_fila   = fee_usdt_por_unidad × qty      (solo modo usdt; costo real de esa transferencia)
+//   fee_usdt_fila   = fee_usdt_por_unidad × qty      (costo real de las transferencias)
 //
 // TOTAL:
 //   costo_total = costo_ars1 + comision_ars + envio_fijo_fila + fee_usdt_fila
 //
 // SELLING PRICE (redondeado hacia arriba a r-round-step):
-//   precio_venta_ars      = redondear(costo_total / (1 - margin%))
-//   precio_venta_usd_blue = precio_venta_ars / blue
-//   ganancia              = precio_venta_ars - costo_total   (recalculada post-redondeo)
-//   margen_real           = ganancia / precio_venta_ars
+//   precio_venta_ars = redondear(costo_total / (1 - margin%))
+//   precio_venta_usd = precio_venta_ars / usdt
+//   ganancia         = precio_venta_ars - costo_total   (recalculada post-redondeo)
+//   margen_real      = ganancia / precio_venta_ars
 //
 // El envío REAL (r-envio, lo que de verdad se le paga al fletero) no interviene acá — se usa
 // solo en el resumen general, para el costo/ROI real del embarque (ver más abajo).
 // ─────────────────────────────────────────────
 function recalculate() {
   const ctx = getCostingContext();
-  const { blue, roundStep } = ctx;
+  const { usdt, roundStep } = ctx;
   const productRows = rows.filter(rowHasProduct);
   const envioRealTotal = productRows.length ? getRate('r-envio') : 0;
 
   const totalUnits = productRows.reduce((s, r) => s + r.qty, 0);
 
-  // Auto-derive clientes from distinct non-empty client names in CLI rows
-  const clienteNameSet = new Set(
-    rows.filter(r => r.tipo !== 'stock' && (r.cliente ?? '').trim())
-        .map(r => r.cliente.trim().toLowerCase())
-  );
-  const clientes = clienteNameSet.size > 0 ? clienteNameSet.size : 1;
-
-  // Update r-clientes display
-  const clientesEl = document.getElementById('r-clientes');
-  if (clientesEl) clientesEl.value = clientes;
-  const clientesHint = document.getElementById('clientes-hint');
-  if (clientesHint) {
-    clientesHint.textContent = clienteNameSet.size > 0
-      ? `Auto: ${[...clienteNameSet].map(n => n.charAt(0).toUpperCase() + n.slice(1)).join(', ')}`
-      : 'Auto — ingresá nombres en las filas CLI';
-  }
-
-  let totalBRL = 0, totalUSD1 = 0, totalARS1 = 0, totalComisiones = 0;
+  let totalUSDT = 0, totalARS1 = 0, totalComisiones = 0;
   let totalVentaCliente = 0, totalGananciaCliente = 0;
 
   // Per-client accumulators for summary breakdown
   const clientStats = {}; // name → { qty, costo, venta, ganancia }
 
   rows.forEach(row => {
-    const { isStock, rowMode, brlUnid, usdUnid, costoARS1, envioFijoUnid, feeUsdtUnid, costoTotal } = computeRowCosting(row, ctx);
+    const { isStock, usdtUnid, costoARS1, envioFijoUnid, feeUsdtUnid, costoTotal } = computeRowCosting(row, ctx);
 
     // Selling price — bidirectional: gananciaUSD ↔ margin. El resultado se redondea hacia
     // arriba (r-round-step) y ganancia/margenReal se recalculan sobre el precio YA redondeado,
     // para que lo que se muestra sea siempre coherente con lo que de verdad se cobra.
     let precioARS = 0, ganancia = 0, gananciaUSD = 0, margenReal = 0;
-    let precioLista = 0, precioListaUSD = 0;
 
     if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0 && costoTotal > 0) {
       // User set gananciaUSD → back-calculate margin (el override se conserva tal cual escrito;
       // el redondeo hacia arriba solo puede aumentar un poco la ganancia real vs la tipeada)
       gananciaUSD = row.gananciaUSDOverride;
-      precioARS   = roundUpToStep(costoTotal + gananciaUSD * blue, roundStep);
+      precioARS   = roundUpToStep(costoTotal + gananciaUSD * usdt, roundStep);
       ganancia    = precioARS - costoTotal;
       margenReal  = ganancia / precioARS;
       row.margin  = parseFloat((margenReal * 100).toFixed(1));
@@ -1731,7 +1424,7 @@ function recalculate() {
       // Margin set → calculate precio y ganancia
       precioARS   = roundUpToStep(costoTotal / (1 - row.margin / 100), roundStep);
       ganancia    = precioARS - costoTotal;
-      gananciaUSD = blue > 0 ? ganancia / blue : 0;
+      gananciaUSD = usdt > 0 ? ganancia / usdt : 0;
       margenReal  = ganancia / precioARS;
     }
 
@@ -1741,19 +1434,12 @@ function recalculate() {
       gInput.value = gananciaUSD > 0 ? gananciaUSD.toFixed(2) : '';
     }
 
-    // Precio lista — con envío fijo por fila, el costo de "comprar solo este producto" y el
-    // de "comprar todo junto" ya son el mismo (antes diferían por el prorrateo real del envío
-    // entre unidades/clientes). Se mantiene como columna aparte por si el layout la necesita.
-    if (!isStock && precioARS > 0) {
-      precioLista    = precioARS;
-      precioListaUSD = blue > 0 ? precioARS / blue : 0;
-    }
+    const precioUSD = usdt > 0 ? precioARS / usdt : 0;
 
     // Accumulate totals (las filas vacías no suman — ver rowHasProduct)
     const hasProduct = rowHasProduct(row);
     if (hasProduct) {
-    totalBRL        += rowMode !== 'usdt' ? brlUnid * row.qty : 0;
-    totalUSD1       += usdUnid   * row.qty;
+    totalUSDT       += usdtUnid  * row.qty;
     totalARS1       += costoARS1 * row.qty;
     totalComisiones += ctx.comisionARS * row.qty;
     if (!isStock) {
@@ -1773,15 +1459,13 @@ function recalculate() {
     // Update cells
     const qty = row.qty || 1;
     setCell(`sellname-${row.id}`, row.name || '—');
-    setCell(`brl-${row.id}`,  rowMode === 'usdt' ? '—' : fmt_brl(brlUnid * qty));
-    setCell(`usd-${row.id}`,  rowMode === 'ars'  ? '—' : (usdUnid > 0 ? fmt_usd(usdUnid * qty) : '—'));
+    setCell(`usd-${row.id}`,  usdtUnid > 0 ? fmt_usdt(usdtUnid * qty) : '—');
     setCell(`ars1-${row.id}`, costoARS1 > 0 ? fmt_ars(costoARS1 * qty) : '—');
     setCell(`com-${row.id}`,  hasProduct ? fmt_ars(ctx.comisionARS * qty) : '—');
     setCell(`env-${row.id}`,  hasProduct ? fmt_ars((envioFijoUnid + feeUsdtUnid) * qty) : '—');
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal * qty) : '—');
     setCell(`vars-${row.id}`,  precioARS     > 0 ? fmt_ars(precioARS    * qty) : '—');
-    setCell(`lista-${row.id}`, (!isStock && precioLista    > 0) ? fmt_ars(precioLista    * qty) : '—');
-    setCell(`vusd-${row.id}`,  (!isStock && precioListaUSD > 0) ? fmt_usd(precioListaUSD * qty) : '—');
+    setCell(`vusd-${row.id}`,  precioUSD > 0 ? fmt_usd(precioUSD * qty) : '—');
     setCell(`gan-${row.id}`,   ganancia > 0 ? fmt_ars(ganancia * qty) : '—');
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
@@ -1790,15 +1474,14 @@ function recalculate() {
   const totalCostoReal = totalARS1 + totalComisiones + envioRealTotal + ctx.feeUsdtTotal;
 
   setText('s-qty',          fmt_num(totalUnits));
-  setText('s-brl',          fmt_brl(totalBRL));
-  setText('s-usd1',         fmt_usd(totalUSD1));
+  setText('s-usd1',         fmt_usdt(totalUSDT));
   setText('s-ars-p1',       fmt_ars(totalARS1));
   setText('s-comisiones',   fmt_ars(totalComisiones));
   setText('s-envio',        fmt_ars(envioRealTotal));
   setText('s-costo-total',  fmt_ars(totalCostoReal));
   setText('s-venta',        fmt_ars(totalVentaCliente));
   setText('s-ganancia',     fmt_ars(totalGananciaCliente));
-  setText('s-ganancia-usd', ctx.oficial > 0 ? fmt_usd(totalGananciaCliente / ctx.oficial) : 'USD 0');
+  setText('s-ganancia-usd', ctx.usdt > 0 ? fmt_usd(totalGananciaCliente / ctx.usdt) : 'USD 0');
   const roi = totalCostoReal > 0 ? totalGananciaCliente / totalCostoReal * 100 : 0;
   setText('s-roi', roi.toFixed(1) + '%');
 
@@ -1848,8 +1531,8 @@ function setBadge(id, val, hasData) {
 
 // Formatters
 function fmt_ars(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
-function fmt_brl(n) { return 'R$ ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmt_usd(n) { return 'USD ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmt_usdt(n) { return 'USDT ' + n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmt_num(n) { return Number(n).toLocaleString('es-AR'); }
 
 // ─────────────────────────────────────────────
@@ -1987,127 +1670,20 @@ async function fetchAllRates() {
   status.className = '';
   icon.classList.add('spin');
 
-  const results = await Promise.allSettled([
-    fetch(`${WORKER}/dolar-oficial`).then(r => r.json()),    // infodolar.com Córdoba oficial venta
-    fetch(`${WORKER}/dolar-blue`).then(r => r.json()),       // infodolar.com Córdoba blue venta
-    fetch(`${WORKER}/`).then(r => r.json()),                 // comparapix PIX rates
-    fetch(`${WORKER}/binance-usdt`).then(r => r.json()),     // Binance P2P USDT
-    fetch(`${WORKER}/pix-rate`).then(r => r.json()),         // Valor do PIX (Madrid Center)
-  ]);
-
-  const msgs = [];
-
-  // ── Dólar Oficial (BBVA venta) ──
-  const oficialWorker = results[0].status === 'fulfilled' ? results[0].value?.price : null;
-  if (oficialWorker) {
-    document.getElementById('r-oficial').value = oficialWorker;
-    msgs.push(`Oficial Cba $${oficialWorker}`);
-  } else {
-    // Fallback to dolarapi.com
-    try {
-      const fb = await fetch('https://dolarapi.com/v1/dolares/oficial').then(r => r.json());
-      document.getElementById('r-oficial').value = fb.venta;
-      msgs.push(`Oficial $${fb.venta}`);
-    } catch (_) {}
-  }
-
-  // ── Dólar Blue Córdoba (infodolar.com) ──
-  const blueWorker = results[1].status === 'fulfilled' ? results[1].value?.price : null;
-  if (blueWorker) {
-    document.getElementById('r-blue').value = blueWorker;
-    msgs.push(`Blue Cba $${blueWorker}`);
-  } else {
-    // Fallback to dolarapi.com
-    try {
-      const fb = await fetch('https://dolarapi.com/v1/dolares/blue').then(r => r.json());
-      document.getElementById('r-blue').value = fb.venta;
-      msgs.push(`Blue $${fb.venta}`);
-    } catch (_) {}
-  }
-
-  // ── Comparapix — best BRLUSD rate ──
-  if (results[2].status === 'fulfilled') {
-    const data = results[2].value;
-    const ALLOWED = ['brubank', 'astropay'];
-    let bestBrlusd = Infinity, bestName = '';
-    for (const [name, info] of Object.entries(data)) {
-      if (!ALLOWED.includes(name)) continue;
-      const q = info.quotes?.find(q => q.symbol === 'BRLUSD');
-      if (q && q.buy > 0 && q.buy < bestBrlusd) {
-        bestBrlusd = q.buy;
-        bestName   = name;
-      }
-    }
-    if (bestBrlusd < Infinity) {
-      const brlPerUsd = 1 / bestBrlusd;
-      document.getElementById('r-pix-usd').value              = brlPerUsd.toFixed(3);
-      document.getElementById('pix-usd-provider').textContent = `Mejor: ${bestName} · ${brlPerUsd.toFixed(3)} BRL/USD · comparapix.ar`;
-      msgs.push(`PIX: ${bestName} @ ${brlPerUsd.toFixed(3)}`);
-    } else {
-      document.getElementById('pix-usd-provider').textContent = 'Sin datos — ingresá el valor manualmente';
-    }
-
-    // Best BRLARS rate (for "Pesos (ARS)" mode) — lowest buy = least ARS per BRL = cheapest
-    const BRLARS_BLOCKED = ['real-tarjeta-mep'];
-    let bestBrlArs = Infinity, bestBrlArsName = '';
-    for (const [name, info] of Object.entries(data)) {
-      if (BRLARS_BLOCKED.includes(name)) continue;
-      const q = info.quotes?.find(q => q.symbol === 'BRLARS');
-      if (q && q.buy > 0 && q.buy < bestBrlArs) {
-        bestBrlArs = q.buy;
-        bestBrlArsName = name;
-      }
-    }
-    if (bestBrlArs < Infinity) {
-      document.getElementById('r-brl-ars').value              = bestBrlArs.toFixed(2);
-      document.getElementById('brl-ars-provider').textContent = `Mejor: ${bestBrlArsName} · $${bestBrlArs.toFixed(2)} ARS/BRL · comparapix.ar`;
-      msgs.push(`BRL→ARS: ${bestBrlArsName} @ $${bestBrlArs.toFixed(2)}`);
-    } else {
-      // Derive: blue / pixUsdRate (service route: ARS→USDC at blue rate→BRL at BRLUSD rate)
-      const pixUsdVal = parseFloat(document.getElementById('r-pix-usd').value) || 0;
-      const blueVal   = parseFloat(document.getElementById('r-blue').value)    || 0;
-      if (pixUsdVal > 0 && blueVal > 0) {
-        const derived = blueVal / pixUsdVal;
-        document.getElementById('r-brl-ars').value              = derived.toFixed(2);
-        document.getElementById('brl-ars-provider').textContent = `Est. Blue÷PIX: $${derived.toFixed(2)} ARS/BRL · ingresá el real si tenés`;
-        msgs.push(`BRL→ARS est: $${derived.toFixed(2)}`);
-      } else {
-        document.getElementById('brl-ars-provider').textContent = 'Sin datos — ingresá el valor manualmente';
-      }
-    }
-  } else {
-    document.getElementById('pix-usd-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
-    document.getElementById('brl-ars-provider').textContent  = '✗ No se pudo obtener — ingresá manualmente';
-  }
-
-  // ── Binance P2P — USDT ──
-  const usdtPrice = results[3].status === 'fulfilled' ? results[3].value?.price : null;
-
-  if (usdtPrice) {
-    document.getElementById('r-usdt').value        = usdtPrice;
-    document.getElementById('usdt-provider').textContent = `Binance P2P · $${usdtPrice}`;
-    msgs.push(`USDT $${usdtPrice}`);
-  } else {
-    document.getElementById('usdt-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
-  }
-
-  // ── Valor do PIX (Madrid Center) ──
-  const pixPrice = results[4].status === 'fulfilled' ? results[4].value?.price : null;
-  if (pixPrice) {
-    document.getElementById('r-pix').value         = pixPrice;
-    document.getElementById('pix-provider').textContent = `Madrid Center · R$ ${pixPrice.toFixed(2).replace('.', ',')} · madridcenterimportados.com`;
-    msgs.push(`PIX tienda R$${pixPrice}`);
-  } else {
-    document.getElementById('pix-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
-  }
+  // Binance P2P bloquea al Worker; dolarapi.com expone su precio ("cripto") con centavos de diferencia.
+  let usdtPrice = null;
+  try { usdtPrice = (await fetch(`${WORKER}/binance-usdt`).then(r => r.json()))?.price; } catch (_) {}
 
   icon.classList.remove('spin');
-  if (msgs.length > 0) {
+  if (usdtPrice) {
+    document.getElementById('r-usdt').value = usdtPrice;
+    document.getElementById('usdt-provider').textContent = `Binance P2P · $${usdtPrice}`;
     const now = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-    status.textContent = `✓ ${now} — ${msgs.join(' · ')}`;
+    status.textContent = `✓ ${now} — USDT $${usdtPrice}`;
     status.className = 'ok';
   } else {
-    status.textContent = '✗ Error al conectar con las APIs.';
+    document.getElementById('usdt-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+    status.textContent = '✗ Error al conectar con la API.';
     status.className = 'err';
   }
 
@@ -2189,7 +1765,6 @@ function plTierList(set) {
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
 let plShowExcluded = false;
-let plAutoExcludedArabic = 0;
 let plAutoExcludedCategory = 0;
 
 // ── Filtro de marcas para publicar ──
@@ -2288,18 +1863,16 @@ const KNOWN_BRANDS = [
   // Agregadas por el PDF de la tienda (2026-10-07) — las abreviaturas CH/AB/JPG/RL/PDM van como alias arriba
   ['Acqua di Parma'], ['Bentley'], ['Brioni'], ['Lalique'], ['Lolita Lempicka'], ['Missoni'],
 
-  // Marcas árabes/de Medio Oriente detectadas en el proveedor "VARIOS" — se agregan para que
-  // se etiqueten bien, y están en EXCLUDED_BRANDS más abajo para sacarlas de la lista generada.
+  // Marcas árabes/de Medio Oriente detectadas en el proveedor "VARIOS"
   ['Adyan'], ['Afnan'], ['Ajmal'], ["Al A'raaf", "AL A'RAAF", 'AL ARAAF'], ['Al Haramain'],
   ['Al Wataniah', 'WATANIAH', 'SULTAN AL LAIL'], ['Armaf', 'MANDARIN SKY'], ['Dar Al Ward', 'DAR EL WARD', 'DAR AL WARD'], ['Lattafa', 'QAED AL FURSAN', 'YARA ELIXIR'],
   ['Maison Alhambra', 'ALHAMBRA', 'MAISON AL', 'MAISON ALL', 'DELILAH BLANC'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
   ['Rayhaan'], ['Sahari'],
-  // Confianza media (revisar) — sí se agregan para detectarlas, pero confirmá si van también excluidas
+  // Confianza media (revisar)
   ['Borouj'], ['Mawwal'], ['French Avenue'], ['Zirconia'], ['Arqus'], ['Bespoke'], ['Marina Royal'], ['Amaran'],
 
   // Agregadas al clasificar por categoría (2026-10-08), sacadas de las listas de nicho/árabes de los
-  // proveedores. Las árabes NO van a EXCLUDED_BRANDS: antes de esto se publicaban como "sin marca",
-  // y agregarlas acá no tiene que cambiar qué se publica, solo darles nombre y categoría.
+  // proveedores. Antes de esto se publicaban como "sin marca": agregarlas acá solo les da nombre y categoría.
   ['Atelier des Ors'], ['Christian Provenzano'], ['Ex Nihilo'], ['Fugazzi'], ['Liquides Imaginaires'],
   ['Marc-Antoine Barrois', 'MARC ANTOINE BARROIS'], ['Mes Bisous'], ['Oman Luxury'], ['Pantheon Roma'],
   ["Penhaligon's", 'PENHALIGONS', "PENHALIGON'S"], ['Rajani'], ['Salum Parfums', 'SALUM'], ['Unique Luxury'],
@@ -2315,8 +1888,8 @@ const KNOWN_BRANDS = [
   // Flavia (Armaf) queda afuera a propósito: aparece como "ARMAF FLAVIA …" y como marca propia le ganaría a Armaf.
 
   // Agregadas por el catálogo de Ponto Com (2026-10-09), sacadas del filtro de marcas del sitio.
-  // Zimaya es marca propia (distinta de Afnan): "AFNAN ZIMAYA …" de otros proveedores queda como Zimaya,
-  // y por eso también está en EXCLUDED_BRANDS junto a Afnan. Milestone NO va acá aunque tenga categoría:
+  // Zimaya es marca propia (distinta de Afnan): "AFNAN ZIMAYA …" de otros proveedores queda como Zimaya
+  // (ver PL_PARENT_BRANDS). Milestone NO va acá aunque tenga categoría:
   // también es nombre de perfume de otras marcas ("ARMAF CLUB DE NUIT MILESTONE", "CUBA … MILESTONE") y
   // les ganaría la detección; en Ponto Com la marca le llega del sidebar del sitio.
   ['Pendora Scents'], ['Anfar'], ['Asten'], ['Love Collection'], ['Fariis'], ['Le Bonheur'], ['Reef'],
@@ -2327,14 +1900,6 @@ const KNOWN_BRANDS = [
   ['Adidas'], ['Cristiano Ronaldo'], ['Estee Lauder'], ['Roberto Capucci'], ['Lulu Castagnette'],
   ['Armand Basi'], ['Kylie Minogue'], ['Roccobarocco'], ['Morgan'], ['Guy Laroche'], ['Acquadì']
 ];
-
-// Marcas que se excluyen automáticamente de la lista generada (perfumes árabes/de Medio Oriente
-// que el proveedor mezcla con las occidentales). Usa el nombre canónico (primer elemento del entry).
-const EXCLUDED_BRANDS = new Set([
-  'Adyan', 'Afnan', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Armaf',
-  'Dar Al Ward', 'Lattafa', 'Maison Alhambra', 'Maryaj', 'Nasma', 'Nejma',
-  'Orientica', 'Rasasi', 'Rayhaan', 'Sahari', 'Zimaya'
-]);
 
 // ── Categoría de marca (nicho / diseñador / árabe) — alimenta el filtro de la lista publicada ──
 // Usa el nombre canónico (primer elemento de KNOWN_BRANDS). Criterio: la sección donde la ponen los
@@ -3193,24 +2758,14 @@ function detectFuzzyDuplicates(items) {
 }
 
 // ── Costing ──
-// NOTA: la lista de precios no tiene un pedido real, así que no hay forma de saber cuántas
-// transferencias USDT reales va a haber — se asume 1 (ver card 04, decisión D2). El precio
-// publicado puede no reflejar transferencias múltiples de un pedido grande real en ese modo.
-function plComputeCostTotal(priceUsd, mode, rates, envioFijo) {
-  const { pixRate, pixUsdRate, oficial, usdt, brlArsRate, comUSD, usdtFeeUsd } = rates;
-  let costoARS1 = 0;
-  if (mode === 'usdt') {
-    costoARS1 = priceUsd * usdt;
-  } else if (mode === 'ars') {
-    const brlUnid = priceUsd * pixRate;
-    costoARS1 = brlArsRate > 0 ? brlUnid * brlArsRate : 0;
-  } else {
-    const brlUnid = priceUsd * pixRate;
-    const usdUnid = pixUsdRate > 0 ? brlUnid / pixUsdRate : 0;
-    costoARS1 = usdUnid * oficial;
-  }
+// Misma cadena que la calculadora (USDT directo). NOTA: la lista de precios no tiene un pedido real,
+// así que no hay forma de saber cuántas transferencias USDT va a haber — se asume 1 (ver card 04,
+// decisión D2). El precio publicado no refleja transferencias múltiples de un pedido grande.
+function plComputeCostTotal(priceUsd, rates, envioFijo) {
+  const { usdt, comUSD, usdtFeeUsd } = rates;
+  const costoARS1   = priceUsd * usdt;
   const comisionARS = comUSD * usdt;
-  const feeUsdt      = mode === 'usdt' ? (usdtFeeUsd || 0) * usdt : 0; // 1 transferencia asumida
+  const feeUsdt     = (usdtFeeUsd || 0) * usdt; // 1 transferencia asumida
   return costoARS1 + comisionARS + envioFijo + feeUsdt;
 }
 
@@ -3224,15 +2779,10 @@ function plFinalPrice(costTotal, marginPct, roundStep) {
 
 function plGetConfig() {
   return {
-    mode: document.getElementById('pl-modo').value,
     envioFijo: getRate('r-envio-fijo'),
     roundStep: getRate('r-round-step') || 1,
     rates: {
-      pixRate:    getRate('r-pix'),
-      pixUsdRate: getRate('r-pix-usd'),
-      oficial:    getRate('r-oficial'),
       usdt:       getRate('r-usdt'),
-      brlArsRate: getRate('r-brl-ars'),
       comUSD:     getRate('r-comision'),
       usdtFeeUsd: getRate('r-usdt-fee')
     }
@@ -3246,7 +2796,7 @@ function refreshPlPricing() {
 function recomputePlPricing() {
   const cfg = plGetConfig();
   plItems.forEach(it => {
-    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.mode, cfg.rates, cfg.envioFijo);
+    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.rates, cfg.envioFijo);
     it.marginPct   = marginForPriceUsd(it.priceUsd, plCategoryFor(it));
     it.finalPriceArs = plFinalPrice(it.costTotal, it.marginPct, cfg.roundStep);
   });
@@ -3283,19 +2833,15 @@ function generatePriceList() {
     groups.get(key).push(it);
   });
 
-  const excludeArabicEnabled = document.getElementById('pl-exclude-arabic')?.checked ?? true;
-
   plItems = [];
-  let idc = 1, autoExcludedArabic = 0, autoExcludedCategory = 0;
+  let idc = 1, autoExcludedCategory = 0;
   for (const arr of groups.values()) {
     arr.sort((a, b) => a.price - b.price);
     const cheapest = arr[0];
     const overrideBrand = plBrandOverrides[plBrandOverrideKey(cheapest.name)];
     const brand = overrideBrand || cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
     const isNonPerfume = plIsNonPerfumeCategory(cheapest.name);
-    const isArabic = excludeArabicEnabled && EXCLUDED_BRANDS.has(brand);
     if (isNonPerfume) autoExcludedCategory++;
-    else if (isArabic) autoExcludedArabic++;
     plItems.push({
       id: idc++,
       name: cheapest.name,
@@ -3308,13 +2854,12 @@ function generatePriceList() {
       sourceLabel: cheapest.sourceLabel,
       alternates: arr.slice(1).map(a => ({ source: a.sourceLabel, price: a.price })),
       multiSource: arr.length > 1,
-      excluded: isNonPerfume || isArabic,
-      autoExcludedReason: isNonPerfume ? 'category' : (isArabic ? 'arabic' : null),
+      excluded: isNonPerfume,
+      autoExcludedReason: isNonPerfume ? 'category' : null,
       manualPrice: null
     });
   }
 
-  plAutoExcludedArabic = autoExcludedArabic;
   plAutoExcludedCategory = autoExcludedCategory;
   plFuzzyPairs = detectFuzzyDuplicates(plItems);
 
@@ -3603,8 +3148,8 @@ function plBrandFilterInvert() {
 function plGainHtml(it) {
   const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
   const gain = price - it.costTotal;
-  const blue = getRate('r-blue');
-  const usd = blue > 0 ? ` · USD ${(gain / blue).toFixed(1)}` : '';
+  const usdt = getRate('r-usdt');
+  const usd = usdt > 0 ? ` · USD ${(gain / usdt).toFixed(1)}` : '';
   return `<span style="${gain < 0 ? 'color:var(--danger);font-weight:700;' : ''}">${fmt_ars(gain)}${usd}</span>`;
 }
 
@@ -3624,7 +3169,7 @@ function plRowHtml(it) {
           onchange="updatePlBrand(${it.id}, this.value)" />
       </td>
       <td style="min-width:220px;" title="${esc(it.name)}">
-        ${it.autoExcludedReason === 'arabic' ? '<span title="Excluido automático — marca árabe/de Medio Oriente" style="margin-right:4px;">🌙</span>' : ''}${it.autoExcludedReason === 'category' ? '<span title="Excluido automático — no es perfume" style="margin-right:4px;">🚫</span>' : ''}${esc(it.displayName)}
+        ${it.autoExcludedReason === 'category' ? '<span title="Excluido automático — no es perfume" style="margin-right:4px;">🚫</span>' : ''}${esc(it.displayName)}
       </td>
       <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
       <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
@@ -3706,10 +3251,7 @@ function renderPlSummary() {
     || it.displayName.toLowerCase().includes(query);
   const rowsToShow = (plShowExcluded ? plItems : visible).filter(matchesQuery);
 
-  const autoExcludedParts = [];
-  if (plAutoExcludedArabic > 0) autoExcludedParts.push(`${plAutoExcludedArabic} por marca árabe 🌙`);
-  if (plAutoExcludedCategory > 0) autoExcludedParts.push(`${plAutoExcludedCategory} no es perfume 🚫`);
-  const autoExcludedNote = autoExcludedParts.length ? ` (${autoExcludedParts.join(', ')})` : '';
+  const autoExcludedNote = plAutoExcludedCategory > 0 ? ` (${plAutoExcludedCategory} no es perfume 🚫)` : '';
 
   document.getElementById('pl-summary').textContent = query
     ? `${rowsToShow.length} resultado${rowsToShow.length !== 1 ? 's' : ''} de ${visible.length}`
@@ -4416,10 +3958,6 @@ async function publishCatalogAuto() {
   }
 }
 
-document.getElementById('pl-modo').addEventListener('change', () => {
-  saveBusinessConfig();
-  if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
-});
 // Envío fijo, fee USDT y redondeo son compartidos con la Calculadora (rates-grid principal).
 // El recálculo de la lista ya generada lo hace el listener de BUSINESS_CONFIG_IDS (refreshPlPricing);
 // acá solo se refresca el resumen que muestra el generador.
@@ -4438,12 +3976,10 @@ renderPublishSecretStatus();
 // ─────────────────────────────────────────────
 function exportNotes() {
   // Usa el mismo motor que recalculate() (getCostingContext/computeRowCosting) — antes esta
-  // función tenía su propia copia de la fórmula y había quedado desalineada (ignoraba
-  // row.modo y gananciaUSDOverride). Ver card 04.
+  // función tenía su propia copia de la fórmula y había quedado desalineada. Ver card 04.
   const ctx          = getCostingContext();
   const filled        = rows.filter(rowHasProduct);
   const envioRealTotal = filled.length ? getRate('r-envio') : 0;
-  const pixService    = document.getElementById('pix-usd-provider').textContent;
   const totalUnits    = filled.reduce((s, r) => s + r.qty, 0);
   const fecha         = new Date().toLocaleString('es-AR');
 
@@ -4452,13 +3988,13 @@ function exportNotes() {
     const { costoTotal } = computeRowCosting(row, ctx);
     let precioARS = 0, precioUSD = 0, ganancia = 0;
     if (row.gananciaUSDOverride != null && row.gananciaUSDOverride > 0 && costoTotal > 0) {
-      precioARS = roundUpToStep(costoTotal + row.gananciaUSDOverride * ctx.blue, ctx.roundStep);
+      precioARS = roundUpToStep(costoTotal + row.gananciaUSDOverride * ctx.usdt, ctx.roundStep);
       ganancia  = precioARS - costoTotal;
-      precioUSD = ctx.blue > 0 ? precioARS / ctx.blue : 0;
+      precioUSD = ctx.usdt > 0 ? precioARS / ctx.usdt : 0;
     } else if (row.margin > 0 && row.margin < 100 && costoTotal > 0) {
       precioARS = roundUpToStep(costoTotal / (1 - row.margin / 100), ctx.roundStep);
       ganancia  = precioARS - costoTotal;
-      precioUSD = ctx.blue > 0 ? precioARS / ctx.blue : 0;
+      precioUSD = ctx.usdt > 0 ? precioARS / ctx.usdt : 0;
     }
     totalVenta    += precioARS  * row.qty;
     totalGanancia += ganancia   * row.qty;
@@ -4477,11 +4013,7 @@ function exportNotes() {
   lines.push(line);
 
   lines.push('TASAS');
-  lines.push(`  Valor do PIX (tienda):  ${ctx.pixRate} BRL/USD`);
-  lines.push(`  Servicio PIX (USD→BRL): ${ctx.pixUsdRate} BRL/USD  (${pixService})`);
-  lines.push(`  Dólar Oficial: $${ctx.oficial}`);
-  lines.push(`  Dólar Blue:    $${ctx.blue}`);
-  lines.push(`  USDT:          $${ctx.usdt}  (base comisión shipper y fee de transferencia)`);
+  lines.push(`  USDT:          $${ctx.usdt}  (pago a la tienda, comisión shipper y fee de transferencia)`);
   lines.push(`  Comisión:      USD ${getRate('r-comision')}/producto`);
   lines.push(`  Envío fijo:    $${ctx.envioFijo}/producto (cobrado al cliente)`);
   lines.push(`  Envío real:    $${envioRealTotal} total (costo real del embarque, no se cobra así)`);
@@ -4492,21 +4024,21 @@ function exportNotes() {
   productRows.forEach(({ row, costoTotal, precioARS, precioUSD, ganancia }) => {
     const nombre = row.name || '(sin nombre)';
     lines.push(`  ${nombre}`);
-    lines.push(`    Precio USD:       USD ${row.price}  ×  ${row.qty} unidad${row.qty !== 1 ? 'es' : ''}  (${MODE_LABELS_FULL[row.modo] || 'PIX'})`);
+    lines.push(`    Precio USD:       USD ${row.price}  ×  ${row.qty} unidad${row.qty !== 1 ? 'es' : ''}  (USDT)`);
     lines.push(`    Costo real/unid:  $${Math.round(costoTotal).toLocaleString('es-AR')}`);
-    lines.push(`    Precio de venta:  $${Math.round(precioARS).toLocaleString('es-AR')}  (USD ${precioUSD.toFixed(2)} blue)`);
+    lines.push(`    Precio de venta:  $${Math.round(precioARS).toLocaleString('es-AR')}  (USD ${precioUSD.toFixed(2)})`);
     lines.push(`    Ganancia/unid:    $${Math.round(ganancia).toLocaleString('es-AR')}`);
     lines.push('');
   });
 
   lines.push(line);
-  const gananciaUSD = ctx.oficial > 0 ? (totalGanancia / ctx.oficial).toFixed(2) : '—';
+  const gananciaUSD = ctx.usdt > 0 ? (totalGanancia / ctx.usdt).toFixed(2) : '—';
   lines.push('TOTALES');
   lines.push(`  Unidades:            ${totalUnits}`);
   lines.push(`  Costo real total:    $${Math.round(totalCostoReal).toLocaleString('es-AR')}`);
   lines.push(`  Total a cobrar:      $${Math.round(totalVenta).toLocaleString('es-AR')}`);
   lines.push(`  Ganancia total:      $${Math.round(totalGanancia).toLocaleString('es-AR')}`);
-  lines.push(`  Ganancia (USD):      USD ${gananciaUSD}  (÷ oficial $${ctx.oficial})`);
+  lines.push(`  Ganancia (USD):      USD ${gananciaUSD}  (÷ USDT $${ctx.usdt})`);
   lines.push(`  ROI:                 ${roi}%`);
 
   const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
@@ -4519,43 +4051,15 @@ function exportNotes() {
 }
 
 // ─────────────────────────────────────────────
-// Copy prices to clipboard
-// ─────────────────────────────────────────────
-function copyPrices(mode = 'individual') {
-  const lines = rows.map(row => {
-    const nombre = row.name || '(sin nombre)';
-    // individual → precioLista (full shipping per product)
-    // bundle     → precioARS  (shipping split across all products)
-    const arsEl  = mode === 'bundle'
-      ? document.getElementById(`vars-${row.id}`)
-      : document.getElementById(`lista-${row.id}`);
-    const usdEl  = document.getElementById(`vusd-${row.id}`);
-    const ars    = arsEl?.textContent?.trim() || '—';
-    const usd    = usdEl?.textContent?.trim() || '—';
-    return `${nombre} — ${ars} / ${usd}`;
-  }).join('\n');
-
-  navigator.clipboard.writeText(lines).then(() => {
-    const btn = document.querySelector(`[onclick="copyPrices('${mode}')"]`);
-    const orig = btn.innerHTML;
-    btn.textContent = '✓ Copiado';
-    btn.style.color = 'var(--success)';
-    setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
-  });
-}
-
-// ─────────────────────────────────────────────
 // Reactive inputs
 // ─────────────────────────────────────────────
 // La lista de precios ya generada también depende de estas tasas y de la config de negocio —
 // sin refreshPlPricing() quedaría con las tasas del momento de "Generar" (ej. los defaults si se
 // generó antes de que terminara fetchAllRates) y publicaría precios distintos a la calculadora.
-['r-pix','r-pix-usd','r-oficial','r-blue','r-usdt'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => { recalculate(); refreshPlPricing(); });
-});
+document.getElementById('r-usdt').addEventListener('input', () => { recalculate(); refreshPlPricing(); });
 // Config de negocio: recalcula igual que las tasas de mercado, pero además se persiste
 // (a diferencia de las tasas, que siempre se refrescan de la API al recargar).
-BUSINESS_CONFIG_IDS.filter(id => id !== 'pl-modo').forEach(id => {
+BUSINESS_CONFIG_IDS.forEach(id => {
   document.getElementById(id).addEventListener('input', () => { saveBusinessConfig(); recalculate(); refreshPlPricing(); });
 });
 
