@@ -670,7 +670,7 @@
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">1. Importar listas de proveedor</div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
-        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪), subí uno o más Excel/Numbers/PDF, o traé el catálogo de Ponto Com o de Macedonia directo del sitio.
+        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪), subí uno o más Excel/Numbers/PDF, traé el catálogo de Ponto Com directo del sitio o importá el archivo de Macedonia (se baja con el marcador ⬇ Macedonia).
         Podés importar varias listas — si un mismo producto aparece repetido, se resuelve automáticamente al generar la lista.
       </div>
 
@@ -702,19 +702,26 @@
           </svg>
           Traer catálogo Ponto Com
         </button>
-        <button class="btn btn-outline" id="pl-macedonia-btn" onclick="importMacedonia()" title="Trae los perfumes y kits con stock de compras.macedonia.com.py (sin body mist, splash, desodorantes, infantiles ni marcas de muy bajo costo), convertidos a USD con la tasa de al lado. Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline" id="pl-macedonia-btn" onclick="document.getElementById('pl-macedonia-file').click()" title="Carga el archivo macedonia-AAAA-MM-DD.json que baja el marcador ⬇ Macedonia: perfumes y kits con stock (sin body mist, splash, desodorantes, infantiles ni marcas de muy bajo costo), convertidos a USD con la tasa de al lado. Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          Traer catálogo Macedonia
+          Importar archivo Macedonia
         </button>
+        <input type="file" id="pl-macedonia-file" accept=".json,application/json" style="display:none"
+          onchange="importMacedoniaFile(this.files[0]); this.value=''" />
+        <a id="pl-macedonia-bookmarklet" href="#" draggable="true"
+          onclick="event.preventDefault(); alert(MACEDONIA_BOOKMARKLET_HELP)"
+          style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;"
+          title="Arrastralo a la barra de marcadores. Después abrí compras.macedonia.com.py y tocalo: baja el catálogo en un archivo .json (~20 s).">⬇ Macedonia</a>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
           Gs/USD
           <input type="number" id="pl-macedonia-rate" step="0.5" min="1"
             style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:var(--bg);color:var(--text);"
             onchange="setMacedoniaRate(this.value)" />
-          <span class="col-tip" data-tip="Tasa con la que Macedonia pasa sus precios en USD a guaraníes. Para verificarla: precio en Gs ÷ precio en US$ del mismo producto en comprasparaguai.com.br. Si la cambiás, volvé a traer el catálogo."></span>
+          <span class="col-tip" data-tip="Tasa con la que Macedonia pasa sus precios en USD a guaraníes. Para verificarla: precio en Gs ÷ precio en US$ del mismo producto en comprasparaguai.com.br. Si la cambiás, volvé a importar el archivo."></span>
         </label>
         <button class="btn btn-outline" onclick="clearAllPlSources()" style="color:var(--danger);border-color:var(--danger);" title="Borra las listas cargadas y el resultado generado, para empezar de cero">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -2497,7 +2504,9 @@ async function importPontocom() {
 }
 
 // ── Import: catálogo de Macedonia (compras.macedonia.com.py) ──
-// WooCommerce: el Worker (/macedonia) pasa la Store API pública, 100 productos con stock por página.
+// WooCommerce con la Store API pública. No pasa por el Worker: el hosting (SiteGround) le responde con
+// un captcha a todo pedido que sale de Cloudflare, y la API no manda CORS. Por eso el catálogo lo baja un
+// marcador (bookmarklet) corriendo en el sitio, con la conexión del usuario, y la app importa ese archivo.
 // Los precios vienen en guaraníes. La tienda los fija en USD y los muestra en Gs a una tasa propia
 // (2026-10-13: 7.484,5 Gs/USD, redondeado a la centena hacia arriba — 197 de 200 productos coincidieron
 // con el precio en US$ que la misma tienda publica en comprasparaguai.com.br). La tasa se edita al lado
@@ -2567,41 +2576,82 @@ function plMacedoniaExcluded(name) {
   return (/\bKIT\b|\+/.test(name) ? MACEDONIA_KIT_BODY_RE : MACEDONIA_BODY_RE).test(name);
 }
 
-async function importMacedonia() {
-  const btn = document.getElementById('pl-macedonia-btn');
-  const label = btn.innerHTML;
-  btn.disabled = true;
-  const rate = macedoniaRate;
+// Código del marcador "⬇ Macedonia". Corre en compras.macedonia.com.py (mismo origen, sin CORS ni captcha):
+// recorre la Store API (categoría 135 "Perfumes", con stock, 100 por página, orderby=id para que el orden
+// no cambie mientras se recorre en paralelo) y descarga {source, date, items:[{code, name, pyg, cats}]}.
+// Se serializa con toString(): no puede usar nada de afuera de la función.
+async function macedoniaBookmarklet() {
+  if (location.hostname !== 'compras.macedonia.com.py') {
+    alert('Abrí compras.macedonia.com.py y tocá el marcador ahí.');
+    return;
+  }
+  const base = '/wp-json/wc/store/v1/products?category=135&stock_status=instock&per_page=100&orderby=id&order=desc'
+    + '&_fields=id,sku,name,prices,categories&page=';
+  const title = document.title;
+  const txt = document.createElement('textarea'); // decodifica entidades HTML ("VICTORIA&#8217;S")
+  const decode = s => { txt.innerHTML = s; return txt.value; };
   try {
     const fetchPage = async page => {
-      const r = await fetch(`${WORKER}/macedonia?page=${page}`);
-      if (!r.ok) throw new Error(`Macedonia respondió ${r.status} (página ${page})`);
-      return r.json();
+      const r = await fetch(base + page, { headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error(`página ${page}: ${r.status}`);
+      return { total: parseInt(r.headers.get('X-WP-TotalPages'), 10) || 1, data: await r.json() };
     };
     const first = await fetchPage(1);
-    const total = Math.min(first.totalPages || 1, 100);
-    const pages = [first];
-    let read = first.items.length;
-    btn.textContent = `Macedonia: ${read.toLocaleString('es-AR')} leídos…`;
+    const total = Math.min(first.total, 100);
+    const pages = [first.data];
     let next = 2;
-    await Promise.all(Array.from({ length: 6 }, async () => {
+    await Promise.all(Array.from({ length: 4 }, async () => {
       while (next <= total) {
-        const data = await fetchPage(next++);
-        pages.push(data);
-        read += data.items.length;
-        btn.textContent = `Macedonia: ${read.toLocaleString('es-AR')} leídos…`;
+        const page = next++;
+        pages.push((await fetchPage(page)).data);
+        document.title = `Macedonia ${pages.length}/${total}…`;
       }
     }));
+    const items = pages.flat().map(p => ({
+      code: String(p.sku || p.id),
+      name: decode(String(p.name || '')).replace(/\s+/g, ' ').trim(),
+      pyg: parseInt(p.prices && p.prices.price, 10) || 0,
+      cats: (p.categories || []).map(c => c.id),
+    }));
+    const date = new Date().toLocaleDateString('en-CA');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ source: 'macedonia', date, items })], { type: 'application/json' }));
+    a.download = `macedonia-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    alert(`Macedonia: ${items.length} productos con stock descargados en ${a.download}. Importalo en el generador de listas.`);
+  } catch (err) {
+    alert(`No se pudo bajar el catálogo de Macedonia: ${err.message}`);
+  } finally {
+    document.title = title;
+  }
+}
+const MACEDONIA_BOOKMARKLET_HELP = 'Este botón es un marcador: arrastralo a la barra de marcadores del navegador '
+  + '(si no la ves: Cmd+Shift+B). Después abrí compras.macedonia.com.py y tocá el marcador: en unos 20 segundos '
+  + 'descarga macedonia-AAAA-MM-DD.json. Ese archivo se carga con "Importar archivo Macedonia".';
+document.getElementById('pl-macedonia-bookmarklet').href =
+  'javascript:' + encodeURIComponent(`(${macedoniaBookmarklet.toString()})()`);
+
+async function importMacedoniaFile(file) {
+  if (!file) return;
+  const rate = macedoniaRate;
+  try {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch { throw new Error('el archivo no es un JSON válido'); }
+    if (!data || data.source !== 'macedonia' || !Array.isArray(data.items)) {
+      throw new Error('no es un archivo bajado con el marcador ⬇ Macedonia');
+    }
 
     const seen = new Set();
     const items = [];
     const newBrands = {};
     let noBrand = 0;
-    for (const it of pages.flatMap(pg => pg.items)) {
+    for (const it of data.items) {
       if (seen.has(it.code)) continue;
       seen.add(it.code);
       if (!(it.pyg > 0)) continue;
-      if (it.cats.some(c => MACEDONIA_INFANTIL_CATS.includes(c))) continue;
+      if ((it.cats || []).some(c => MACEDONIA_INFANTIL_CATS.includes(c))) continue;
       const name = plCleanMacedoniaName(it.name);
       if (plMacedoniaExcluded(name) || plIsNonPerfumeCategory(name)) continue;
 
@@ -2613,8 +2663,8 @@ async function importMacedonia() {
     }
     if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
 
-    // Reemplaza la carga anterior, igual que Ponto Com.
-    const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    // Reemplaza la carga anterior, igual que Ponto Com. La fecha es la de la descarga, no la de hoy.
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : new Date().toLocaleDateString('en-CA');
     plSources = plSources.filter(s => !s.macedonia);
     plSources.push({
       id: plNextSourceId++, name: `Macedonia · ${date} · ${rate.toLocaleString('es-AR')} Gs/USD`, macedonia: true, items
@@ -2627,12 +2677,9 @@ async function importMacedonia() {
     if (nb.length > 0) notes.push(`${nb.length} marca(s) sin categoría — se van a preciar con los tramos generales:\n` +
       nb.map(([b, n]) => `• ${b} (${n})`).join('\n'));
     if (noBrand > 0) notes.push(`${noBrand} producto(s) sin marca detectada: aparecen con ⚠ en la tabla de revisión.`);
-    if (notes.length > 0) alert(`Macedonia: ${items.length.toLocaleString('es-AR')} productos cargados.\n\n` + notes.join('\n\n'));
+    alert(`Macedonia: ${items.length.toLocaleString('es-AR')} productos cargados.` + (notes.length ? '\n\n' + notes.join('\n\n') : ''));
   } catch (err) {
-    alert(`No se pudo traer el catálogo de Macedonia: ${err.message}. No se agregó nada.`);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = label;
+    alert(`No se pudo importar el archivo de Macedonia: ${err.message}. No se agregó nada.`);
   }
 }
 
