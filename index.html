@@ -1008,7 +1008,7 @@ function getCalcCatalog() {
   // Misma re-detección de marca que generatePriceList, así calculadora y generador coinciden.
   plSources.forEach(src => src.items.forEach(it => all.push({
     ...it,
-    brand: detectKnownBrand(it.name) || it.brand || '',
+    brand: detectKnownBrand(it.name) || plCanonicalBrand(it.brand),
     sourceLabel: src.name
   })));
 
@@ -1913,7 +1913,7 @@ const KNOWN_BRANDS = [
   // Agregadas al clasificar por categoría (2026-10-08), sacadas de las listas de nicho/árabes de los
   // proveedores. Antes de esto se publicaban como "sin marca": agregarlas acá solo les da nombre y categoría.
   ['Atelier des Ors'], ['Christian Provenzano'], ['Ex Nihilo'], ['Fugazzi'], ['Liquides Imaginaires'],
-  ['Marc-Antoine Barrois', 'MARC ANTOINE BARROIS'], ['Mes Bisous'], ['Oman Luxury'], ['Pantheon Roma'],
+  ['Marc-Antoine Barrois', 'MARC ANTOINE BARROIS'], ['Mes Bisous'], ['Oman Luxury', 'OMANLUXURY'], ['Pantheon Roma'],
   ["Penhaligon's", 'PENHALIGONS', "PENHALIGON'S"], ['Rajani'], ['Salum Parfums', 'SALUM'], ['Unique Luxury'],
   ['Ahmed Al Maghribi', 'AHMED'], ['Arabiyat'], ['Ard Al Zaafaran', 'ARD AL ZAA'], ['Asdaaf'], ['Aurora'], ['By Charisma'],
   ['Camara'], ['Emper'], ['Fragrance World', 'FRAGANCE WORLD'], ['Hamidi'], ['Karen Low'],
@@ -1963,7 +1963,7 @@ const KNOWN_BRANDS = [
   ['Maison Ghandour'], ['Swiss Arabian'], ['Abyat'], ['Azha'], ['Maison Awad'], ['Modyafa'], ['Akaro'],
   ["L'Affair", 'LAFFAIR', "L'AFFRAIR"], ['Olmas'], ['Shaikh Mohd Saeed'], ['Al Rehab'], ['Al Atrab'], ['Al Ambra'],
   ['Nylaa'], ['Auraa'], ['Novah Scents'], ['Lafayette'], ['Ramon Blazar'],
-  ['Omanluxury', 'OMAN LUXURY'], ['93MIL'], ["Etat Libre d'Orange", 'ETAT LIBRE D ORANGE', 'ETAT LIBRE D`ORANGE'],
+  ['93MIL'], ["Etat Libre d'Orange", 'ETAT LIBRE D ORANGE', 'ETAT LIBRE D`ORANGE'],
   ['Giardini di Toscana'],
   ['Tumi'], ['Dunhill'], ['Tory Burch'], ['Kylie Jenner'], ['Baldessarini'], ['Banana Republic'], ['Carven'],
   ['Cerruti', 'CERRUTTI'], ['Christian Siriano'], ['S.T. Dupont', 'ST DUPONT', 'S T DUPONT'], ['Jeanne en Provence'],
@@ -1998,7 +1998,7 @@ const BRAND_CATEGORY = (() => {
     'Spirit of Kings', 'Laboratorio Olfattivo', 'Birkholz', 'Min New York', 'The Merchant of Venice', 'Amouroud',
     'Coreterno', 'Korloff', 'Noeme', 'Maybach', 'Simone Andreoli', 'Orens', 'Emirates Pride',
     // Elegancia / Atacado Connect / Genove (2026-10-14)
-    'Omanluxury', '93MIL', "Etat Libre d'Orange", 'Giardini di Toscana'
+    '93MIL', "Etat Libre d'Orange", 'Giardini di Toscana'
   ]);
   add('disenador', [
     'Abercrombie & Fitch', 'Agatha Paris', 'Agua Brava', 'Alviero Martini', 'Animale', 'Antonio Banderas',
@@ -4218,7 +4218,7 @@ async function importPontocom({ quiet = false } = {}) {
       if (siteBrand && PONTOCOM_EXCLUDE_BRANDS.has(plStripAccents(siteBrand).toUpperCase())) continue;
 
       const name = plCleanPontocomName(it.name);
-      const brand = detectKnownBrand(name) || (siteBrand ? plTitleCaseBrand(siteBrand) : '');
+      const brand = detectKnownBrand(name) || plSiteBrand(siteBrand);
       if (brand && !BRAND_CATEGORY[brand] && !plIsNonPerfumeCategory(name)) newBrands[brand] = (newBrands[brand] || 0) + 1;
       const siteCat = codesIn['perfumes-arabes'].has(it.code) ? 'arabe'
                     : codesIn['perfumes-nicho'].has(it.code) ? 'nicho' : '';
@@ -4463,6 +4463,11 @@ const PL_SITE_EXCLUDE_BRANDS = new Set([
 ]);
 
 function plSiteBrandKey(raw) { return plStripAccents(String(raw || '')).toUpperCase().replace(/[\s.]+$/, '').replace(/\s+/g, ' ').trim(); }
+
+// Marca guardada en una fuente vieja (p. ej. "Mugler" o "Omanluxury" del filtro del sitio) → canónica si es alias.
+function plCanonicalBrand(brand) {
+  return brand ? (detectKnownBrand(brand) || brand) : '';
+}
 
 function plSiteBrand(raw) {
   const k = plSiteBrandKey(raw);
@@ -5017,7 +5022,7 @@ function generatePriceList() {
   // con la lista (encabezado del texto pegado o columna "marca" del Excel).
   plSources.forEach(src => src.items.forEach(it => all.push({
     ...it,
-    brand: detectKnownBrand(it.name) || it.brand || '',
+    brand: detectKnownBrand(it.name) || plCanonicalBrand(it.brand),
     sourceLabel: src.name
   })));
   if (all.length === 0) {
