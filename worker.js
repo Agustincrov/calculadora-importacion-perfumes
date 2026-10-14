@@ -1,7 +1,7 @@
 // Cloudflare Worker — comparapi-proxy
-// Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogo de perfumes de
-// Ponto Com (pontocom.com, scraping del listado paginado) y publicación de docs/catalogo.html en
-// GitHub (/publish-catalog). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
+// Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogos de perfumes de
+// Ponto Com (pontocom.com, scraping del listado paginado) y Macedonia (compras.macedonia.com.py,
+// API pública de WooCommerce) y publicación de docs/catalogo.html en GitHub (/publish-catalog). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
 // se sacaron el 2026-10-10.
 //
 // Deploy: paste this into the Cloudflare Worker dashboard at
@@ -28,6 +28,9 @@ async function handle(req) {
     if (path === '/pontocom') {
       const q = new URL(req.url).searchParams;
       return await fetchPontocomPage(q.get('cat') || PONTOCOM_MAIN, parseInt(q.get('page'), 10));
+    }
+    if (path === '/macedonia') {
+      return await fetchMacedoniaPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
     }
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
@@ -107,6 +110,36 @@ async function fetchPontocomPage(cat, page) {
       .map(x => decodeEntities(x[1]));
   }
   return jsonResp(out);
+}
+
+// ── Macedonia — catálogo de perfumes ─────────────────────────────
+// WooCommerce con la Store API pública (sin login): JSON directo, sin scraping. Tampoco manda CORS.
+//  - Categoría 135 = "Perfumes" (incluye Femenino/Masculino/Unissex/Infantil/Kits infantil).
+//  - stock_status=instock deja afuera los agotados del lado del sitio (~3.300 de ~7.800).
+//  - orderby=id: orden estable mientras se recorre en paralelo.
+//  - Precios en guaraníes (PYG, sin decimales). La conversión a USD la hace la app.
+//  - Los nombres vienen con entidades HTML ("VICTORIA&#8217;S").
+async function fetchMacedoniaPage(page) {
+  if (!Number.isInteger(page) || page < 1 || page > 100) return jsonResp({ error: 'page inválida' }, 400);
+  const url = 'https://compras.macedonia.com.py/wp-json/wc/store/v1/products'
+    + `?category=135&stock_status=instock&per_page=100&page=${page}&orderby=id&order=desc`
+    + '&_fields=id,sku,name,prices,categories';
+  const r = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+    },
+    cf: { cacheTtl: 900, cacheEverything: true },
+  });
+  if (!r.ok) return jsonResp({ error: `macedonia ${r.status}` }, 502);
+  const data = await r.json();
+  const items = (Array.isArray(data) ? data : []).map(p => ({
+    code: String(p.sku || p.id),
+    name: decodeEntities(String(p.name || '')).replace(/\s+/g, ' ').trim(),
+    pyg:  parseInt(p.prices?.price, 10) || 0,
+    cats: (p.categories || []).map(c => c.id),
+  }));
+  return jsonResp({ page, totalPages: parseInt(r.headers.get('X-WP-TotalPages'), 10) || 0, items });
 }
 
 function decodeEntities(s) {

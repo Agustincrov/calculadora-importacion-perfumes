@@ -670,7 +670,7 @@
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">1. Importar listas de proveedor</div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
-        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪), subí uno o más Excel/Numbers/PDF, o traé el catálogo de Ponto Com directo del sitio.
+        Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪), subí uno o más Excel/Numbers/PDF, o traé el catálogo de Ponto Com o de Macedonia directo del sitio.
         Podés importar varias listas — si un mismo producto aparece repetido, se resuelve automáticamente al generar la lista.
       </div>
 
@@ -702,6 +702,20 @@
           </svg>
           Traer catálogo Ponto Com
         </button>
+        <button class="btn btn-outline" id="pl-macedonia-btn" onclick="importMacedonia()" title="Trae los perfumes y kits con stock de compras.macedonia.com.py (sin body mist, splash, desodorantes, infantiles ni marcas de muy bajo costo), convertidos a USD con la tasa de al lado. Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          Traer catálogo Macedonia
+        </button>
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
+          Gs/USD
+          <input type="number" id="pl-macedonia-rate" step="0.5" min="1"
+            style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:var(--bg);color:var(--text);"
+            onchange="setMacedoniaRate(this.value)" />
+          <span class="col-tip" data-tip="Tasa con la que Macedonia pasa sus precios en USD a guaraníes. Para verificarla: precio en Gs ÷ precio en US$ del mismo producto en comprasparaguai.com.br. Si la cambiás, volvé a traer el catálogo."></span>
+        </label>
         <button class="btn btn-outline" onclick="clearAllPlSources()" style="color:var(--danger);border-color:var(--danger);" title="Borra las listas cargadas y el resultado generado, para empezar de cero">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="3 6 5 6 21 6"/>
@@ -1825,37 +1839,37 @@ const KNOWN_BRANDS = [
   ['Goldfield & Banks', 'GOLDFIELD & BANKS', 'GOLDFIELD BANKS'],
   ['Karl Lagerfeld'], ['Lorenzo Pazzaglia'], ['Louis Vuitton'],
   ['Maison Francis Kurkdjian', 'MAISON FRANCIS KURKDJIAN', 'MFK'],
-  ['Mercedes-Benz', 'MERCEDES BENZ'], ['New Brand', 'NEW BRAND'],
-  ['Rosendo Mateus', 'ROSENDO MATUE', 'ROSENDO MATEUS'], ['Salvatore Ferragamo', 'SAL FERRAG'],
+  ['Mercedes-Benz', 'MERCEDES BENZ', 'MERCEDES AMG'], ['New Brand', 'NEW BRAND'],
+  ['Rosendo Mateus', 'ROSENDO MATUE', 'ROSENDO MATEUS'], ['Salvatore Ferragamo', 'SAL FERRAG', 'FERRAGAMO'],
   ['Victorinox Swiss Army', 'SWISS ARMY'],
   ['Van Cleef & Arpels', 'VAN CLEEF & ARPELS', 'VAN CLEEF ARPELS'],
-  ['Animale'], ['Antonio Banderas', 'ANTONIO', 'AB'], ['Azzaro'], ['Billie Eilish'], ['Britney Spears', 'BRITNEY'], ['Burberry'],
+  ['Animale'], ['Antonio Banderas', 'ANTONIO', 'AB', 'ANTONIA BANDERAS', 'BLUE SEDUCTION', 'KING OF SEDUCTION'], ['Azzaro'], ['Billie Eilish'], ['Britney Spears', 'BRITNEY'], ['Burberry'],
   ['Cacharel'], ['Calvin Klein', 'CK'], ['Carolina Herrera', 'CAROLINA', 'CH'], ['Chanel'], ['Chloe'], ['Clinique'],
   ['Davidoff'], ['Diesel'], ['Dolce&Gabbana', 'DOLCE&GABBANA', 'DOLCE & GABBANA', 'D&G', 'DOLCE GAB', 'DOLCE G'],
-  ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV', 'ELIZ A'], ['Ferrari'], ['Giorgio Beverly Hills'],
+  ['Donna Karan', 'DKNY', 'DONNA K'], ['Elie Saab'], ['Elizabeth Arden', 'ELIZ A 5 AV', 'ELIZ A', 'ELIZABETH ARDENWHITE'], ['Ferrari'], ['Giorgio Beverly Hills'],
   ['Givenchy', 'GIV'], ['Gres'], ['Gucci'], ['Guerlain'], ['Halloween', 'HALLOWEN'], ['Hermes Paris', 'HERMES', 'UN JARDIN EN'],
-  ['Hugo Boss', 'HUGO'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G', 'JPG'],
+  ['Hugo Boss', 'HUGO'], ['Issey Miyake', 'MIYAKE'], ['Jacques Bogart', 'BOGART', 'JACQUES BORGAT'], ['Jean Paul Gaultier', 'JEAN PAUL G', 'J P G', 'JPG', 'JEAN OAUL GAULTIER'],
   ['Jimmy Choo'], ['Joop', 'JOOP!'], ['Juicy Couture', 'J COUTURE'], ['Kenzo'], ['Lacoste'], ['Lancome'], ['Lomani'],
   ['Marc Jacobs'], ['Marina de Bourbon', 'MARINA'], ['Michael Kors'], ['Montblanc', 'MONT BLANC'], ['Moschino'],
   ['Narciso Rodriguez'], ['Nina Ricci', 'NINA'], ['Paco Rabanne', 'PACO', 'RABANNE'], ['Paloma Picasso'], ['Prada'],
-  ['Ralph Lauren', 'RALPH L', 'RL'], ['Sabrina Carpenter', 'SAB CARPENTER'], ['Sarah Jessica Parker'], ['Shakira'],
+  ['Ralph Lauren', 'RALPH L', 'RL', 'RAPLH LAUREN'], ['Sabrina Carpenter', 'SAB CARPENTER'], ['Sarah Jessica Parker'], ['Shakira'],
   ['Thierry Mugler', 'T MUGLER', 'MUGLER'],
   ['Tiffany & Co'], ['Tommy Hilfiger', 'TOMMY'], ['Valentino'], ['Versace'],
-  ['Viktor&Rolf', 'VIKTOR&ROLF', 'VIKTOR & ROLF', 'VIKTOR ROLF'], ['Yves Saint Laurent', 'YVES SAINT LAURENT', 'YSL'],
+  ['Viktor&Rolf', 'VIKTOR&ROLF', 'VIKTOR & ROLF', 'VIKTOR ROLF', 'VICTOR Y ROLF'], ['Yves Saint Laurent', 'YVES SAINT LAURENT', 'YSL', 'SAINT LAURENT', 'YVES SAUNT LAURENT', 'YVEST SAINT LAURENT'],
 
   // Agregadas por el proveedor "VARIOS" (2026-08-10) — marcas occidentales/de diseñador no árabes
   ['Agatha Paris', 'AGATHA'], ['Agua Brava'], ['Alviero Martini'], ['Arrogance'],
   ['Arsenal'], ['Axis'], ['Benetton', 'UNITED COLORS OF BENETTON'], ['Blauer'], ['Blumarine'],
   ['Cuba Paris', 'CUBA'], ['Elodie Roy', 'BELIZE'], ['Enrico Coveri'], ['Escentric Molecules', 'ESCENTRIC'],
-  ['Faconnable'], ['Fragluxe'], ['Fred Hayman', "FRED HAYMAN'S"], ['Furla'], ['Gisada'], ['J.Arthe', 'J ARTHE', 'JEANNE ARTHES'],
+  ['Faconnable'], ['Fragluxe'], ['Fred Hayman', "FRED HAYMAN'S"], ['Furla'], ['Gisada'], ['J.Arthe', 'J ARTHE', 'JEANNE ARTHES', 'AMORE MIO'],
   ['Jacomo'], ['Jaguar'], ['Jennifer Lopez', 'JENNIFER L', 'JENNIFER LP'], ['Kate Spade'], ['Katy Perry'],
   ['La Rive'], ['Lanvin'], ['Ted Lapidus', 'LAPIDUS'], ['Loewe'], ['Lonkoom'], ['Lotto'],
-  ['Mandarina Duck'], ['Mauboussin'], ['Max & Co'], ['Moncler'], ['Nadia Ferreira'],
+  ['Mandarina Duck'], ['Mauboussin'], ['Max & Co', 'MAX&CO', 'MAX&GO'], ['Moncler'], ['Nadia Ferreira'],
   ['Nazareno Gabrielli', 'NAZARENO'], ['One Direction'], ['Pascal Morabito'], ['Perry Ellis'],
   ['Pino Silvestre', 'PINO'], ['Pitbull'], ['Porsche Design'], ['Puccini'], ['Reebok'],
   ['Salvador Dali', 'SAL DALI'], ['Skil'], ['Sorvella'], ['Stella Dustin'],
   ['Ulric de Varens', 'UDV'], ["Women'Secret", 'WOMEN ST', 'WOMEN SECRET'],
-  ['Police'], ['Paris Bleu'], ['David Beckham'], ['Pepe Jeans'], ['Bharara'],
+  ['Police'], ['Paris Bleu'], ['David Beckham'], ['Pepe Jeans'], ['Bharara', 'BHARARAH', 'BRARARA'],
   ['Oscar de la Renta', 'OSCAR DL'], ['Tous'], ['Trussardi'], ['Replay'], ['Rochas'],
   ['Escada'], ['Cool & Cool', 'COOL&COOL'], ['Brut'], ['Nautica'], ['Paris Hilton'],
   ['Victorio & Lucchino', 'VICTORIO &', 'VICTORIO&LUCCHINO'],
@@ -1866,7 +1880,7 @@ const KNOWN_BRANDS = [
   // Marcas árabes/de Medio Oriente detectadas en el proveedor "VARIOS"
   ['Adyan'], ['Afnan'], ['Ajmal'], ["Al A'raaf", "AL A'RAAF", 'AL ARAAF'], ['Al Haramain'],
   ['Al Wataniah', 'WATANIAH', 'SULTAN AL LAIL'], ['Armaf', 'MANDARIN SKY'], ['Dar Al Ward', 'DAR EL WARD', 'DAR AL WARD'], ['Lattafa', 'QAED AL FURSAN', 'YARA ELIXIR'],
-  ['Maison Alhambra', 'ALHAMBRA', 'MAISON AL', 'MAISON ALL', 'DELILAH BLANC'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
+  ['Maison Alhambra', 'ALHAMBRA', 'MAISON AL', 'MAISON ALL', 'DELILAH BLANC', 'ALHAMBRAJEAN', 'JEAN LOWE', 'BAROQUE ROUGE'], ['Maryaj'], ['Nasma'], ['Nejma'], ['Orientica'], ['Rasasi'],
   ['Rayhaan'], ['Sahari'],
   // Confianza media (revisar)
   ['Borouj'], ['Mawwal'], ['French Avenue'], ['Zirconia'], ['Arqus'], ['Bespoke'], ['Marina Royal'], ['Amaran'],
@@ -1876,13 +1890,13 @@ const KNOWN_BRANDS = [
   ['Atelier des Ors'], ['Christian Provenzano'], ['Ex Nihilo'], ['Fugazzi'], ['Liquides Imaginaires'],
   ['Marc-Antoine Barrois', 'MARC ANTOINE BARROIS'], ['Mes Bisous'], ['Oman Luxury'], ['Pantheon Roma'],
   ["Penhaligon's", 'PENHALIGONS', "PENHALIGON'S"], ['Rajani'], ['Salum Parfums', 'SALUM'], ['Unique Luxury'],
-  ['Ahmed Al Maghribi', 'AHMED'], ['Arabiyat'], ['Ard Al Zaafaran'], ['Asdaaf'], ['Aurora'], ['By Charisma'],
+  ['Ahmed Al Maghribi', 'AHMED'], ['Arabiyat'], ['Ard Al Zaafaran', 'ARD AL ZAA'], ['Asdaaf'], ['Aurora'], ['By Charisma'],
   ['Camara'], ['Emper'], ['Fragrance World', 'FRAGANCE WORLD'], ['Hamidi'], ['Karen Low'],
   ['Khadlaj'], ['Khalis'], ['Krip'], ['Laverne'], ['Maison Asrar'], ['My Perfumes', 'MPF'], ['Nusuk'],
   ['Oriarome'], ['Paris Corner'], ['Riiffs'], ['Thoq Al Hawamer'], ['Tubbees', 'TUBBES'], ['Zakat'],
   // Agregadas al revisar productos sin marca (2026-10-08)
   ["Victoria's Secret", "VICTORIA'S SECRET", 'VICTORIAS SECRET'], ['Shaikh Saeed'], ['Jessica Twain'],
-  ['Volare'], ['Choice Selection'], ['Nayaat'], ['Le Falcone'], ['Rue Broca'], ['Mast Rome'],
+  ['Volare'], ['Choice Selection'], ['Nayaat'], ['Le Falcone', 'LE FALCON'], ['Rue Broca'], ['Mast Rome'],
   ['Gulf Orchid', 'G ORCHID'], ['Gian Marco Venturi', 'GMV'], ['Gabriela Sabatini', 'GABRIELA'], ['Via Paris'],
   ['LPDO'], // sin categoría: "Jardin Imperial" es de Atelier Rebul, LPDO parece una imitación, no está claro qué es
   // Flavia (Armaf) queda afuera a propósito: aparece como "ARMAF FLAVIA …" y como marca propia le ganaría a Armaf.
@@ -1893,12 +1907,30 @@ const KNOWN_BRANDS = [
   // también es nombre de perfume de otras marcas ("ARMAF CLUB DE NUIT MILESTONE", "CUBA … MILESTONE") y
   // les ganaría la detección; en Ponto Com la marca le llega del sidebar del sitio.
   ['Pendora Scents'], ['Anfar'], ['Asten'], ['Love Collection'], ['Fariis'], ['Le Bonheur'], ['Reef'],
-  ['Mamlakat Al Oud'], ['Chris Adams'], ['Ansam'], ['Paris Secret'], ['Maison de Milan'], ['Mykonos'],
+  ['Mamlakat Al Oud'], ['Chris Adams', 'CHRIS ADMANS'], ['Ansam'], ['Paris Secret'], ['Maison de Milan'], ['Mykonos'],
   ['Ajyad'], ['Le Chameau'], ['Dignite'], ['Matin Martin'], ['Attri'], ['Grandeur Elite'], ['Sultan'],
   ['Zimaya'], ['Folie Pure'], ['Brand Collection'], ['NYC Scents'],
   ['Regalien'], ['The Fragrance'], ['Fabbrica della Musa'], ['M. Micallef', 'M MICALLEF'], ['Electimuss'],
-  ['Adidas'], ['Cristiano Ronaldo'], ['Estee Lauder'], ['Roberto Capucci'], ['Lulu Castagnette'],
-  ['Armand Basi'], ['Kylie Minogue'], ['Roccobarocco'], ['Morgan'], ['Guy Laroche'], ['Acquadì']
+  ['Adidas'], ['Cristiano Ronaldo', 'CR7', 'CRISTIANO ROLANDO'], ['Estee Lauder'], ['Roberto Capucci'], ['Lulu Castagnette'],
+  ['Armand Basi'], ['Kylie Minogue', 'KYLIE MINOGUEDISCO'], ['Roccobarocco'], ['Morgan'], ['Guy Laroche'], ['Acquadì'],
+
+  // Agregadas por el catálogo de Macedonia (2026-10-13). Las que son una palabra suelta que aparece dentro
+  // de otros nombres (Grandeur, Karma, Aris, Head, Royal Opera…) no van acá: ver MACEDONIA_PREFIX_BRANDS.
+  // Los alias con typos ("RAPLH LAUREN", "YVES SAUNT LAURENT"…) y las líneas sueltas (INSURRECTION,
+  // SWEET FEELING, MANDINO…) salen de los productos que el sitio publica así.
+  ['Al Absar'], ['Al Qusay'], ['Al Fares'], ['Al Malakia'], ['Assala'], ['Dkhoni', 'DKHOON'], ['Bidaya'],
+  ['Nabeel', 'NABBEL', 'LIL ABAD'], ['Aramios'],
+  ['Reyane Tradition', 'REYANE', 'INSURRECTION'], ['Elysees Fashion', 'ELISEES FASHION'], ['Marc Joseph'], ['Born in France'],
+  ['Jack Hope', 'SWEET FEELING'], ['Prestigius Parfum', 'PRESTIGIUS'], ['Prime Collection'], ['Just Jack'],
+  ['Ariaz'], ['Nanine'], ['Louis Cardin'], ['The Voice'],
+  ['Dina Cosmetics', 'DINA COSMETICS', 'DINA PARFUMS', 'MANDINO', 'CACHOTTERIE', 'LEA & MIA', 'LOVE ME FOLIE'],
+  ['Spirit of Kings'], ['Laboratorio Olfattivo'], ['Birkholz'], ['Min New York'], ['The Merchant of Venice'],
+  ['Amouroud'], ['Coreterno'], ['Korloff'], ['Noeme'], ['Maybach'], ['Simone Andreoli', 'SIMONE ANFREOLI'],
+  ['Albane Noble'], ['Orens'],
+  ['Guess'], ['John Varvatos'], ['Tonino Lamborghini'], ['Zadig & Voltaire', 'ZADIG VOLTAIRE', 'Z&V'],
+  ['Beverly Hills Polo Club', 'POLO CLUB BEVERLY HILLS'], ['Hollister'], ['Alfa Romeo'], ['Dsquared2'],
+  ['Boucheron'], ['Emanuel Ungaro', 'UNGARO'], ['Michel Germain'], ['Antonio Puig', 'QUORUM'], ['Braccialini'],
+  ['Elizabeth Taylor'], ['Molyneux'], ['UFC']
 ];
 
 // ── Categoría de marca (nicho / diseñador / árabe) — alimenta el filtro de la lista publicada ──
@@ -1924,7 +1956,10 @@ const BRAND_CATEGORY = (() => {
     'Rosendo Mateus', 'Salum Parfums', 'Scentologia', 'Sospiro', 'Stephane Humbert Lucas 777', 'Thameen',
     'The House of Oud', 'Thomas Kosmala', 'Tiziana Terenzi', 'Tom Ford', 'Unique Luxury',
     'Van Cleef & Arpels', 'Vertus', 'Vilhelm', 'Xerjoff',
-    'Regalien', 'The Fragrance', 'Fabbrica della Musa', 'M. Micallef', 'Electimuss' // Ponto Com (2026-10-09)
+    'Regalien', 'The Fragrance', 'Fabbrica della Musa', 'M. Micallef', 'Electimuss', // Ponto Com (2026-10-09)
+    // Macedonia (2026-10-13)
+    'Spirit of Kings', 'Laboratorio Olfattivo', 'Birkholz', 'Min New York', 'The Merchant of Venice', 'Amouroud',
+    'Coreterno', 'Korloff', 'Noeme', 'Maybach', 'Simone Andreoli', 'Orens', 'Emirates Pride'
   ]);
   add('disenador', [
     'Abercrombie & Fitch', 'Agatha Paris', 'Agua Brava', 'Alviero Martini', 'Animale', 'Antonio Banderas',
@@ -1950,7 +1985,11 @@ const BRAND_CATEGORY = (() => {
     "Victoria's Secret", 'Viktor&Rolf', "Women'Secret", 'Yves Saint Laurent',
     // Ponto Com (2026-10-09)
     'Adidas', 'Cristiano Ronaldo', 'Estee Lauder', 'Roberto Capucci', 'Lulu Castagnette', 'Armand Basi',
-    'Kylie Minogue', 'Roccobarocco', 'Morgan', 'Guy Laroche', 'Acquadì'
+    'Kylie Minogue', 'Roccobarocco', 'Morgan', 'Guy Laroche', 'Acquadì',
+    // Macedonia (2026-10-13)
+    'Guess', 'John Varvatos', 'Tonino Lamborghini', 'Zadig & Voltaire', 'Beverly Hills Polo Club', 'Hollister',
+    'Alfa Romeo', 'Dsquared2', 'Boucheron', 'Emanuel Ungaro', 'Michel Germain', 'Head', '4711', 'Antonio Puig',
+    'Braccialini', 'Elizabeth Taylor', 'Molyneux', 'UFC'
   ]);
   add('arabe', [
     'Adyan', 'Afnan', 'Ahmed Al Maghribi', 'Ajmal', "Al A'raaf", 'Al Haramain', 'Al Wataniah', 'Amaran',
@@ -1967,7 +2006,15 @@ const BRAND_CATEGORY = (() => {
     'Pendora Scents', 'Anfar', 'Asten', 'Love Collection', 'Fariis', 'Le Bonheur', 'Reef', 'Mamlakat Al Oud',
     'Chris Adams', 'Milestone', 'Ansam', 'Paris Secret', 'Maison de Milan', 'Mykonos', 'Ajyad', 'Le Chameau',
     'Dignite', 'Matin Martin', 'Attri', 'Grandeur Elite', 'Sultan', 'Zimaya', 'Folie Pure', 'Brand Collection',
-    'NYC Scents'
+    'NYC Scents',
+    // Macedonia (2026-10-13). Reyane Tradition, Elysees Fashion, Marc Joseph, Born in France, Jack Hope,
+    // Prestigius, Prime Collection, Royal Opera, Just Jack, Ariaz, Nanine, Boulevard Paris, Albane Noble, Louis
+    // Cardin, Dina Cosmetics y The Voice son casas de clones (francesas o sin origen claro): van como árabe por
+    // el mismo criterio que Mykonos, compiten en ese rango. Emirates Pride va como nicho (USD 80–180).
+    'Al Absar', 'Al Qusay', 'Al Fares', 'Al Malakia', 'Flavia', 'Assala', 'Dkhoni', 'Bidaya', 'Nabeel', 'Aramios', 'Karma', 'Aris', 'Almas',
+    'Dubai', 'Reyane Tradition', 'Elysees Fashion', 'Marc Joseph', 'Born in France', 'Jack Hope',
+    'Prestigius Parfum', 'Prime Collection', 'Royal Opera', 'Just Jack', 'Ariaz', 'Nanine', 'Boulevard Paris',
+    'Albane Noble', 'Louis Cardin', 'Dina Cosmetics', 'The Voice'
   ]);
   return map;
 })();
@@ -2005,7 +2052,7 @@ const NON_PERFUME_PATTERNS = [
   /^MAC\s/i,      // maquillaje MAC Cosmetics
   /^(KIT\s)?INFANTIL\b/i, // productos infantiles con licencia (Disney, Batman, etc.), sueltos o en kit
   /^FRASCO\b/i,   // envases/frascos vacíos, no es un producto terminado
-  /^(DISNEY|EAU MY UNICORN)\b/i, // infantiles con licencia, igual que INFANTIL (el PDF de la tienda no usa esa palabra)
+  /^DISNEY\b|\bEAU MY UNICORN\b/i, // infantiles con licencia, igual que INFANTIL (el PDF de la tienda no usa esa palabra; Macedonia pone "AIR-VAL EAU MY UNICORN")
   // Lociones y cremas sueltas. Los kits quedan afuera de la regla: "PERFUME 100ML + BODY LOTION" sí es perfume.
   /^(?!.*(\bKIT\b|\+)).*\b(LOTION|BODY CREAM|HAND CREAM|CREME POTE)\b/i,
 ];
@@ -2443,6 +2490,146 @@ async function importPontocom() {
     }
   } catch (err) {
     alert(`No se pudo traer el catálogo de Ponto Com: ${err.message}. No se agregó nada.`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = label;
+  }
+}
+
+// ── Import: catálogo de Macedonia (compras.macedonia.com.py) ──
+// WooCommerce: el Worker (/macedonia) pasa la Store API pública, 100 productos con stock por página.
+// Los precios vienen en guaraníes. La tienda los fija en USD y los muestra en Gs a una tasa propia
+// (2026-10-13: 7.484,5 Gs/USD, redondeado a la centena hacia arriba — 197 de 200 productos coincidieron
+// con el precio en US$ que la misma tienda publica en comprasparaguai.com.br). La tasa se edita al lado
+// del botón; si cambia, hay que volver a traer el catálogo.
+const MACEDONIA_RATE_DEFAULT = 7484.5;
+const MACEDONIA_INFANTIL_CATS = [353, 354]; // "Kits infantil", "Infantil"
+// Body mist/splash, desodorantes, cremas, productos de cabello: se excluyen si el nombre no dice que
+// además trae perfume. En los kits solo se mira MIST/SPLASH: "KIT 100ML+B.LOTION" es un kit de perfume.
+const MACEDONIA_BODY_RE = /\b(BODY|BODDY|MIST|SPLASH|DEO|DESODORANTE|SHOWER|HAIR|BRUMA|LOTION|CREAM|CREMA|AFTER SHAVE|CORPORAL|PERFUME SPRAY|\d+ML SPRAY)\b/; // "MAISON ALHAMBRA … 150ML SPRAY" = body spray
+const MACEDONIA_KIT_BODY_RE = /\b(MIST|SPLASH)\b/;
+const MACEDONIA_PERFUME_RE = /\b(EAU DE|EDP|EDT|PARFUM|PERFUM|COLONIA|COLOGNE|EXTRAIT)\b/;
+// Marcas descartadas (2026-10-13, ver card 09): clones/marcas de muy bajo costo, las mismas que se
+// descartaron en Ponto Com, y lo que no es perfume (cabello/barbería, desodorantes, perfume para
+// perros, maquillaje). Comparado contra el principio del nombre: la tienda siempre pone la marca primero.
+const MACEDONIA_EXCLUDE_BRANDS_RE = new RegExp('^(PARFUMS DES CHAMPS |ELITE BRANDS |YVES DE |LONDON |PARIS |ACQUA DI )?(' + [
+  'CUBA', 'LOVALI', 'REAL TIME', 'MONTWOOD', 'AVEC CREATIONS', 'AVAR', 'FRAGLUXE', 'NEW BRAND',
+  'ULRIC DE VARENS', 'LINNG? YOUNG', 'GEORGES MEZZ?OTTI', 'OMERTA', 'PREMIER SOIR', "CHIC'N GLAM",
+  'ME MY LIFE', 'CALL ME', 'WHISKY', 'NUVO', 'COFCI', 'UMBRO', 'JOLI',
+  'SCENTOLOGY',
+  'MIRADA', 'SISTELLE', 'CYRUS', 'DORIANE', 'MONTANA COLLECTION', 'BEAUTIK', // también descartadas en Ponto Com (Cyrus y Doriane son de Sistelle)
+  'MORFOSE', 'OSSION', 'BABARIA', 'MY PET', 'ETRE BELLE', 'MEDICUBE', 'STITCH' // no es perfume
+].join('|') + ')\\b');
+// Marcas que se reconocen solo cuando el nombre EMPIEZA con ellas. Como alias de KNOWN_BRANDS
+// aplicarían a todas las fuentes, y son palabras que aparecen dentro de nombres de otras marcas
+// (GRANDEUR, KARMA, ANGEL, 212…). Quedan como marca de la fuente: "Generar" las usa si
+// detectKnownBrand no encuentra otra.
+const MACEDONIA_PREFIX_BRANDS = [
+  [/^GRANDEUR\b/, 'Grandeur Elite'], [/^KARMA\b/, 'Karma'], [/^ARIS\b/, 'Aris'], [/^ALMAS\b/, 'Almas'],
+  [/^HEAD\b/, 'Head'], [/^EMIRATES\b/, 'Emirates Pride'], [/^BOULEVARD\b/, 'Boulevard Paris'], [/^DUBAI\b/, 'Dubai'],
+  [/^ROYAL OPERA\b/, 'Royal Opera'], // como alias global le ganaría a "RAYDAN ROYAL OPERA"
+  [/^PARISIS\b/, 'Born in France'], [/^(PARIRIS|PARIS) PARFUMS? H AND H\b/, 'Born in France'],
+  [/^JULIETT?[AE]\b/, 'Juliette Has a Gun'], [/^ACQUA DI GIO/, 'Giorgio Armani'],
+  [/^ALIEN\b|^ANGEL\b(?! SCHLESSER)/, 'Thierry Mugler'], [/^212\b/, 'Carolina Herrera'], [/^L'EAU D'ISSEY\b/, 'Issey Miyake'],
+  [/^ECLAT D'ARPEGE\b/, 'Lanvin'], [/^VIVA LA JUICY\b/, 'Juicy Couture'],
+  [/^MEDITERRANEO\b/, 'Antonio Banderas'], [/^GIORGIO\b(?! ARMANI)/, 'Giorgio Beverly Hills'],
+  [/^FANTASY\b/, 'Britney Spears'], [/^KAWKAB\b/, 'Ahmed Al Maghribi'], [/^ELYSEES\b/, 'Elysees Fashion'],
+  [/^DINA\b/, 'Dina Cosmetics'], [/^4711\b/, '4711'],
+  [/^MILESTONE\b/, 'Milestone'], [/^FLAVIA\b/, 'Flavia'] // fuera de KNOWN_BRANDS a propósito (ver ahí)
+];
+
+let macedoniaRate = MACEDONIA_RATE_DEFAULT;
+try { macedoniaRate = parseFloat(localStorage.getItem('importo-macedonia-rate')) || MACEDONIA_RATE_DEFAULT; } catch {}
+function setMacedoniaRate(v) {
+  const n = parseFloat(v);
+  if (!(n > 0)) return;
+  macedoniaRate = n;
+  try { localStorage.setItem('importo-macedonia-rate', String(n)); } catch {}
+}
+
+// Mismo formato que plCleanPontocomName, con el género en español (FEMENINO/MASCULINO) y sin los
+// códigos de barras que traen algunos nombres ("CUBA LA VIDA FEM 100ML EDP C/S 5425039220611").
+function plCleanMacedoniaName(raw) {
+  return plStripAccents(raw).toUpperCase()
+    .replace(/[’´`]/g, "'")
+    .replace(/^PERFUMES?\s+/, '')
+    .replace(/\b\d{8,14}\b/g, '')
+    .replace(/(MASCULINO|FEM+[EI]NINO)(?=\d)/g, '$1 ')
+    .replace(/\bMASCULINO\b/g, 'MASC')
+    .replace(/\bFEM+[EI]NINO\b/g, 'FEM')
+    .replace(/\bUNI(?:SSEX|SEX)\b/g, 'UNI')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function plMacedoniaExcluded(name) {
+  if (MACEDONIA_EXCLUDE_BRANDS_RE.test(name)) return true;
+  if (MACEDONIA_PERFUME_RE.test(name)) return false;
+  return (/\bKIT\b|\+/.test(name) ? MACEDONIA_KIT_BODY_RE : MACEDONIA_BODY_RE).test(name);
+}
+
+async function importMacedonia() {
+  const btn = document.getElementById('pl-macedonia-btn');
+  const label = btn.innerHTML;
+  btn.disabled = true;
+  const rate = macedoniaRate;
+  try {
+    const fetchPage = async page => {
+      const r = await fetch(`${WORKER}/macedonia?page=${page}`);
+      if (!r.ok) throw new Error(`Macedonia respondió ${r.status} (página ${page})`);
+      return r.json();
+    };
+    const first = await fetchPage(1);
+    const total = Math.min(first.totalPages || 1, 100);
+    const pages = [first];
+    let read = first.items.length;
+    btn.textContent = `Macedonia: ${read.toLocaleString('es-AR')} leídos…`;
+    let next = 2;
+    await Promise.all(Array.from({ length: 6 }, async () => {
+      while (next <= total) {
+        const data = await fetchPage(next++);
+        pages.push(data);
+        read += data.items.length;
+        btn.textContent = `Macedonia: ${read.toLocaleString('es-AR')} leídos…`;
+      }
+    }));
+
+    const seen = new Set();
+    const items = [];
+    const newBrands = {};
+    let noBrand = 0;
+    for (const it of pages.flatMap(pg => pg.items)) {
+      if (seen.has(it.code)) continue;
+      seen.add(it.code);
+      if (!(it.pyg > 0)) continue;
+      if (it.cats.some(c => MACEDONIA_INFANTIL_CATS.includes(c))) continue;
+      const name = plCleanMacedoniaName(it.name);
+      if (plMacedoniaExcluded(name) || plIsNonPerfumeCategory(name)) continue;
+
+      const prefix = MACEDONIA_PREFIX_BRANDS.find(([re]) => re.test(name));
+      const brand = detectKnownBrand(name) || (prefix ? prefix[1] : '');
+      if (!brand) noBrand++;
+      else if (!BRAND_CATEGORY[brand]) newBrands[brand] = (newBrands[brand] || 0) + 1;
+      items.push({ name, brand, price: Math.round(it.pyg / rate * 100) / 100, pyg: it.pyg, code: it.code });
+    }
+    if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
+
+    // Reemplaza la carga anterior, igual que Ponto Com.
+    const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    plSources = plSources.filter(s => !s.macedonia);
+    plSources.push({
+      id: plNextSourceId++, name: `Macedonia · ${date} · ${rate.toLocaleString('es-AR')} Gs/USD`, macedonia: true, items
+    });
+    savePlSources();
+    renderPlSourceTags();
+
+    const nb = Object.entries(newBrands).sort((a, b) => b[1] - a[1]);
+    const notes = [];
+    if (nb.length > 0) notes.push(`${nb.length} marca(s) sin categoría — se van a preciar con los tramos generales:\n` +
+      nb.map(([b, n]) => `• ${b} (${n})`).join('\n'));
+    if (noBrand > 0) notes.push(`${noBrand} producto(s) sin marca detectada: aparecen con ⚠ en la tabla de revisión.`);
+    if (notes.length > 0) alert(`Macedonia: ${items.length.toLocaleString('es-AR')} productos cargados.\n\n` + notes.join('\n\n'));
+  } catch (err) {
+    alert(`No se pudo traer el catálogo de Macedonia: ${err.message}. No se agregó nada.`);
   } finally {
     btn.disabled = false;
     btn.innerHTML = label;
@@ -3970,6 +4157,7 @@ renderPlTiers();
 renderPlBrandTags();
 renderPlSourceTags();
 renderPublishSecretStatus();
+document.getElementById('pl-macedonia-rate').value = macedoniaRate;
 
 // ─────────────────────────────────────────────
 // Export plain text notes
