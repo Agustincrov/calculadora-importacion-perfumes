@@ -1,6 +1,6 @@
 // Cloudflare Worker — comparapi-proxy
 // Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogos de perfumes de
-// Ponto Com (pontocom.com, scraping del listado paginado) y publicación de docs/catalogo.html en GitHub
+// Ponto Com (pontocom.com) y Star Company (starcompany-py.com), scraping del listado paginado, y publicación de docs/catalogo.html en GitHub
 // (/publish-catalog). Macedonia no pasa por acá: su hosting (SiteGround) le responde con un captcha a todo
 // pedido que sale de Cloudflare; el catálogo se baja desde el navegador (ver index.html). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
 // se sacaron el 2026-10-10.
@@ -29,6 +29,9 @@ async function handle(req) {
     if (path === '/pontocom') {
       const q = new URL(req.url).searchParams;
       return await fetchPontocomPage(q.get('cat') || PONTOCOM_MAIN, parseInt(q.get('page'), 10));
+    }
+    if (path === '/starcompany') {
+      return await fetchStarCompanyPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
     }
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
@@ -117,6 +120,41 @@ function decodeEntities(s) {
     .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&'); // último: si no, "&amp;quot;" terminaría como comilla
+}
+
+// ── Star Company — catálogo de perfumes ──────────────────────────
+// PrestaShop con un módulo propio de categoría (categoria-premium/121 = PERFUMES). Sin CORS ni API
+// pública, igual que Ponto Com. El listado solo muestra productos con stock y acepta hasta n=96 por
+// página (~22 páginas). Cada tarjeta: <article class="scp-card"> con .scp-brand, <h2><a href=…/ID-slug.html>
+// nombre</a></h2>, .scp-price "U$ 13,99" y .scp-stock "228 In Stock". Una página por request.
+async function fetchStarCompanyPage(page) {
+  if (!Number.isInteger(page) || page < 1 || page > 100) return jsonResp({ error: 'page inválida' }, 400);
+  const r = await fetch(`https://www.starcompany-py.com/categoria-premium/121?fc=module&order=position&n=96&p=${page}`, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml',
+      'Accept-Language': 'pt-BR,pt;q=0.9',
+    },
+    cf: { cacheTtl: 900, cacheEverything: true },
+  });
+  if (!r.ok) return jsonResp({ error: `starcompany ${r.status}` }, 502);
+  const html = await r.text();
+
+  const text = re => (re ? decodeEntities(re[1]).replace(/\s+/g, ' ').trim() : '');
+  const items = [];
+  for (const card of html.split('<article class="scp-card">').slice(1)) {
+    const link = card.match(/<h2><a href="[^"]*\/(\d+)-[^"]*">([^<]*)<\/a>/);
+    if (!link) continue;
+    items.push({
+      code:  link[1],
+      name:  text([, link[2]]),
+      brand: text(card.match(/class="scp-brand">([^<]*)</)),
+      price: parseArNum(text(card.match(/class="scp-price">([^<]*)</)).replace(/^U\$\s*/, '')), // "1.250,00" → 1250
+      stock: parseInt(text(card.match(/class="scp-stock[^"]*">([^<]*)</)), 10) || 0,
+    });
+  }
+  const total = html.match(/Existem\s+([\d.]+)\s+produtos/);
+  return jsonResp({ page, total: total ? parseInt(total[1].replace(/\./g, ''), 10) : null, items });
 }
 
 // ── Publicar catalogo.html en GitHub Pages ─────────────────────────

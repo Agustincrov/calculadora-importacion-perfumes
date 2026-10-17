@@ -728,7 +728,11 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Genove
         </button>
-        <button class="btn btn-outline" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect y Genove uno detrás del otro (un par de minutos) y avisa al final. Macedonia se carga aparte con su archivo.">
+        <button class="btn btn-outline" id="pl-star-btn" onclick="importSiteCatalog('star')" title="Trae los perfumes con stock de starcompany-py.com (los mismos nombres que sus listas de WhatsApp, precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Traer catálogo Star Company
+        </button>
+        <button class="btn btn-outline" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove y Star Company uno detrás del otro (un par de minutos) y avisa al final. Macedonia se carga aparte con su archivo.">
           Traer todos
         </button>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
@@ -1965,6 +1969,7 @@ const KNOWN_BRANDS = [
   ['Nylaa'], ['Auraa'], ['Novah Scents'], ['Lafayette'], ['Ramon Blazar'],
   ['93MIL'], ["Etat Libre d'Orange", 'ETAT LIBRE D ORANGE', 'ETAT LIBRE D`ORANGE'],
   ['Giardini di Toscana'],
+  ['Marquisa Dubai'], ['Floraiku Paris', 'FLORAIKU'], ['Ramon Bejar'], // Star Company (2026-10-16)
   ['Tumi'], ['Dunhill'], ['Tory Burch'], ['Kylie Jenner'], ['Baldessarini'], ['Banana Republic'], ['Carven'],
   ['Cerruti', 'CERRUTTI'], ['Christian Siriano'], ['S.T. Dupont', 'ST DUPONT', 'S T DUPONT'], ['Jeanne en Provence'],
   ['Rihanna'], ['Thalia Sodi']
@@ -1998,7 +2003,8 @@ const BRAND_CATEGORY = (() => {
     'Spirit of Kings', 'Laboratorio Olfattivo', 'Birkholz', 'Min New York', 'The Merchant of Venice', 'Amouroud',
     'Coreterno', 'Korloff', 'Noeme', 'Maybach', 'Simone Andreoli', 'Orens', 'Emirates Pride',
     // Elegancia / Atacado Connect / Genove (2026-10-14)
-    '93MIL', "Etat Libre d'Orange", 'Giardini di Toscana'
+    '93MIL', "Etat Libre d'Orange", 'Giardini di Toscana',
+    'Floraiku Paris', 'Ramon Bejar' // Star Company (2026-10-16)
   ]);
   add('disenador', [
     'Abercrombie & Fitch', 'Agatha Paris', 'Agua Brava', 'Alviero Martini', 'Animale', 'Antonio Banderas',
@@ -2061,7 +2067,8 @@ const BRAND_CATEGORY = (() => {
     // sin origen claro: van como árabe por el mismo criterio.
     'Risala', 'Vurv', 'Al Hunaidi', 'Royal Glory', 'Sweet Dreams of Dubai', 'Maison Ghandour', 'Swiss Arabian', 'Abyat',
     'Azha', 'Maison Awad', 'Modyafa', 'Akaro', "L'Affair", 'Olmas', 'Shaikh Mohd Saeed', 'Al Rehab', 'Al Atrab',
-    'Al Ambra', 'Nylaa', 'Auraa', 'Novah Scents', 'Lafayette', 'Ramon Blazar', 'Coral'
+    'Al Ambra', 'Nylaa', 'Auraa', 'Novah Scents', 'Lafayette', 'Ramon Blazar', 'Coral',
+    'Marquisa Dubai' // Star Company (2026-10-16)
   ]);
   return map;
 })();
@@ -2100,6 +2107,7 @@ const NON_PERFUME_PATTERNS = [
   /^MAC\s/i,      // maquillaje MAC Cosmetics
   /^(KIT\s)?INFANTIL\b/i, // productos infantiles con licencia (Disney, Batman, etc.), sueltos o en kit
   /^FRASCO\b/i,   // envases/frascos vacíos, no es un producto terminado
+  /^BOLSA\b/i,    // carteras de regalo (Star Company: "BOLSA CAROLINA HERRERA 212 BLACK BAG")
   /^DISNEY\b|\bEAU MY UNICORN\b/i, // infantiles con licencia, igual que INFANTIL (el PDF de la tienda no usa esa palabra; Macedonia pone "AIR-VAL EAU MY UNICORN")
   // Lociones y cremas sueltas. Los kits quedan afuera de la regla: "PERFUME 100ML + BODY LOTION" sí es perfume.
   /^(?!.*(\bKIT\b|\+)).*\b(LOTION|BODY CREAM|HAND CREAM|CREME POTE)\b/i,
@@ -3836,7 +3844,23 @@ const PL_DUPLICATE_DECISIONS_SEED = {
   "BLUE D EDT G LIGHT M::BLUE DOLCE EDT GABBANA HOMME LIGHT POUR": "same",
   "DOLCE EDP F GABBANA ONE THE::DOLCE EDP FOR GABBANA ONE THE WOMEN": "same",
   "DOLCE EDP F GABBANA ONE THE::DOLCE EDP GAB INTENS ONE THE": "different",
-  "DOLCE EDP F GABBANA ONE THE::DOLCE EDP GAB ONE THE": "same"
+  "DOLCE EDP F GABBANA ONE THE::DOLCE EDP GAB ONE THE": "same",
+  // Star Company (2026-10-16): pares nuevos contra sus listas de WhatsApp
+  "ARMAF EDP MANDARIN ODYSSEY SKY::ARMAF EDP MANDARIN ODYSSEY SKY VINTAGE": "different",
+  "ANTONIO BANDERAS EDT OF QUEEN SEDUCTION::ANTONIO BANDERAS EDT OF QUEEN SEDUCTION SUMMERLAND": "different",
+  "CALVIN CK EDT KLEIN ONE::CALVIN CK EDT KLEIN ONE SHOCK": "different",
+  "ARMANI ECLAT EDP PASSIONE SI::ARMANI EDP PASSIONE SI": "different",
+  "ACQUA ACQUA CLASSIC DI EDP SARDEGNA TESTER::ACQUA CLASSIC DI EDP SARDEGNA SMERALDA TESTER": "different",
+  "ACQUA ACQUA CLASSIC DI EDP SARDEGNA TESTER::ACQUA CLASSIC DI EDP MAIJDA SARDEGNA TESTER": "different",
+  "ACQUA ACQUA CLASSIC DI EDP SARDEGNA TESTER::ACQUA CLASSIC DESVELOS DI EDP SARDEGNA TESTER": "different",
+  "ACQUA ACQUA CLASSIC DI EDP SARDEGNA TESTER::ACQUA CLASSIC DI EDP NOIS SARDEGNA TESTER": "different",
+  "DOM EDP IMAGINAIRES LIQUIDES MILLESIME ROSA::DOM EDP IMAGINAIRES LIQUIDES ROSA": "different",
+  "ACCENTO EDP PURPLE SWAROVSKI XERJOFF::ACCENTO EDP PURPLE XERJOFF": "different",
+  "ARMAF CLUB DE EDP MILESTONE NUIT::ARMAF CLUB DE EDP NUIT WOMAN": "different",
+  "EDP EROS FLAME VERSACE::EDP EROS VERSACE": "different",
+  "LAURENT LE MYSLF PARFUM SAINT YVES::LAURENT LE PARFUM SAINT Y YVES": "different",
+  "ACQUA ACQUA CLASSIC DI EDP SARDEGNA TESTER::ACQUA CHARME CLASSIC DI EDP SARDEGNA SMERALDA TESTER": "different",
+  "ACQUA ACQUA CLASSIC DI EDP SARDEGNA TESTER::ACQUA AMMAJANTE CLASSIC DESVELOS DI EDP SARDEGNA TESTER": "different"
 };
 for (const [k, v] of Object.entries(PL_DUPLICATE_DECISIONS_SEED)) if (!(k in plDuplicateDecisions)) plDuplicateDecisions[k] = v;
 
@@ -4459,7 +4483,8 @@ const PL_SITE_BRAND_MAP = {
 // (tienen sus tramos), como en Ponto Com y Macedonia. Además vale MACEDONIA_EXCLUDE_BRANDS_RE sobre el nombre.
 const PL_SITE_EXCLUDE_BRANDS = new Set([
   'JOLI JOLI', 'OMERTA', 'LINN YOUNG', 'BYPHASSE', 'DR.BRAND', 'DR.BRAND 30ML/LOTION-SPL', 'DEOMANIA',
-  'BEAUTY BRAND', 'SMART COLLECTION', 'SHIRLEY MAY', 'CUBA', 'ULRIC DE VARENS', 'FRAGLUXE', 'MIRADA', 'SISTELLE'
+  'BEAUTY BRAND', 'SMART COLLECTION', 'SHIRLEY MAY', 'CUBA', 'ULRIC DE VARENS', 'FRAGLUXE', 'MIRADA', 'SISTELLE',
+  'MINI BRAND COLLECTION', 'BABY THREE' // Star Company (2026-10-16): réplicas de 25 ml a US$ 3 y un juguete "blind box"
 ]);
 
 function plSiteBrandKey(raw) { return plStripAccents(String(raw || '')).toUpperCase().replace(/[\s.]+$/, '').replace(/\s+/g, ' ').trim(); }
@@ -4492,7 +4517,8 @@ function plBuildSiteItems(rows) {
     if (seen.has(r.code)) continue;
     seen.add(r.code);
     if (!(r.price > 0)) continue;
-    const upper = plStripAccents(r.name).toUpperCase().replace(/^(KIT\s+)?PERFUMES?\s+/, ''); // Atacado: "Perfume Cuba …"
+    // Atacado: "Perfume Cuba …"; Star Company: "PERF TESTER FEM SCENTOLOGIA …"
+    const upper = plStripAccents(r.name).toUpperCase().replace(/^(KIT\s+)?(PERFUMES?|PERF)\s+(TESTER\s+)?((FEM|MASC|UNI|UNISEX)\s+)?/, '');
     if (PL_SITE_EXCLUDE_BRANDS.has(plSiteBrandKey(r.site)) || MACEDONIA_EXCLUDE_BRANDS_RE.test(upper)) continue;
     if (plIsBodyProduct(upper) || plIsNonPerfumeCategory(upper)) continue;
     const brand = detectKnownBrand(r.name) || plSiteBrand(r.site);
@@ -4548,6 +4574,27 @@ async function plFetchEleganciaRows(progress) {
   }));
 }
 
+// Star Company: vía Worker (/starcompany), el sitio no manda CORS. Solo lista productos con stock, 96 por página.
+// El nombre queda tal cual ("PERF FEM ANTONIO BANDERAS … 80ML"): es el mismo de sus listas de WhatsApp, así
+// valen las decisiones de duplicados ya tomadas sobre esos textos.
+async function plFetchStarCompanyRows(progress) {
+  const page = p => plFetchJson(`${WORKER}/starcompany?page=${p}`);
+  const first = await page(1);
+  progress(first.items.length);
+  const last = Math.min(Math.ceil((first.total || first.items.length) / 96), 60);
+  const rest = await plMapLimit(Array.from({ length: Math.max(0, last - 1) }, (_, i) => i + 2), 4, async p => {
+    const d = await page(p);
+    progress(d.items.length);
+    return d;
+  });
+  const rows = [first, ...rest].flatMap(d => d.items);
+  if (first.total && rows.length < first.total * 0.95) throw new Error(`llegaron ${rows.length} de ${first.total} productos`);
+  return rows.filter(x => x.stock > 0).map(x => ({
+    code: x.code, name: plStripAccents(x.name).toUpperCase().replace(/[’´`]/g, "'").replace(/\s+/g, ' ').trim(),
+    price: x.price, site: x.brand
+  }));
+}
+
 async function plFetchAtacadoRows(progress) {
   const filter = `classificacao_br:=[${ATACADO_PERFUME_CLASSES.map(c => '`' + c + '`').join(',')}] && estoque:=true`;
   const url = page => `${ATACADO_SEARCH}?` + new URLSearchParams({ q: '*', query_by: 'nome_site_es', filter_by: filter, per_page: 250, page });
@@ -4589,7 +4636,8 @@ async function plFetchGenoveRows(progress) {
 const PL_SITE_IMPORTS = {
   elegancia: { label: 'Elegancia', btn: 'pl-elegancia-btn', fetchRows: plFetchEleganciaRows },
   atacado:   { label: 'Atacado Connect', btn: 'pl-atacado-btn', fetchRows: plFetchAtacadoRows },
-  genove:    { label: 'Genove', btn: 'pl-genove-btn', fetchRows: plFetchGenoveRows }
+  genove:    { label: 'Genove', btn: 'pl-genove-btn', fetchRows: plFetchGenoveRows },
+  star:      { label: 'Star Company', btn: 'pl-star-btn', fetchRows: plFetchStarCompanyRows }
 };
 
 // Trae un sitio y reemplaza su carga anterior (marcada con `site`). Con quiet devuelve el aviso en vez de
@@ -4627,7 +4675,7 @@ async function importSiteCatalog(key, { quiet = false } = {}) {
   }
 }
 
-// Ponto Com + los tres sitios, uno detrás del otro, con un solo aviso al final. Macedonia queda afuera:
+// Ponto Com + los sitios de PL_SITE_IMPORTS, uno detrás del otro, con un solo aviso al final. Macedonia queda afuera:
 // necesita el archivo del marcador.
 async function importAllSiteCatalogs() {
   const btn = document.getElementById('pl-all-sites-btn');
