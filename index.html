@@ -804,7 +804,12 @@
     <div class="card" id="pl-fuzzy-card" style="margin-bottom:20px;display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div class="card-title">Posibles duplicados a revisar</div>
-        <button class="btn btn-outline" id="pl-fuzzy-copy-btn" onclick="copyPlFuzzyPairs()" title="Copia los pares pendientes, uno por línea y separados por tabulación (nombre, USD y lista de cada lado), para pegarlos en una planilla o pasarlos a revisar">Copiar pares</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline" id="pl-fuzzy-copy-btn" onclick="copyPlFuzzyPairs()" title="Copia los pares pendientes, uno por línea y separados por tabulación (nombre, USD y lista de cada lado), para pegarlos en una planilla o pasarlos a revisar">Copiar pares</button>
+          <button class="btn btn-outline" onclick="document.getElementById('pl-decisions-file').click()" title="Carga un archivo decisiones-….json con pares ya revisados afuera. No pisa las decisiones que ya tomaste y vuelve a generar la lista">Importar decisiones</button>
+          <input type="file" id="pl-decisions-file" accept=".json,application/json" style="display:none"
+            onchange="importDuplicateDecisionsFile(this.files[0]); this.value=''" />
+        </div>
       </div>
       <div style="font-size:.8rem;color:var(--muted);margin-bottom:12px;">
         Estos pares se parecen pero no coinciden exactamente (distinto formato entre proveedores). Elegí si son el mismo producto o no — no se fusionan solos.
@@ -5402,6 +5407,31 @@ async function copyPlFuzzyPairs() {
     btn.textContent = 'No se pudo copiar';
   }
   setTimeout(() => { btn.textContent = 'Copiar pares'; }, 2000);
+}
+
+// Archivo que arma la revisión de duplicados hecha afuera: {source:'importo-duplicados', date,
+// decisions:{"coreA::coreB": "same"|"different"}} (mismas claves que plDuplicateKey).
+// Las decisiones que ya existen no se pisan, igual que la semilla.
+async function importDuplicateDecisionsFile(file) {
+  if (!file) return;
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { alert('El archivo no es un JSON válido.'); return; }
+  if (!data || data.source !== 'importo-duplicados' || !data.decisions || typeof data.decisions !== 'object') {
+    alert('No es un archivo de decisiones de duplicados.');
+    return;
+  }
+  let added = 0, kept = 0, invalid = 0;
+  for (const [k, v] of Object.entries(data.decisions)) {
+    if (!k.includes('::') || (v !== 'same' && v !== 'different')) { invalid++; continue; }
+    if (k in plDuplicateDecisions) { kept++; continue; }
+    plDuplicateDecisions[k] = v;
+    added++;
+  }
+  saveDuplicateDecisions();
+  if (plSources.length) generatePriceList();
+  const pending = plFuzzyPairs.filter(p => !p.resolved).length;
+  alert(`Decisiones nuevas: ${added}` + (kept ? `\nYa decididas antes (no se tocaron): ${kept}` : '')
+    + (invalid ? `\nIgnoradas por formato: ${invalid}` : '') + `\nPares pendientes de revisar: ${pending}`);
 }
 
 // Actualización quirúrgica: en vez de reconstruir toda la tabla de revisión (miles de filas en
