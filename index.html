@@ -791,6 +791,12 @@
       </div>
       <div id="pl-tiers-arabe"></div>
 
+      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 8px;">
+        Tramos de margen para nicho
+        <span class="col-tip" data-tip="Se aplican solo a productos de categoría Nicho (Xerjoff, Creed, Montale…), en el generador y en el autocompletado de la calculadora. Los valores iniciales salen de comparar con precios de la competencia (2026-10-21). Si borrás todos los tramos menos el último, el nicho usa los tramos generales."></span>
+      </div>
+      <div id="pl-tiers-nicho"></div>
+
       <div class="btn-group" style="margin-top:16px;">
         <button class="btn btn-success" onclick="generatePriceList()">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -1802,13 +1808,31 @@ try {
   if (Array.isArray(savedArabe) && savedArabe.length > 0) plTiersArabe = savedArabe;
 } catch { /* se queda con el default */ }
 
+// Tramos propios para nicho: el mercado argentino vende nicho bastante más caro que diseñador
+// del mismo costo. Defaults conservadores (2026-10-21, card 14): unos puntos más que los generales,
+// así los hypeados (Naxos, Erba Pura) siguen cerca del precio más bajo de la competencia.
+const PL_DEFAULT_TIERS_NICHO = [
+  { max: 60,  margin: 34 },
+  { max: 100, margin: 30 },
+  { max: 150, margin: 27 },
+  { max: 300, margin: 26 },
+  { max: 500, margin: 11 },
+  { max: null, margin: 20 }
+];
+let plTiersNicho = PL_DEFAULT_TIERS_NICHO.map(t => ({ ...t }));
+try {
+  const savedNicho = JSON.parse(localStorage.getItem('importo-margin-tiers-nicho') || 'null');
+  if (Array.isArray(savedNicho) && savedNicho.length > 0) plTiersNicho = savedNicho;
+} catch { /* se queda con el default */ }
+
 function savePlTiers() {
   localStorage.setItem('importo-margin-tiers', JSON.stringify(plTiers));
   localStorage.setItem('importo-margin-tiers-arabe', JSON.stringify(plTiersArabe));
+  localStorage.setItem('importo-margin-tiers-nicho', JSON.stringify(plTiersNicho));
 }
 
 function plTierList(set) {
-  return set === 'arabe' ? plTiersArabe : plTiers;
+  return set === 'arabe' ? plTiersArabe : set === 'nicho' ? plTiersNicho : plTiers;
 }
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
@@ -4951,6 +4975,7 @@ function renderPlSourceTags() {
 function renderPlTiers() {
   renderPlTierSet('general', 'pl-tiers');
   renderPlTierSet('arabe', 'pl-tiers-arabe');
+  renderPlTierSet('nicho', 'pl-tiers-nicho');
 }
 
 function renderPlTierSet(set, containerId) {
@@ -5001,11 +5026,11 @@ function removePlTier(set, i) {
   if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
 }
 
-// category = 'nicho' | 'disenador' | 'arabe' | '' (ver plCategoryFor). Los árabes usan sus propios
+// category = 'nicho' | 'disenador' | 'arabe' | '' (ver plCategoryFor). Árabes y nicho usan sus propios
 // tramos salvo que el usuario los haya dejado en un solo tramo "resto" sin tramos finitos.
 function marginForPriceUsd(priceUsd, category = '') {
-  const useArabe = category === 'arabe' && plTiersArabe.some(t => t.max != null);
-  const list = useArabe ? plTiersArabe : plTiers;
+  const own = category === 'arabe' ? plTiersArabe : category === 'nicho' ? plTiersNicho : null;
+  const list = own && own.some(t => t.max != null) ? own : plTiers;
   const finite = list.filter(t => t.max != null).sort((a, b) => a.max - b.max);
   for (const t of finite) if (priceUsd <= t.max) return t.margin;
   const catchAll = list.find(t => t.max == null);
