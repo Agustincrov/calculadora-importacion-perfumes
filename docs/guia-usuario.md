@@ -169,7 +169,7 @@ La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios)
 - **Descargar página buscable:** descarga ese mismo archivo (`catalogo.html`) en vez de publicarlo.
 - **Exportar Excel:** descarga la lista con marca, producto y precio.
 
-En el catálogo, tus clientes pueden buscar, filtrar por categoría (nicho, diseñador, árabe), marca y rango de precio, armar un carrito y mandarte el pedido por WhatsApp. El carrito descuenta $10.000 por cada unidad extra ("Descuento envío combinado").
+En el catálogo, tus clientes pueden buscar, filtrar por categoría (nicho, diseñador, árabe), marca y rango de precio, armar un carrito y mandarte el pedido por WhatsApp. El total del carrito es la suma de los precios: el envío ya va incluido en cada producto.
 
 Los precios del catálogo quedan fijos al momento de publicar: si cambian las cotizaciones, volvé a generar y publicar.
 
