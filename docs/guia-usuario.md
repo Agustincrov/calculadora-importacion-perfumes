@@ -69,7 +69,7 @@ Completá los campos editables:
 
 - **Tipo** — **CLI** si el producto es para un cliente (paga envío fijo) o **STOCK** si es para vos (sin envío). Hacé clic para cambiarlo.
 - **Cliente** — El nombre del cliente (solo en filas CLI). Sirve para contar clientes y para el desglose por cliente del resumen.
-- **Producto** — El nombre del perfume. Si tenés listas cargadas, escribí parte del nombre y te aparecen sugerencias con precio y proveedor (si está en varios proveedores, se muestra el más barato). Al elegir una, se completan el nombre, el precio y el margen según los tramos del Generador de listas.
+- **Producto** — El nombre del perfume. Si tenés listas cargadas, escribí parte del nombre y te aparecen sugerencias con precio y proveedor (si está en varios proveedores, se muestra el más barato). Al elegir una, se completan el nombre, el precio y el margen según la ganancia por categoría del Generador de listas.
 - **Precio USD** — El precio en dólares que te cobra la tienda.
 - **Cantidad** — Cuántas unidades de ese producto comprás.
 - **Margen %** (en la tabla de abajo) — El margen de ganancia que querés. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).
@@ -143,7 +143,7 @@ Podés cargar varias listas, de cualquiera de estas formas:
 
 - **Costo:** se calcula igual que en la calculadora (USDT directo), asumiendo una sola transferencia.
 - **Envío fijo y redondeo:** se toman de la pestaña Calculadora, así los precios coinciden.
-- **Tramos de margen:** el margen depende de cuánto cuesta el producto en dólares (por ejemplo, hasta USD 60 → 32%). Hay un juego de tramos general y otro para las **marcas árabes**, que compiten por precio y llevan menos margen. Podés editar, agregar o quitar tramos.
+- **Ganancia por categoría:** para cada categoría (diseñador, árabe y nicho) definís una ganancia = **monto fijo + % del costo** (por ejemplo, diseñador: $6.000 + 30% del costo). Así el margen baja solo a medida que el perfume es más caro, pero la ganancia en pesos siempre crece. Debajo de cada fórmula ves ejemplos con la cotización del momento. Los productos sin categoría usan la de diseñador.
 
 Apretá **Generar lista de precios**.
 
@@ -204,7 +204,7 @@ No. La calculadora funciona directo desde el navegador.
 Sí, aunque se ve mejor en computadora por la cantidad de columnas.
 
 **¿Los datos se guardan?**
-Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, los tramos de margen, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.
+Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, la ganancia por categoría, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.
 
 **¿Con qué frecuencia se actualiza el USDT?**
 Cada vez que abrís la calculadora o apretás "Actualizar cotizaciones". No se actualizan solas mientras la tenés abierta.

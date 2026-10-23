@@ -412,7 +412,7 @@
     <ul>
       <li><strong>Tipo</strong> — <strong>CLI</strong> si el producto es para un cliente (paga envío fijo) o <strong>STOCK</strong> si es para vos (sin envío). Hacé clic para cambiarlo.</li>
       <li><strong>Cliente</strong> — El nombre del cliente (solo en filas CLI). Sirve para contar clientes y para el desglose por cliente del resumen.</li>
-      <li><strong>Producto</strong> — El nombre del perfume. Si tenés listas cargadas, escribí parte del nombre y te aparecen sugerencias con precio y proveedor (si está en varios proveedores, se muestra el más barato). Al elegir una, se completan el nombre, el precio y el margen según los tramos del Generador de listas.</li>
+      <li><strong>Producto</strong> — El nombre del perfume. Si tenés listas cargadas, escribí parte del nombre y te aparecen sugerencias con precio y proveedor (si está en varios proveedores, se muestra el más barato). Al elegir una, se completan el nombre, el precio y el margen según la ganancia por categoría del Generador de listas.</li>
       <li><strong>Precio USD</strong> — El precio en dólares que te cobra la tienda.</li>
       <li><strong>Cantidad</strong> — Cuántas unidades de ese producto comprás.</li>
       <li><strong>Margen %</strong> (en la tabla de abajo) — El margen de ganancia que querés. Un 30% significa que tu ganancia es el 30% del precio de venta final (no es un markup).</li>
@@ -483,7 +483,7 @@
     <ul>
       <li><strong>Costo:</strong> se calcula igual que en la calculadora (USDT directo), asumiendo una sola transferencia.</li>
       <li><strong>Envío fijo y redondeo:</strong> se toman de la pestaña Calculadora, así los precios coinciden.</li>
-      <li><strong>Tramos de margen:</strong> el margen depende de cuánto cuesta el producto en dólares (por ejemplo, hasta USD 60 → 32%). Hay un juego de tramos general y otro para las <strong>marcas árabes</strong>, que compiten por precio y llevan menos margen. Podés editar, agregar o quitar tramos.</li>
+      <li><strong>Ganancia por categoría:</strong> para cada categoría (diseñador, árabe y nicho) definís una ganancia = <strong>monto fijo + % del costo</strong> (por ejemplo, diseñador: $6.000 + 30% del costo). Así el margen baja solo a medida que el perfume es más caro, pero la ganancia en pesos siempre crece. Debajo de cada fórmula ves ejemplos con la cotización del momento. Los productos sin categoría usan la de diseñador.</li>
     </ul>
     <p>Apretá <strong>Generar lista de precios</strong>.</p>
 
@@ -545,7 +545,7 @@
 
     <div class="faq-item">
       <p class="faq-q">¿Los datos se guardan?</p>
-      <p class="faq-a">Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, los tramos de margen, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.</p>
+      <p class="faq-a">Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, la ganancia por categoría, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.</p>
     </div>
 
     <div class="faq-item">

@@ -781,21 +781,10 @@
       </div>
 
       <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
-        Tramos de margen según costo original (USD del proveedor)
+        Ganancia por categoría
+        <span class="col-tip" data-tip="Ganancia = monto fijo + % del costo total (producto + comisión + envío fijo + fee USDT). El margen baja solo a medida que sube el costo y la ganancia en pesos siempre crece, sin saltos entre tramos. Se usa en el generador y en el autocompletado de la calculadora. Los productos sin categoría usan la de Diseñador."></span>
       </div>
-      <div id="pl-tiers"></div>
-
-      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 8px;">
-        Tramos de margen para marcas árabes
-        <span class="col-tip" data-tip="Se aplican solo a productos de categoría Árabe (Lattafa, Armaf, Rayhaan…), en el generador y en el autocompletado de la calculadora. Los valores iniciales salen de comparar con precios de la competencia: quedan unos puntos por debajo. Si borrás todos los tramos menos el último, los árabes usan los tramos generales."></span>
-      </div>
-      <div id="pl-tiers-arabe"></div>
-
-      <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 8px;">
-        Tramos de margen para nicho
-        <span class="col-tip" data-tip="Se aplican solo a productos de categoría Nicho (Xerjoff, Creed, Montale…), en el generador y en el autocompletado de la calculadora. Los valores iniciales salen de comparar con precios de la competencia (2026-10-21). Si borrás todos los tramos menos el último, el nicho usa los tramos generales."></span>
-      </div>
-      <div id="pl-tiers-nicho"></div>
+      <div id="pl-formulas"></div>
 
       <div class="btn-group" style="margin-top:16px;">
         <button class="btn btn-success" onclick="generatePriceList()">
@@ -1775,65 +1764,31 @@ function clearAllPlSources() {
   document.getElementById('pl-result-card').style.display = 'none';
   document.getElementById('pl-fuzzy-card').style.display = 'none';
 }
-const PL_DEFAULT_TIERS = [
-  { max: 60,  margin: 32 },
-  { max: 100, margin: 24 },
-  { max: 150, margin: 22 },
-  { max: 300, margin: 20 },
-  { max: 500, margin: 10 },
-  { max: null, margin: 20 }
+// Ganancia por categoría = monto fijo + % del costo total (card 14, 2026-10-22/23). Reemplaza a los
+// tramos de margen: bajar el margen al cruzar un borde hacía que un perfume más caro dejara menos
+// plata (ej. diseñador USD 301 al 10% < USD 300 al 20%). Así el margen baja solo a medida que sube
+// el costo y la ganancia en pesos siempre crece. Defaults calibrados contra los precios de la
+// competencia: quedan debajo del más barato en tantos productos como los tramos, con más ganancia.
+const PL_MARGIN_FORMULA_SETS = [
+  { key: 'disenador', label: 'Diseñador' },
+  { key: 'arabe',     label: 'Árabe' },
+  { key: 'nicho',     label: 'Nicho' }
 ];
-let plTiers = PL_DEFAULT_TIERS.map(t => ({ ...t }));
+const PL_DEFAULT_FORMULAS = {
+  disenador: { fixed: 6000,  pct: 30 },
+  arabe:     { fixed: 6000,  pct: 26 },
+  nicho:     { fixed: 36000, pct: 19 }
+};
+let plFormulas = JSON.parse(JSON.stringify(PL_DEFAULT_FORMULAS));
 try {
-  const savedTiers = JSON.parse(localStorage.getItem('importo-margin-tiers') || 'null');
-  if (Array.isArray(savedTiers) && savedTiers.length > 0) plTiers = savedTiers;
+  const saved = JSON.parse(localStorage.getItem('importo-margin-formulas') || 'null');
+  if (saved) PL_MARGIN_FORMULA_SETS.forEach(({ key }) => {
+    if (saved[key] && saved[key].fixed != null && saved[key].pct != null) plFormulas[key] = saved[key];
+  });
 } catch { /* se queda con el default */ }
 
-// Tramos propios para la categoría árabe: los árabes compiten por precio y se venden con menos
-// margen que un diseñador del mismo costo. Defaults calibrados contra un catálogo de la competencia
-// (2026-10-08): ~96% del precio de ellos (ej. Rayhaan Italia, 35 USD → ~$95.000).
-const PL_DEFAULT_TIERS_ARABE = [
-  { max: 12, margin: 35 },
-  { max: 15, margin: 34 },
-  { max: 20, margin: 29 },
-  { max: 25, margin: 26 },
-  { max: 30, margin: 24 },
-  { max: 40, margin: 20 },
-  { max: 60, margin: 17 },
-  { max: null, margin: 15 }
-];
-let plTiersArabe = PL_DEFAULT_TIERS_ARABE.map(t => ({ ...t }));
-try {
-  const savedArabe = JSON.parse(localStorage.getItem('importo-margin-tiers-arabe') || 'null');
-  if (Array.isArray(savedArabe) && savedArabe.length > 0) plTiersArabe = savedArabe;
-} catch { /* se queda con el default */ }
-
-// Tramos propios para nicho: el mercado argentino vende nicho bastante más caro que diseñador
-// del mismo costo. Defaults conservadores (2026-10-21, card 14): unos puntos más que los generales,
-// así los hypeados (Naxos, Erba Pura) siguen cerca del precio más bajo de la competencia.
-const PL_DEFAULT_TIERS_NICHO = [
-  { max: 60,  margin: 34 },
-  { max: 100, margin: 30 },
-  { max: 150, margin: 27 },
-  { max: 300, margin: 26 },
-  { max: 400, margin: 24 },
-  { max: 500, margin: 22 },
-  { max: null, margin: 20 }
-];
-let plTiersNicho = PL_DEFAULT_TIERS_NICHO.map(t => ({ ...t }));
-try {
-  const savedNicho = JSON.parse(localStorage.getItem('importo-margin-tiers-nicho') || 'null');
-  if (Array.isArray(savedNicho) && savedNicho.length > 0) plTiersNicho = savedNicho;
-} catch { /* se queda con el default */ }
-
-function savePlTiers() {
-  localStorage.setItem('importo-margin-tiers', JSON.stringify(plTiers));
-  localStorage.setItem('importo-margin-tiers-arabe', JSON.stringify(plTiersArabe));
-  localStorage.setItem('importo-margin-tiers-nicho', JSON.stringify(plTiersNicho));
-}
-
-function plTierList(set) {
-  return set === 'arabe' ? plTiersArabe : set === 'nicho' ? plTiersNicho : plTiers;
+function savePlFormulas() {
+  localStorage.setItem('importo-margin-formulas', JSON.stringify(plFormulas));
 }
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
@@ -4972,70 +4927,60 @@ function renderPlSourceTags() {
   });
 }
 
-// ── Margin tiers UI ──
-function renderPlTiers() {
-  renderPlTierSet('general', 'pl-tiers');
-  renderPlTierSet('arabe', 'pl-tiers-arabe');
-  renderPlTierSet('nicho', 'pl-tiers-nicho');
-}
-
-function renderPlTierSet(set, containerId) {
-  const el = document.getElementById(containerId);
+// ── Ganancia por categoría UI ──
+const PL_FORMULA_INPUT_STYLE = 'padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;';
+function renderPlFormulas() {
+  const el = document.getElementById('pl-formulas');
   if (!el) return;
-  el.innerHTML = plTierList(set).map((t, i) => `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
-      <span style="font-size:.8rem;color:var(--muted);min-width:150px;">Costo original hasta</span>
-      ${t.max == null
-        ? '<span style="font-size:.82rem;font-weight:700;min-width:70px;">∞ (resto)</span>'
-        : `<input type="number" value="${t.max}" min="0" step="1"
-             style="width:80px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;"
-             oninput="updatePlTier('${set}',${i},'max',+this.value)" />`}
-      <span style="font-size:.8rem;color:var(--muted);">USD → margen</span>
-      <input type="number" value="${t.margin}" min="0" max="95" step="0.5"
-        style="width:64px;padding:6px 7px;border:1px solid var(--border);border-radius:5px;font-size:.85rem;"
-        oninput="updatePlTier('${set}',${i},'margin',+this.value)" />%
-      ${t.max != null
-        ? `<button class="del-btn" onclick="removePlTier('${set}',${i})" title="Quitar tramo">
-             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-           </button>`
-        : ''}
-    </div>`).join('') +
-    `<button class="btn btn-outline" style="margin-top:2px;" onclick="addPlTier('${set}')">+ Agregar tramo</button>`;
+  el.innerHTML = PL_MARGIN_FORMULA_SETS.map(({ key, label }) => `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:.82rem;font-weight:700;min-width:80px;">${label}</span>
+        <span style="font-size:.8rem;color:var(--muted);">Ganancia = $</span>
+        <input type="number" value="${plFormulas[key].fixed}" min="0" step="1000" style="width:96px;${PL_FORMULA_INPUT_STYLE}"
+          oninput="updatePlFormula('${key}','fixed',+this.value)" />
+        <span style="font-size:.8rem;color:var(--muted);">+</span>
+        <input type="number" value="${plFormulas[key].pct}" min="0" max="95" step="0.5" style="width:64px;${PL_FORMULA_INPUT_STYLE}"
+          oninput="updatePlFormula('${key}','pct',+this.value)" />
+        <span style="font-size:.8rem;color:var(--muted);">% del costo</span>
+      </div>
+      <div id="pl-formula-preview-${key}" style="font-size:.75rem;color:var(--muted);margin-top:3px;"></div>
+    </div>`).join('');
+  renderPlFormulaPreviews();
 }
 
-function updatePlTier(set, i, field, val) {
-  const list = plTierList(set);
-  if (!list[i]) return;
-  list[i][field] = val;
-  savePlTiers();
+function updatePlFormula(key, field, val) {
+  plFormulas[key][field] = val;
+  savePlFormulas();
+  renderPlFormulaPreviews();
   if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
 }
 
-function addPlTier(set) {
-  const list = plTierList(set);
-  list.splice(Math.max(0, list.length - 1), 0, { max: 100, margin: 30 });
-  savePlTiers();
-  renderPlTiers();
+// Ejemplos con las tasas y la config actuales, para ver cómo queda cada fórmula sin generar.
+const PL_FORMULA_PREVIEW_USD = { disenador: [30, 60, 100, 150, 300], arabe: [10, 20, 30, 40, 60], nicho: [60, 150, 300, 500] };
+function renderPlFormulaPreviews() {
+  const cfg = plGetConfig();
+  PL_MARGIN_FORMULA_SETS.forEach(({ key }) => {
+    const el = document.getElementById(`pl-formula-preview-${key}`);
+    if (!el) return;
+    el.textContent = PL_FORMULA_PREVIEW_USD[key].map(usd => {
+      const cost   = plComputeCostTotal(usd, cfg.rates, cfg.envioFijo);
+      const margin = marginForPriceUsd(usd, key);
+      const price  = plFinalPrice(cost, margin, cfg.roundStep);
+      return `USD ${usd} → ${margin}% · gana ${fmt_ars(price - cost)}`;
+    }).join('  ·  ');
+  });
 }
 
-function removePlTier(set, i) {
-  const list = plTierList(set);
-  if (list.length <= 1) return;
-  list.splice(i, 1);
-  savePlTiers();
-  renderPlTiers();
-  if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
-}
-
-// category = 'nicho' | 'disenador' | 'arabe' | '' (ver plCategoryFor). Árabes y nicho usan sus propios
-// tramos salvo que el usuario los haya dejado en un solo tramo "resto" sin tramos finitos.
+// category = 'nicho' | 'disenador' | 'arabe' | '' (ver plCategoryFor); sin categoría usa diseñador.
+// La ganancia (fijo + % del costo) se convierte a margen sobre el precio, que es lo que esperan
+// plFinalPrice y las filas de la calculadora.
 function marginForPriceUsd(priceUsd, category = '') {
-  const own = category === 'arabe' ? plTiersArabe : category === 'nicho' ? plTiersNicho : null;
-  const list = own && own.some(t => t.max != null) ? own : plTiers;
-  const finite = list.filter(t => t.max != null).sort((a, b) => a.max - b.max);
-  for (const t of finite) if (priceUsd <= t.max) return t.margin;
-  const catchAll = list.find(t => t.max == null);
-  return catchAll ? catchAll.margin : (finite.length ? finite[finite.length - 1].margin : 30);
+  const f    = plFormulas[category] || plFormulas.disenador;
+  const cfg  = plGetConfig();
+  const cost = plComputeCostTotal(priceUsd, cfg.rates, cfg.envioFijo);
+  const gain = f.fixed + cost * f.pct / 100;
+  return cost + gain > 0 ? Math.round(gain / (cost + gain) * 1000) / 10 : 0;
 }
 
 // ── Normalization & matching ──
@@ -5305,6 +5250,7 @@ function plGetConfig() {
 }
 
 function refreshPlPricing() {
+  renderPlFormulaPreviews();
   if (plItems.length > 0) { recomputePlPricing(); renderPlTable(); }
 }
 
@@ -6513,7 +6459,7 @@ async function publishCatalogAuto() {
 });
 renderPlSharedConfigPreview();
 
-renderPlTiers();
+renderPlFormulas();
 renderPlBrandTags();
 renderPlSourceTags();
 renderPublishSecretStatus();
