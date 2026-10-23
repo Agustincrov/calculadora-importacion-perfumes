@@ -143,7 +143,7 @@ Podés cargar varias listas, de cualquiera de estas formas:
 
 - **Costo:** se calcula igual que en la calculadora (USDT directo), asumiendo una sola transferencia.
 - **Envío fijo y redondeo:** se toman de la pestaña Calculadora, así los precios coinciden.
-- **Ganancia por categoría:** para cada categoría (diseñador, árabe y nicho) definís una ganancia = **monto fijo + % del costo** (por ejemplo, diseñador: $6.000 + 30% del costo). Así el margen baja solo a medida que el perfume es más caro, pero la ganancia en pesos siempre crece. Debajo de cada fórmula ves ejemplos con la cotización del momento. Los productos sin categoría usan la de diseñador.
+- **Ganancia por categoría:** para cada categoría (diseñador, árabe y nicho) definís una ganancia = **monto fijo + % del producto** (por ejemplo, diseñador: $2.000 + 35% del precio del proveedor). La comisión, el envío y el fee se suman al costo, sin ganancia encima. La ganancia en pesos siempre crece con el costo del perfume. Debajo de cada fórmula ves ejemplos con la cotización del momento. Los productos sin categoría usan la de diseñador.
 
 Apretá **Generar lista de precios**.
 
@@ -183,13 +183,13 @@ Los precios del catálogo quedan fijos al momento de publicar: si cambian las co
 
 ## Ejemplo rápido
 
-Querés comprar un perfume que cuesta **USD 50**. El USDT está en **$1.500**, la comisión es **4 USD**, el envío fijo es **$10.000/producto** y la fee de transferencia es **3 USDT**.
+Querés comprar un perfume que cuesta **USD 50**. El USDT está en **$1.500**, la comisión es **5 USD**, el envío fijo es **$5.000/producto** y la fee de transferencia es **1,5 USDT**.
 
 1. Verificá que "USDT" diga 1.500.
 2. Cargá el producto con precio 50 y cantidad 1.
 3. Poné un margen del 30%.
 
-Costo: 50 × 1.500 = $75.000 + comisión $6.000 + envío $10.000 + fee $4.500 = **$95.500**. Precio de venta: $95.500 ÷ 0,70 = $136.428, redondeado a **$136.500**. Ganancia: **$41.000** (USD 27,33).
+Costo: 50 × 1.500 = $75.000 + comisión $7.500 + envío $5.000 + fee $2.250 = **$89.750**. Precio de venta: $89.750 ÷ 0,70 = $128.214, redondeado a **$128.300**. Ganancia: **$38.550** (USD 25,70).
 
 Si cargás más productos para el mismo cliente, cada uno suma su propio envío fijo, y la fee de transferencia se reparte entre todos los productos del mismo pedido.
 

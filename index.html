@@ -424,7 +424,7 @@
           <label>Comisión/producto <span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">USD</span>
-            <input type="number" id="r-comision" value="4" step="0.5" style="padding-left:38px" />
+            <input type="number" id="r-comision" value="5" step="0.5" style="padding-left:38px" />
           </div>
         </div>
 
@@ -433,7 +433,7 @@
           <label>Envío total (ARS) <span class="pill pill-p2">FASE 2</span></label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
-            <input type="number" id="r-envio" value="17000" step="100" />
+            <input type="number" id="r-envio" value="20000" step="100" />
           </div>
         </div>
 
@@ -444,7 +444,7 @@
           </label>
           <div class="rate-input-wrap">
             <span class="prefix">$</span>
-            <input type="number" id="r-envio-fijo" value="10000" step="500" />
+            <input type="number" id="r-envio-fijo" value="5000" step="500" />
           </div>
         </div>
 
@@ -455,7 +455,7 @@
           </label>
           <div class="rate-input-wrap">
             <span class="prefix">USDT</span>
-            <input type="number" id="r-usdt-fee" value="3" step="0.5" style="padding-left:44px" />
+            <input type="number" id="r-usdt-fee" value="1.5" step="0.5" style="padding-left:44px" />
           </div>
         </div>
 
@@ -782,7 +782,7 @@
 
       <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
         Ganancia por categoría
-        <span class="col-tip" data-tip="Ganancia = monto fijo + % del costo total (producto + comisión + envío fijo + fee USDT). El margen baja solo a medida que sube el costo y la ganancia en pesos siempre crece, sin saltos entre tramos. Se usa en el generador y en el autocompletado de la calculadora. Los productos sin categoría usan la de Diseñador."></span>
+        <span class="col-tip" data-tip="Ganancia = monto fijo + % del producto (precio del proveedor × USDT). La comisión, el envío fijo y el fee USDT se suman al costo, sin ganancia encima. La ganancia en pesos siempre crece con el costo, sin saltos entre tramos. Se usa en el generador y en el autocompletado de la calculadora. Los productos sin categoría usan la de Diseñador."></span>
       </div>
       <div id="pl-formulas"></div>
 
@@ -1764,31 +1764,34 @@ function clearAllPlSources() {
   document.getElementById('pl-result-card').style.display = 'none';
   document.getElementById('pl-fuzzy-card').style.display = 'none';
 }
-// Ganancia por categoría = monto fijo + % del costo total (card 14, 2026-10-22/23). Reemplaza a los
+// Ganancia por categoría = monto fijo + % del producto (card 14, 2026-10-22/23). Reemplaza a los
 // tramos de margen: bajar el margen al cruzar un borde hacía que un perfume más caro dejara menos
-// plata (ej. diseñador USD 301 al 10% < USD 300 al 20%). Así el margen baja solo a medida que sube
-// el costo y la ganancia en pesos siempre crece. Defaults calibrados contra los precios de la
-// competencia: quedan debajo del más barato en tantos productos como los tramos, con más ganancia.
+// plata (ej. diseñador USD 301 al 10% < USD 300 al 20%). Así la ganancia en pesos siempre crece con
+// el costo. El % va solo sobre el producto: comisión, envío y fee pasan al precio sin ganancia.
+// Defaults calibrados contra los precios de la competencia: quedan debajo del más barato en tantos
+// productos como los tramos, con más ganancia. La clave es -v2 porque el % antes iba sobre el
+// costo total: los valores guardados con la fórmula vieja no significan lo mismo.
 const PL_MARGIN_FORMULA_SETS = [
   { key: 'disenador', label: 'Diseñador' },
   { key: 'arabe',     label: 'Árabe' },
   { key: 'nicho',     label: 'Nicho' }
 ];
 const PL_DEFAULT_FORMULAS = {
-  disenador: { fixed: 6000,  pct: 30 },
-  arabe:     { fixed: 6000,  pct: 26 },
-  nicho:     { fixed: 36000, pct: 19 }
+  disenador: { fixed: 2000,  pct: 35 },
+  arabe:     { fixed: 0,     pct: 46 },
+  nicho:     { fixed: 40000, pct: 18.5 }
 };
+const PL_FORMULAS_STORAGE_KEY = 'importo-margin-formulas-v2';
 let plFormulas = JSON.parse(JSON.stringify(PL_DEFAULT_FORMULAS));
 try {
-  const saved = JSON.parse(localStorage.getItem('importo-margin-formulas') || 'null');
+  const saved = JSON.parse(localStorage.getItem(PL_FORMULAS_STORAGE_KEY) || 'null');
   if (saved) PL_MARGIN_FORMULA_SETS.forEach(({ key }) => {
     if (saved[key] && saved[key].fixed != null && saved[key].pct != null) plFormulas[key] = saved[key];
   });
 } catch { /* se queda con el default */ }
 
 function savePlFormulas() {
-  localStorage.setItem('importo-margin-formulas', JSON.stringify(plFormulas));
+  localStorage.setItem(PL_FORMULAS_STORAGE_KEY, JSON.stringify(plFormulas));
 }
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
@@ -1846,7 +1849,7 @@ const KNOWN_BRANDS = [
   ['Ormonde Jayne'], ['Paradis des Sens'], ['Parfums de Marly', 'MARLY', 'PDM', 'PARFUMS DE MARLE'], ['Roja'], ['Scentologia'],
   ['Sospiro'], ['Stephane Humbert Lucas 777', 'STEPHANE HUMBERT LUCAS', 'STEPHANE HUMBERT'],
   ['Thameen'], ['The House of Oud', 'THOO HOUSE', 'THOO'],
-  ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford', 'TOM FOR'], ['Vertus'], ['Vilhelm'], ['Xerjoff', 'XEREJOFF', 'CASAMORATI'],
+  ['Thomas Kosmala'], ['Tiziana Terenzi'], ['Tom Ford', 'TOM FOR'], ['Vertus'], ['Vilhelm'], ['Xerjoff', 'XEREJOFF', 'CASAMORATI', 'TORINO'],
   ['Fomowa'],
   ['Kayali'], ['Abercrombie & Fitch', 'ABERCROMBIE & FITCH', 'ABERCROMBIE FITCH', 'ABERCROMBIE'], ['Amouage'],
   ['Argos'], ['Ariana Grande', 'ARIANA G'], ['BDK Parfums', 'BDK'], ['Boadicea the Victorious', 'BOADICEA'],
@@ -4944,7 +4947,7 @@ function renderPlFormulas() {
         <span style="font-size:.8rem;color:var(--muted);">+</span>
         <input type="number" value="${plFormulas[key].pct}" min="0" max="95" step="0.5" style="width:64px;${PL_FORMULA_INPUT_STYLE}"
           oninput="updatePlFormula('${key}','pct',+this.value)" />
-        <span style="font-size:.8rem;color:var(--muted);">% del costo</span>
+        <span style="font-size:.8rem;color:var(--muted);">% del producto</span>
       </div>
       <div id="pl-formula-preview-${key}" style="font-size:.75rem;color:var(--muted);margin-top:3px;"></div>
     </div>`).join('');
@@ -4975,13 +4978,13 @@ function renderPlFormulaPreviews() {
 }
 
 // category = 'nicho' | 'disenador' | 'arabe' | '' (ver plCategoryFor); sin categoría usa diseñador.
-// La ganancia (fijo + % del costo) se convierte a margen sobre el precio, que es lo que esperan
+// La ganancia (fijo + % del producto) se convierte a margen sobre el precio, que es lo que esperan
 // plFinalPrice y las filas de la calculadora.
 function marginForPriceUsd(priceUsd, category = '') {
   const f    = plFormulas[category] || plFormulas.disenador;
   const cfg  = plGetConfig();
   const cost = plComputeCostTotal(priceUsd, cfg.rates, cfg.envioFijo);
-  const gain = f.fixed + cost * f.pct / 100;
+  const gain = f.fixed + priceUsd * cfg.rates.usdt * f.pct / 100;
   return cost + gain > 0 ? Math.round(gain / (cost + gain) * 1000) / 10 : 0;
 }
 
@@ -5043,11 +5046,18 @@ function plBrandTokenSet(brand) {
   return new Set(String(brand || '').toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean));
 }
 
+// Palabras de formato que un proveedor escribe y otro no ("Perfume Torino 21 Eau de Parfum Unissex (Tester)"
+// vs "TESTER/VENTA TORINO 21 U EDP"): sin sacarlas, la similitud de ese par daba 0,57 y ni se sugería.
+// Solo se ignoran para la similitud; el núcleo (y las claves de las decisiones guardadas) no cambia.
+// UNISSEX/FEMENINO/MASCULINO quedan a propósito: sin ellos, femenino contra unisex daba similitud 1 y
+// se fusionaba solo (Habibi Come to Dubai F/U).
+const PL_SIM_FORMAT_WORDS = new Set(['PERFUME', 'VENTA']);
+
 function plCoreTokensExcludingBrand(item, core) {
   const brandTokens = plBrandTokenSet(item.brand);
   // Letras sueltas (largo 1) también se ignoran acá — ver nota en PL_PREFIX_WORDS.
   // Solo afecta el cálculo de similitud para sugerir, nunca la fusión automática.
-  return core.split(' ').filter(t => t && t.length > 1 && !brandTokens.has(t));
+  return core.split(' ').filter(t => t && t.length > 1 && !brandTokens.has(t) && !PL_SIM_FORMAT_WORDS.has(t));
 }
 
 // Un producto TESTER/caja dañada/basado-en nunca es "el mismo" que su versión normal —
@@ -5220,14 +5230,15 @@ function detectFuzzyDuplicates(items) {
 }
 
 // ── Costing ──
-// Misma cadena que la calculadora (USDT directo). NOTA: la lista de precios no tiene un pedido real,
-// así que no hay forma de saber cuántas transferencias USDT va a haber — se asume 1 (ver card 04,
-// decisión D2). El precio publicado no refleja transferencias múltiples de un pedido grande.
+// Misma cadena que la calculadora (USDT directo). NOTA: la lista de precios no tiene un pedido real.
+// El fee USDT (1 transferencia por embarque) se reparte igual que el envío: la misma proporción
+// envío fijo ÷ envío total (ej. $5.000 de $20.000 → 1/4 del fee por perfume).
 function plComputeCostTotal(priceUsd, rates, envioFijo) {
-  const { usdt, comUSD, usdtFeeUsd } = rates;
+  const { usdt, comUSD, usdtFeeUsd, envioTotal } = rates;
   const costoARS1   = priceUsd * usdt;
   const comisionARS = comUSD * usdt;
-  const feeUsdt     = (usdtFeeUsd || 0) * usdt; // 1 transferencia asumida
+  const feeShare    = envioTotal > 0 && envioFijo > 0 ? Math.min(1, envioFijo / envioTotal) : 1;
+  const feeUsdt     = (usdtFeeUsd || 0) * usdt * feeShare;
   return costoARS1 + comisionARS + envioFijo + feeUsdt;
 }
 
@@ -5246,7 +5257,8 @@ function plGetConfig() {
     rates: {
       usdt:       getRate('r-usdt'),
       comUSD:     getRate('r-comision'),
-      usdtFeeUsd: getRate('r-usdt-fee')
+      usdtFeeUsd: getRate('r-usdt-fee'),
+      envioTotal: getRate('r-envio')
     }
   };
 }
