@@ -37,5 +37,9 @@ listas/
 # Claude Code local settings
 .claude/
 
+# Codex: contexto (copia de CLAUDE.md) y skills locales (copia de .claude/skills/)
+AGENTS.md
+.agents/
+
 # Notas internas de planificación (no para publicar)
 cards/
