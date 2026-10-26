@@ -7928,8 +7928,24 @@ ${SC}
   if (window.ResizeObserver) new ResizeObserver(setHdrH).observe($('hdr'));
   setHdrH();
 
-  var lastY = 0, jumping = false;
-  window.addEventListener('scroll', function () { if (jumping) return; var y = window.scrollY; $('hdr').classList.toggle('compact', y > 140 && y > lastY - 4); lastY = y; }, { passive: true });
+  // Header compacto al bajar. Cambiar su alto cambia el alto de la página: pegado al final, el navegador corrige
+  // el scroll hacia arriba (y en iOS se suma el rebote), eso lo volvía a agrandar y quedaba en un bucle. Por eso:
+  // se ignora el scroll que provoca el propio cambio (300 ms), hace falta moverse 24 px en la misma dirección,
+  // se ignora el rebote fuera de los límites y no se agranda pegado al final.
+  var lastY = 0, jumping = false, hdrLock = 0, acc = 0;
+  window.addEventListener('scroll', function () {
+    if (jumping) return;
+    var hdr = $('hdr'), y = window.scrollY, max = document.documentElement.scrollHeight - window.innerHeight;
+    var dy = y - lastY; lastY = y;
+    if (y < 0 || y > max) return;
+    if (performance.now() < hdrLock) return;
+    acc = (acc > 0) === (dy > 0) ? acc + dy : dy;
+    var want = y <= 140 ? false : acc > 24 ? true : acc < -24 ? false : null;
+    if (want === null || want === hdr.classList.contains('compact')) return;
+    if (!want && y > 140 && max - y < 80) return;
+    hdr.classList.toggle('compact', want);
+    hdrLock = performance.now() + 300; acc = 0;
+  }, { passive: true });
   CF.watchKeyboard();
   run(); cartUi();
 })();
