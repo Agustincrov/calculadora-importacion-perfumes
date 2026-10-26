@@ -6565,7 +6565,7 @@ a { color: var(--vino); }
 @media (min-width: 1024px) { .countbar select { display: block; } }
 .countbar select { height: 44px; border: 1px solid var(--piedra); border-radius: 999px; background: var(--blanco); padding: 0 12px; font-size: 14px; color: var(--tinta); }
 
-.layout { display: grid; gap: 28px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 @media (min-width: 1024px) { .layout { grid-template-columns: 230px minmax(0, 1fr); align-items: start; padding-top: 20px; } }
 @media (min-width: 1200px) { .layout { grid-template-columns: 230px minmax(0, 1fr) 300px; } }
 
@@ -6585,32 +6585,61 @@ a { color: var(--vino); }
   .rail .tag-btn { min-height: 24px; padding: 2px 8px; }
 }
 
-/* Renglones (agrupados por marca en A–Z) con tamaños en pills */
-.brand-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 22px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--borde-marco); }
-.brand-h h2 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--vino); }
-.brand-h span { font-family: var(--f-mono); font-size: 11px; color: var(--meta); }
+/* Renglones agrupados por marca (A–Z). Cada marca es una sección: su encabezado queda fijo debajo del header
+   mientras se recorre la marca y lo empuja el de la siguiente. Tocarlo abre la lista de marcas. */
+/* content-visibility: las marcas fuera de pantalla no se arman ni se pintan (saltar a la última dibuja ~6.000 renglones) */
+/* Solo se estima el alto: contain-intrinsic-size con un valor fija también el ancho y estiraba la columna en celular */
+.brand-sec { scroll-margin-top: var(--hdr-h, 0px); content-visibility: auto; contain-intrinsic-width: auto 1px; contain-intrinsic-height: auto 600px; }
+#results { overflow-anchor: none; }
+/* Fondo opaco y una franja de 10 px debajo (box-shadow del mismo color): lo que pasa por detrás no asoma por el borde */
+.brand-h { position: sticky; top: var(--hdr-h, 0px); z-index: 5; margin: 12px 0 0; background: var(--lino); border-bottom: 1px solid var(--borde-marco); box-shadow: 0 10px 0 0 var(--lino); }
+.brand-h button { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 44px; padding: 8px 0 6px; border: 0; background: transparent; color: var(--vino); text-align: left; }
+.brand-h .bn { font-family: var(--f-display); font-weight: 500; font-size: 20px; line-height: 1.2; letter-spacing: .06em; text-transform: uppercase; min-width: 0; }
+.brand-h .n { font-family: var(--f-mono); font-size: 11px; color: var(--meta); }
+.brand-h .chev { align-self: center; margin-left: auto; width: 18px; height: 18px; transform: rotate(90deg); }
+/* Foco solo con teclado: fondo tinte + línea vino abajo. Un anillo alrededor quedaría cortado (la sección recorta
+   lo que sale de su caja por content-visibility) o taparía la primera letra */
+.brand-h button:focus { outline: none; }
+.brand-h button:focus-visible { background: var(--tinte); box-shadow: inset 0 -2px 0 var(--vino); }
+@media (min-width: 900px) { .brand-h .bn { font-size: 22px; } }
+/* Con el teclado abierto el encabezado no queda fijo (no les quita lugar a los resultados) */
+.kb-open .brand-h { position: static; }
+
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--borde-card); }
 .row .br { display: none; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--vino); }
 .flat .row .br { display: block; }
 .row .nm { font-family: var(--f-serif); font-size: 20px; line-height: 1.12; font-weight: 500; }
-.row .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 10px; margin-top: 6px; }
-.row .sizes { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-.row .sizes button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--piedra); background: var(--blanco); font-size: 13px; display: inline-flex; gap: 6px; align-items: baseline; position: relative; }
-.row .sizes button::after { content: ""; position: absolute; inset: -2px 0; }
-.row .sizes button span { font-variant-numeric: tabular-nums; color: var(--meta); font-size: 12px; }
-.row .sizes button[aria-pressed="true"] { border-color: var(--vino); background: rgba(110,42,57,.08); color: var(--vino); font-weight: 600; }
-.row .sizes button[aria-pressed="true"] span { color: var(--vino); }
+/* Línea de concentración + tamaños + condición. Alto mínimo de un tag: con uno o varios tamaños, el renglón mide lo mismo */
+.row .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 10px; margin-top: 6px; min-height: 30px; }
+.row .sizes { display: inline-flex; flex-wrap: wrap; gap: 14px 8px; }
+/* Tamaño: tag de 30 px con área táctil de 44 (como los chips de tester); el elegido, tinte + vino */
+.row .sz { position: relative; min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--piedra); background: transparent; font-family: var(--f-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--meta); display: inline-flex; align-items: center; }
+.row .sz::after { content: ""; position: absolute; inset: -7px -4px; }
+.row .sz:hover { border-color: var(--tinta); color: var(--tinta); }
+.row .sz[aria-pressed="true"] { background: var(--tinte); border-color: rgba(110,42,57,.35); color: var(--vino); }
 .row .buy { grid-column: 2; grid-row: 1; display: grid; justify-items: end; gap: 6px; }
-.row .sizes { grid-row: 2; }
 .row .pr { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
 .row .add { width: 136px; }
 .row .stepper { width: 136px; justify-content: space-between; }
 @media (min-width: 640px) {
-  /* Pills debajo del nombre; la compra ocupa las dos filas a la derecha */
-  .row .sizes { grid-column: 1; grid-row: 2; }
-  .row .buy { grid-row: 1 / span 2; }
-  /* Columna de compra de ancho fijo: precio + botón quedan alineados en todos los renglones, con o sin pills */
+  /* Columna de compra de ancho fijo: precio + botón quedan alineados en todos los renglones */
   .row .buy { grid-template-columns: 104px 136px; align-items: center; justify-items: end; gap: 14px; }
+}
+
+/* Lista de marcas: hoja de abajo en celular, popover debajo del encabezado en desktop */
+.brand-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; border-top: 1px solid var(--piedra-claro); }
+.brand-list button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--piedra-claro); background: transparent; text-align: left; font-size: 15px; color: var(--tinta); }
+.brand-list button .n { margin-left: auto; font-family: var(--f-mono); font-size: 11px; color: var(--meta); }
+.brand-list button[aria-current="true"] { color: var(--vino); font-weight: 700; background: var(--tinte); }
+.brand-list button:hover { background: var(--lino); }
+.brand-list button:focus { outline: none; }
+.brand-list button:focus-visible { outline: 2px solid var(--vino); outline-offset: -2px; }
+.brand-sheet .sheet-card { grid-template-rows: auto auto auto minmax(0, 1fr); max-height: 80dvh; }
+.brand-sheet .fp-head { display: flex; align-items: center; justify-content: space-between; }
+.brand-sheet .search input { height: 44px; }
+@media (min-width: 900px) {
+  .brand-sheet { background: transparent; align-items: flex-start; justify-content: flex-start; }
+  .brand-sheet .sheet-card { position: fixed; top: var(--pop-top, 120px); left: var(--pop-left, 32px); width: 360px; max-height: min(70vh, 560px); border-radius: 16px; padding: 16px 18px; border: 1px solid var(--borde-card); box-shadow: 0 18px 40px -16px rgba(20,17,14,.35); }
 }
 .more { display: grid; justify-items: center; gap: 6px; padding: 24px 0 8px; }
 .more p { margin: 0; font-size: 13px; color: var(--meta); }
@@ -6904,6 +6933,11 @@ ${SC}
     if (hide) DUPES++;
     return !hide;
   });
+  // Orden de la lista: marca y después el nombre que se ve (DATA viene ordenado por el nombre original del proveedor)
+  ITEMS.sort(function (a, b) {
+    return a.brand.localeCompare(b.brand) || fold(a.display).localeCompare(fold(b.display), 'es') || a.conc.localeCompare(b.conc) || a.ml - b.ml || a.i - b.i;
+  });
+  ITEMS.forEach(function (it, n) { it.ord = n; });
   // Para la consola: cuánto cambia el ocultamiento con el género de DATA contra el que dice el nombre limpio
   function dupeReport() {
     var byName = dupeDrops(function (it) { return it.nameGender; });
@@ -6993,7 +7027,7 @@ ${SC}
         it._s = nameToks.length && dn.indexOf(nameToks[0]) === 0 ? 0 : 1;
         it._l = dn.length;
       });
-      out.sort(function (a, b) { return a._s - b._s || (a._s === 0 ? a._l - b._l : 0) || a.i - b.i; });
+      out.sort(function (a, b) { return a._s - b._s || (a._s === 0 ? a._l - b._l : 0) || a.ord - b.ord; });
     }
     return { items: out, corrected: corrected, tokens: toks };
   }
@@ -7182,9 +7216,15 @@ ${SC}
   var FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea,[tabindex]:not([tabindex="-1"])';
   function lockBody(on) {
     var b = document.body;
-    if (on && !b.dataset.lockY) { b.dataset.lockY = String(window.scrollY); b.style.position = 'fixed'; b.style.top = -window.scrollY + 'px'; b.style.left = '0'; b.style.right = '0'; }
+    // scrollY se lee antes de fijar el body: con position:fixed vale 0 y el fondo saltaría al principio
+    if (on && !b.dataset.lockY) { var y0 = window.scrollY; b.dataset.lockY = String(y0); b.style.position = 'fixed'; b.style.top = -y0 + 'px'; b.style.left = '0'; b.style.right = '0'; }
     if (!on && b.dataset.lockY) { var y = +b.dataset.lockY; delete b.dataset.lockY; b.style.position = ''; b.style.top = ''; b.style.left = ''; b.style.right = ''; window.scrollTo(0, y); }
   }
+  // Último tipo de interacción: el foco que se mueve por código muestra el anillo solo si se venía usando el teclado
+  var byPointer = false;
+  document.addEventListener('pointerdown', function () { byPointer = true; }, true);
+  document.addEventListener('keydown', function () { byPointer = false; }, true);
+  function focusEl(el) { el.focus({ preventScroll: true, focusVisible: !byPointer }); }
   function openModal(el, opener, opts) {
     opts = opts || {};
     el.hidden = false;
@@ -7194,7 +7234,7 @@ ${SC}
     requestAnimationFrame(function () {
       el.classList.add('is-open');
       var f = el.querySelector('[data-autofocus]') || el.querySelector(FOCUSABLE);
-      if (f) f.focus({ preventScroll: true });
+      if (f) focusEl(f);
     });
   }
   function closeModal(el) {
@@ -7205,7 +7245,7 @@ ${SC}
     el.hidden = true;
     if (!open.some(function (x) { return x.lock; })) lockBody(false);
     if (o.onClose) o.onClose();
-    if (o.opener && document.contains(o.opener)) o.opener.focus({ preventScroll: true });
+    if (o.opener && document.contains(o.opener)) focusEl(o.opener);
   }
   document.addEventListener('keydown', function (e) {
     var top = open[open.length - 1];
@@ -7264,7 +7304,7 @@ ${SC}
     ITEMS: ITEMS, ALL: ALL, DUPES: DUPES, dupeReport: dupeReport, facets: facets, lineLabel: lineLabel, BY_KEY: BY_KEY, CAT_LABELS: CAT_LABELS, PROVINCIAS: PROVINCIAS, CUOTAS: CUOTAS, DELIVERY: DELIVERY, ENVIO_SUCURSAL: ENVIO_SUCURSAL,
     fold: fold, esc: esc, fmt: fmt, store: store, icon: icon, seal: seal, query: query, group: group, Cart: Cart, schedule: schedule, totals: totals,
     whatsappUrl: whatsappUrl, waHelp: waHelp, EXPLAIN: EXPLAIN, conditionChips: conditionChips, conditionLines: conditionLines, specText: specText,
-    openModal: openModal, closeModal: closeModal, explain: explain, announce: announce, watchKeyboard: watchKeyboard, date: global.CATALOG_DATE || ''
+    openModal: openModal, closeModal: closeModal, focusEl: focusEl, explain: explain, announce: announce, watchKeyboard: watchKeyboard, date: global.CATALOG_DATE || ''
   };
 })(window);
 ${SC}
@@ -7605,7 +7645,7 @@ ${SC}
   'use strict';
   var CF = window.CF, F = window.Filters, Cart = CF.Cart, esc = CF.esc, fmt = CF.fmt, icon = CF.icon;
   var PAGE = 50;
-  var st = F.newState(), shown = PAGE, groups = [], sel = {}, brandQ = '', lastQ = '';
+  var st = F.newState(), shown = PAGE, groups = [], sel = {}, brandQ = '', lastQ = '', brandIndex = [];
   var $ = function (id) { return document.getElementById(id); };
   var root = document.documentElement;
   var drawer = new CartDrawer({ mode: 'two', preview: true });
@@ -7682,10 +7722,13 @@ ${SC}
   }
   function rowHtml(g) {
     var it = cur(g);
-    var spec = [it.conc, g.sizes.length === 1 && it.ml ? it.ml + ' ml' : '', it.kit ? 'Kit' : ''].filter(Boolean).join(' · ');
+    var multi = g.sizes.length > 1;
+    // Con varios tamaños, los tags de tamaño van donde iría "· 100 ML"; el precio y "Agregar" siguen al elegido
+    var spec = [it.conc, !multi && it.ml ? it.ml + ' ml' : '', it.kit ? 'Kit' : ''].filter(Boolean).join(' · ');
     return '<div class="row" data-g="' + esc(g.key) + '" data-key="' + esc(it.key) + '"><div><div class="br">' + esc(it.brand) + '</div><div class="nm">' + esc(it.display) + '</div>' +
-      '<div class="meta">' + (spec ? '<span class="spec">' + esc(spec) + '</span>' : '') + CF.conditionChips(it) + '</div></div>' +
-      (g.sizes.length > 1 ? '<div class="sizes" role="group" aria-label="Tamaño de ' + esc(it.display) + '">' + g.sizes.map(function (s, i) { return '<button type="button" data-size="' + i + '" aria-pressed="' + (s === it) + '">' + s.ml + ' ml <span>' + fmt(s.price).replace('$ ', '$') + '</span></button>'; }).join('') + '</div>' : '') +
+      '<div class="meta">' + (spec ? '<span class="spec">' + esc(spec) + '</span>' : '') +
+      (multi ? '<span class="sizes" role="group" aria-label="Tamaño de ' + esc(it.display) + '">' + g.sizes.map(function (s, i) { return '<button type="button" class="sz" data-size="' + i + '" aria-pressed="' + (s === it) + '">' + s.ml + ' ml</button>'; }).join('') + '</span>' : '') +
+      CF.conditionChips(it) + '</div></div>' +
       '<div class="buy"><div class="pr">' + fmt(it.price) + '</div>' + buyCtl(it) + '</div></div>';
   }
 
@@ -7710,11 +7753,24 @@ ${SC}
     }
     $('results').className = flat ? 'flat' : '';
     var h = '', last = null, perBrand = {};
-    if (!flat) groups.forEach(function (g) { perBrand[g.head.brand] = (perBrand[g.head.brand] || 0) + 1; });
+    brandIndex = [];
+    if (!flat) groups.forEach(function (g, i) {
+      if (!perBrand[g.head.brand]) { perBrand[g.head.brand] = 0; brandIndex.push({ brand: g.head.brand, first: i }); }
+      perBrand[g.head.brand]++;
+    });
+    brandIndex.forEach(function (b) { b.count = perBrand[b.brand]; });
     groups.slice(0, shown).forEach(function (g) {
-      if (!flat && g.head.brand !== last) { h += '<div class="brand-h"><h2>' + esc(g.head.brand) + '</h2><span>' + perBrand[g.head.brand] + '</span></div>'; last = g.head.brand; }
+      if (!flat && g.head.brand !== last) {
+        if (last !== null) h += '</section>';
+        var b = esc(g.head.brand), c = perBrand[g.head.brand];
+        // Alto estimado de la sección (renglón ≈ 100 px) para content-visibility: así el salto cae cerca
+        h += '<section class="brand-sec" data-brand="' + b + '" style="contain-intrinsic-height:auto ' + (c * 100 + 48) + 'px"><h2 class="brand-h"><button type="button" data-act="brands" aria-haspopup="dialog" aria-label="' + b + ', ' + c + (c === 1 ? ' perfume' : ' perfumes') + '. Ver la lista de marcas">' +
+          '<span class="bn">' + b + '</span><span class="n">' + c + '</span>' + icon('chevron', 'chev') + '</button></h2>';
+        last = g.head.brand;
+      }
       h += rowHtml(g);
     });
+    if (!flat && last !== null) h += '</section>';
     $('results').innerHTML = h;
     var left = groups.length - shown;
     $('more').innerHTML = left > 0 ? '<button type="button" class="btn btn-outline" data-act="more">Mostrar ' + Math.min(PAGE, left) + ' más</button><p>Viendo ' + shown + ' de ' + n(groups.length) + '</p>' : '';
@@ -7775,6 +7831,7 @@ ${SC}
     if (act === 'reset') { var q = st.q; st = F.newState(); st.q = q; shown = PAGE; run(); }
     if (act === 'open-cart') drawer.open(b);
     if (act === 'info') openInfo(b);
+    if (act === 'brands') openBrands(b);
   });
   $('rail').addEventListener('change', function (e) {
     var t = e.target;
@@ -7808,8 +7865,71 @@ ${SC}
   $('q').addEventListener('input', function () { onQuery(this.value); });
   $('qClear').addEventListener('click', function () { $('q').value = ''; onQuery(''); $('q').focus(); });
 
-  var lastY = 0;
-  window.addEventListener('scroll', function () { var y = window.scrollY; $('hdr').classList.toggle('compact', y > 140 && y > lastY - 4); lastY = y; }, { passive: true });
+  // ── Lista de marcas (navegación, no filtro): salta a la marca elegida y se puede seguir bajando ──
+  var brandSheet = document.createElement('div');
+  brandSheet.className = 'sheet brand-sheet'; brandSheet.hidden = true;
+  brandSheet.setAttribute('role', 'dialog'); brandSheet.setAttribute('aria-labelledby', 'brandsT');
+  document.body.appendChild(brandSheet);
+  var brandCur = '', brandFilter = '';
+  function brandItems() {
+    var f = CF.fold(brandFilter);
+    var list = brandIndex.filter(function (b) { return !f || CF.fold(b.brand).indexOf(f) >= 0; });
+    return list.map(function (b) {
+      return '<li><button type="button" data-goto="' + esc(b.brand) + '"' + (b.brand === brandCur ? ' aria-current="true" data-autofocus' : '') + '>' + esc(b.brand) + '<span class="n">' + b.count + '</span></button></li>';
+    }).join('') || '<li class="muted" style="padding:12px 4px">No hay marcas con ese nombre.</li>';
+  }
+  function openBrands(btn) {
+    brandCur = btn.closest('.brand-sec').getAttribute('data-brand');
+    brandFilter = '';
+    brandSheet.innerHTML = '<div class="sheet-card"><div class="sheet-grip" aria-hidden="true"></div><div class="fp-head"><h2 id="brandsT" class="sheet-title">Marcas <span class="muted" style="font-family:var(--f-mono);font-size:12px">' + brandIndex.length + '</span></h2>' +
+      '<button type="button" class="icon-btn" data-close aria-label="Cerrar la lista de marcas">' + icon('close') + '</button></div>' +
+      '<div class="search">' + icon('search') + '<input type="search" id="brandsQ" placeholder="Buscar marca" autocomplete="off" aria-label="Buscar marca"></div>' +
+      '<ul class="brand-list" id="brandsL">' + brandItems() + '</ul></div>';
+    var r = btn.getBoundingClientRect();
+    brandSheet.style.setProperty('--pop-top', Math.round(r.bottom + 6) + 'px');
+    brandSheet.style.setProperty('--pop-left', Math.round(r.left) + 'px');
+    CF.openModal(brandSheet, btn);
+    var curEl = brandSheet.querySelector('[aria-current="true"]');
+    if (curEl) curEl.scrollIntoView({ block: 'center' });
+  }
+  function gotoBrand(brand) {
+    var b = brandIndex.filter(function (x) { return x.brand === brand; })[0];
+    if (!b) return;
+    // Se dibuja hasta esa marca (y una tanda más) antes de saltar
+    if (b.first + PAGE > shown) { shown = b.first + PAGE; paint(); }
+    var sec = document.querySelector('.brand-sec[data-brand="' + CSS.escape(brand) + '"]');
+    if (!sec) return;
+    // Durante el salto el header queda compacto (no cambia de alto con cada corrección) y se alinea a mano:
+    // las secciones que se arman al pasar cambian su alto estimado por el real: se corrige hasta que la marca
+    // queda quieta 3 cuadros seguidos (máx. 40)
+    jumping = true; $('hdr').classList.add('compact');
+    var frames = 0, still = 0;
+    (function align() {
+      var off = sec.getBoundingClientRect().top - $('hdr').getBoundingClientRect().height;
+      if (Math.abs(off) > 1) { window.scrollBy(0, off); still = 0; } else still++;
+      if (still < 3 && frames++ < 40) requestAnimationFrame(align);
+      else { lastY = window.scrollY; setTimeout(function () { jumping = false; }, 150); }
+    })();
+    // El foco va al encabezado de la marca elegida; el anillo solo se ve si se navega con teclado
+    CF.focusEl(sec.querySelector('.brand-h button'));
+  }
+  brandSheet.addEventListener('click', function (e) {
+    if (e.target === brandSheet || e.target.closest('[data-close]')) return CF.closeModal(brandSheet);
+    var go = e.target.closest('[data-goto]');
+    if (go) { var brand = go.getAttribute('data-goto'); CF.closeModal(brandSheet); gotoBrand(brand); }
+  });
+  brandSheet.addEventListener('input', function (e) {
+    if (e.target.id !== 'brandsQ') return;
+    brandFilter = e.target.value; $('brandsL').innerHTML = brandItems();
+  });
+
+  // Alto del header (cambia al achicarse): el encabezado de marca fijo va justo debajo
+  function setHdrH() { root.style.setProperty('--hdr-h', Math.round($('hdr').getBoundingClientRect().height) + 'px'); }
+  if (window.ResizeObserver) new ResizeObserver(setHdrH).observe($('hdr'));
+  setHdrH();
+
+  var lastY = 0, jumping = false;
+  window.addEventListener('scroll', function () { if (jumping) return; var y = window.scrollY; $('hdr').classList.toggle('compact', y > 140 && y > lastY - 4); lastY = y; }, { passive: true });
   CF.watchKeyboard();
   run(); cartUi();
 })();
