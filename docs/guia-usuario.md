@@ -169,7 +169,16 @@ La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios)
 - **Descargar página buscable:** descarga ese mismo archivo (`catalogo.html`) en vez de publicarlo.
 - **Exportar Excel:** descarga la lista con marca, producto y precio.
 
-En el catálogo, tus clientes pueden buscar, filtrar por categoría (nicho, diseñador, árabe), marca y rango de precio, armar un carrito y mandarte el pedido por WhatsApp. El total del carrito es la suma de los precios: el envío ya va incluido en cada producto.
+En el catálogo, tus clientes pueden:
+
+- **Buscar** con palabras en cualquier orden y sin acentos ("dior sauvage", "khamrah 100ml", "jpg"). Si escriben mal una letra, la página corrige ("aqua di gio" → Acqua di Gio). Si no hay resultados, les ofrece consultarte por WhatsApp.
+- **Filtrar** por precio, categoría (nicho, diseñador, árabe), tamaño, testers y marca, y **ordenar** por precio.
+- Ver cada perfume con el **nombre limpio** y sus **tamaños juntos** en un mismo renglón. Los testers y los perfumes sin código de lote llevan una etiqueta que, al tocarla, explica qué son.
+- **Armar el carrito y mandarte el pedido por WhatsApp** con su nombre, provincia, forma de entrega y de pago. Antes de enviarlo ven el mensaje tal cual te llega.
+
+La página también muestra las condiciones de los encargos: pedidos de sábado a jueves con cierre el viernes, llegada en 7 a 10 días hábiles, pago completo al encargar (transferencia, o tarjeta en 1, 2 o 3 cuotas con +9, 18 o 27 %) y envío a sucursal de Correo Argentino por $ 7.000, gratis sumando un decant (en Córdoba, en mano). Estos valores están fijos en el catálogo: si cambian, hay que actualizarlos en el código.
+
+Si el mismo perfume y tamaño aparece en dos proveedores con menos de 10 % de diferencia de precio, el catálogo muestra solo el más barato. Si la versión de hombre y la de mujer quedan con el mismo nombre, se les agrega "· Hombre" o "· Mujer".
 
 Los precios del catálogo quedan fijos al momento de publicar: si cambian las cotizaciones, volvé a generar y publicar.
 

@@ -6552,7 +6552,7 @@ a { color: var(--vino); }
 
 .toolbar { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 0 16px 0 max(16px, env(safe-area-inset-left, 0px)); }
 .toolbar::-webkit-scrollbar { display: none; }
-.toolbar { padding-top: 14px; }
+.toolbar { padding-top: 10px; }
 .toolbar .sep { flex: none; width: 1px; background: var(--piedra); margin: 8px 2px; }
 @media (min-width: 1024px) { .toolbar { display: none; } }
 .has-q .intro, .has-q .week, .has-q .toolbar { display: none; }
@@ -7624,7 +7624,7 @@ ${SC}
   $('announce').innerHTML = (sch.lastDay ? 'Hoy cierran los pedidos de la semana' : 'Pedidos hasta el jueves ' + sch.dm(sch.thu)) + '<span class="dot"></span>Llegan del ' + sch.dm(sch.from) + ' al ' + sch.dm(sch.to);
   $('week').innerHTML = icon('calendar') + '<div><b>Encargos de la semana:</b> ' + (sch.lastDay ? 'hoy es el último día' : 'hasta el jueves ' + sch.dm(sch.thu)) + ', cierra el viernes ' + sch.dm(sch.fri) + '.</div>' +
     '<div class="muted">Se abona al encargar · envío ' + fmt(CF.ENVIO_SUCURSAL) + ' o gratis con un decant · Córdoba en mano · <button type="button" class="btn-link" data-act="info">Cómo encargar</button></div>';
-  $('introMeta').textContent = 'Precios del ' + CF.date.slice(0, 5) + ', por transferencia. Pedido completo en el carrito y me lo mandás por WhatsApp.';
+  $('introMeta').textContent = 'Precios del ' + CF.date.slice(0, 5) + ', por transferencia.';
   $('infoBtn').innerHTML = icon('info');
   $('cartIc').innerHTML = icon('bag');
   $('qClear').innerHTML = icon('close');
