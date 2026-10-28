@@ -419,6 +419,17 @@
           <div id="usdt-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando Binance P2P…</div>
         </div>
 
+        <!-- Blue Córdoba: solo para pasarle el precio en dólares al cliente que paga en billetes -->
+        <div class="rate-item">
+          <label>Blue Córdoba venta (ARS) <span class="pill pill-sell">VENTA</span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-blue" value="1590" step="1"
+              title="Dólar blue venta en Córdoba (infodolar.com). Solo convierte el precio de venta a dólares para el cliente; no interviene en ningún costo" />
+          </div>
+          <div id="blue-provider" style="font-size:.68rem;color:var(--muted);margin-top:3px;">Consultando blue Córdoba…</div>
+        </div>
+
         <!-- Comisión -->
         <div class="rate-item">
           <label>Comisión/producto <span class="pill pill-p2">FASE 2</span></label>
@@ -578,7 +589,8 @@
               <th class="bg-sell">Producto</th>
               <th class="bg-sell">Margen % <span class="col-tip" data-tip="Margen de ganancia deseado. 30% significa que la ganancia es el 30% del precio de venta, no del costo."></span></th>
               <th class="bg-sell">Precio ARS (total) <span class="col-tip" data-tip="Precio de venta total para esta fila con el margen aplicado."></span></th>
-              <th class="bg-sell">Precio USD (total) <span class="col-tip tip-left" data-tip="Precio de venta expresado en dólares, al valor del USDT."></span></th>
+              <th class="bg-sell">Precio USD (total) <span class="col-tip tip-left" data-tip="Precio de venta en dólares billete, al blue venta de Córdoba. Es lo que le pasás al cliente que te paga en dólares."></span></th>
+              <th class="bg-sell">Precio USDT (total) <span class="col-tip tip-left" data-tip="Precio de venta expresado en USDT, al valor del USDT."></span></th>
               <th class="bg-sell">Ganancia (total) <span class="col-tip tip-left" data-tip="Lo que ganás en pesos por esta fila después de cubrir todos los costos."></span></th>
               <th class="bg-sell">Gan. USD/unid <span class="col-tip tip-left" data-tip="Ganancia por unidad en dólares, al valor del USDT. Podés escribir directamente el valor deseado y el margen se recalcula solo."></span></th>
               <th class="bg-sell">Margen real <span class="col-tip tip-left" data-tip="Margen efectivo resultante. Verde = 20% o más. Amarillo = entre 10% y 20%. Rojo = menos del 10%."></span></th>
@@ -638,6 +650,10 @@
           <div class="stat-row">
             <span class="lbl">Venta clientes (ARS)</span>
             <span class="val purple" id="s-venta">$ 0</span>
+          </div>
+          <div class="stat-row">
+            <span class="lbl">Venta clientes (USD blue)</span>
+            <span class="val purple" id="s-venta-blue">USD 0</span>
           </div>
           <div class="stat-row">
             <span class="lbl">Ganancia clientes</span>
@@ -1284,6 +1300,7 @@ function renderSellTable() {
       <td class="bg-sell"><input type="number" id="margin-${row.id}" value="${row.margin}" min="0" max="99" step="0.5"
           oninput="updateField(${row.id},'margin',+this.value)" /></td>
       <td class="cell-computed bg-sell" id="vars-${row.id}">—</td>
+      <td class="cell-computed bg-sell" id="vblue-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="vusd-${row.id}">—</td>
       <td class="cell-computed bg-sell" id="gan-${row.id}">—</td>
       <td class="bg-sell" style="padding:4px 6px;">
@@ -1383,7 +1400,7 @@ function getCostingContext() {
   const feeUsdtPerUnit = unidadesUsdt > 0 ? feeUsdtTotal / unidadesUsdt : 0;
 
   return {
-    usdt,
+    usdt, blue: getRate('r-blue'),
     comisionARS, envioFijo, usdtFeeUsd, roundStep,
     transferencias, unidadesUsdt, feeUsdtTotal, feeUsdtPerUnit,
   };
@@ -1477,7 +1494,8 @@ function recalculate() {
       gInput.value = gananciaUSD > 0 ? gananciaUSD.toFixed(2) : '';
     }
 
-    const precioUSD = usdt > 0 ? precioARS / usdt : 0;
+    const precioUSD  = usdt > 0 ? precioARS / usdt : 0;
+    const precioBlue = ctx.blue > 0 ? precioARS / ctx.blue : 0;
 
     // Accumulate totals (las filas vacías no suman — ver rowHasProduct)
     const hasProduct = rowHasProduct(row);
@@ -1508,7 +1526,8 @@ function recalculate() {
     setCell(`env-${row.id}`,  hasProduct ? fmt_ars((envioFijoUnid + feeUsdtUnid) * qty) : '—');
     setCell(`tot-${row.id}`,  costoARS1 > 0 ? fmt_ars(costoTotal * qty) : '—');
     setCell(`vars-${row.id}`,  precioARS     > 0 ? fmt_ars(precioARS    * qty) : '—');
-    setCell(`vusd-${row.id}`,  precioUSD > 0 ? fmt_usd(precioUSD * qty) : '—');
+    setCell(`vblue-${row.id}`, precioBlue > 0 ? fmt_usd(precioBlue * qty) : '—');
+    setCell(`vusd-${row.id}`,  precioUSD > 0 ? fmt_usdt(precioUSD * qty) : '—');
     setCell(`gan-${row.id}`,   ganancia > 0 ? fmt_ars(ganancia * qty) : '—');
     setBadge(`mreal-${row.id}`, margenReal, precioARS > 0);
   });
@@ -1523,6 +1542,7 @@ function recalculate() {
   setText('s-envio',        fmt_ars(envioRealTotal));
   setText('s-costo-total',  fmt_ars(totalCostoReal));
   setText('s-venta',        fmt_ars(totalVentaCliente));
+  setText('s-venta-blue',   ctx.blue > 0 ? fmt_usd(totalVentaCliente / ctx.blue) : 'USD 0');
   setText('s-ganancia',     fmt_ars(totalGananciaCliente));
   setText('s-ganancia-usd', ctx.usdt > 0 ? fmt_usd(totalGananciaCliente / ctx.usdt) : 'USD 0');
   const roi = totalCostoReal > 0 ? totalGananciaCliente / totalCostoReal * 100 : 0;
@@ -1714,8 +1734,28 @@ async function fetchAllRates() {
   icon.classList.add('spin');
 
   // Binance P2P bloquea al Worker; dolarapi.com expone su precio ("cripto") con centavos de diferencia.
+  // Blue Córdoba: infodolar vía Worker; si falla, el blue nacional de dolarapi (manda CORS) como aproximación.
+  const blueReq = (async () => {
+    try {
+      const v = (await fetch(`${WORKER}/blue-cordoba`).then(r => r.json()))?.venta;
+      if (v) return { venta: v, label: `Blue Córdoba (infodolar) · $${v}` };
+    } catch (_) {}
+    try {
+      const v = (await fetch('https://dolarapi.com/v1/dolares/blue').then(r => r.json()))?.venta;
+      if (v) return { venta: v, label: `⚠ Blue nacional (dolarapi) · $${v} — revisá el de Córdoba` };
+    } catch (_) {}
+    return null;
+  })();
+
   let usdtPrice = null;
   try { usdtPrice = (await fetch(`${WORKER}/binance-usdt`).then(r => r.json()))?.price; } catch (_) {}
+  const blue = await blueReq;
+  if (blue) {
+    document.getElementById('r-blue').value = blue.venta;
+    document.getElementById('blue-provider').textContent = blue.label;
+  } else {
+    document.getElementById('blue-provider').textContent = '✗ No se pudo obtener — ingresá manualmente';
+  }
 
   icon.classList.remove('spin');
   if (usdtPrice) {
@@ -8091,6 +8131,7 @@ function exportNotes() {
 
   lines.push('TASAS');
   lines.push(`  USDT:          $${ctx.usdt}  (pago a la tienda, comisión shipper y fee de transferencia)`);
+  lines.push(`  Blue Córdoba:  $${ctx.blue}  (venta; precio en dólares para el cliente)`);
   lines.push(`  Comisión:      USD ${getRate('r-comision')}/producto`);
   lines.push(`  Envío fijo:    $${ctx.envioFijo}/producto (cobrado al cliente)`);
   lines.push(`  Envío real:    $${envioRealTotal} total (costo real del embarque, no se cobra así)`);
@@ -8103,7 +8144,8 @@ function exportNotes() {
     lines.push(`  ${nombre}`);
     lines.push(`    Precio USD:       USD ${row.price}  ×  ${row.qty} unidad${row.qty !== 1 ? 'es' : ''}  (USDT)`);
     lines.push(`    Costo real/unid:  $${Math.round(costoTotal).toLocaleString('es-AR')}`);
-    lines.push(`    Precio de venta:  $${Math.round(precioARS).toLocaleString('es-AR')}  (USD ${precioUSD.toFixed(2)})`);
+    const precioBlue = ctx.blue > 0 ? (precioARS / ctx.blue).toFixed(2) : '—';
+    lines.push(`    Precio de venta:  $${Math.round(precioARS).toLocaleString('es-AR')}  (USD ${precioBlue} blue · USDT ${precioUSD.toFixed(2)})`);
     lines.push(`    Ganancia/unid:    $${Math.round(ganancia).toLocaleString('es-AR')}`);
     lines.push('');
   });
@@ -8114,6 +8156,7 @@ function exportNotes() {
   lines.push(`  Unidades:            ${totalUnits}`);
   lines.push(`  Costo real total:    $${Math.round(totalCostoReal).toLocaleString('es-AR')}`);
   lines.push(`  Total a cobrar:      $${Math.round(totalVenta).toLocaleString('es-AR')}`);
+  if (ctx.blue > 0) lines.push(`  Total a cobrar (USD): USD ${(totalVenta / ctx.blue).toFixed(2)}  (÷ blue Córdoba $${ctx.blue})`);
   lines.push(`  Ganancia total:      $${Math.round(totalGanancia).toLocaleString('es-AR')}`);
   lines.push(`  Ganancia (USD):      USD ${gananciaUSD}  (÷ USDT $${ctx.usdt})`);
   lines.push(`  ROI:                 ${roi}%`);
@@ -8134,6 +8177,8 @@ function exportNotes() {
 // sin refreshPlPricing() quedaría con las tasas del momento de "Generar" (ej. los defaults si se
 // generó antes de que terminara fetchAllRates) y publicaría precios distintos a la calculadora.
 document.getElementById('r-usdt').addEventListener('input', () => { recalculate(); refreshPlPricing(); });
+// El blue solo convierte el precio de venta a dólares billete: no cambia costos ni la lista generada.
+document.getElementById('r-blue').addEventListener('input', recalculate);
 // Config de negocio: recalcula igual que las tasas de mercado, pero además se persiste
 // (a diferencia de las tasas, que siempre se refrescan de la API al recargar).
 BUSINESS_CONFIG_IDS.forEach(id => {

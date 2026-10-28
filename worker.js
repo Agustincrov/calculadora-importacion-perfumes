@@ -26,6 +26,7 @@ async function handle(req) {
   const path = new URL(req.url).pathname;
   try {
     if (path === '/binance-usdt')  return await fetchBinanceUSDT();
+    if (path === '/blue-cordoba')  return await fetchBlueCordoba();
     if (path === '/pontocom') {
       const q = new URL(req.url).searchParams;
       return await fetchPontocomPage(q.get('cat') || PONTOCOM_MAIN, parseInt(q.get('page'), 10));
@@ -56,6 +57,24 @@ async function fetchBinanceUSDT() {
   const data = await r.json();
   const price = typeof data?.venta === 'number' ? data.venta : null;
   return jsonResp({ price });
+}
+
+// ── Dólar blue en Córdoba — via infodolar.com ─────────────────────
+// dolarapi solo tiene el blue nacional (CABA), que en Córdoba suele diferir en $10–20.
+// infodolar publica la tabla por provincia pero no manda CORS. Se toma la fila
+// "Dólar Blue en Córdoba": la segunda celda colCompraVenta es la venta ("$ 1.591,00").
+async function fetchBlueCordoba() {
+  const r = await fetch('https://www.infodolar.com/cotizacion-dolar-provincia-cordoba.aspx', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+    cf: { cacheTtl: 300, cacheEverything: true },
+  });
+  const html = await r.text();
+  const i = html.indexOf('</a> en Córdoba');
+  const cells = i < 0 ? [] : [...html.slice(i, i + 2000).matchAll(/colCompraVenta"[^>]*>\s*\$\s*([\d.]+,\d+)/g)];
+  const parse = m => m ? parseFloat(m[1].replace(/\./g, '').replace(',', '.')) : null;
+  const compra = parse(cells[0]), venta = parse(cells[1]);
+  if (!venta) return jsonResp({ error: 'no se encontró el blue de Córdoba' }, 502);
+  return jsonResp({ compra, venta, source: 'infodolar' });
 }
 
 // ── Ponto Com — catálogo de perfumes ─────────────────────────────
