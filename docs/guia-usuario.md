@@ -18,18 +18,19 @@ La app tiene dos pestañas:
 
 ## Paso 1 — Tasas y configuración
 
-Todas las compras se pagan en **USDT directo a la tienda** (1 USDT ≈ 1 USD), así que la única cotización que importa es la del USDT. Se actualiza sola al abrir la calculadora; si el dato del día es distinto, podés editarla a mano.
+Todas las compras se pagan en **USDT directo a la tienda** (1 USDT ≈ 1 USD), así que la cotización que importa para los costos es la del USDT. El blue de Córdoba solo se usa para darle al cliente el precio en dólares. Se actualiza sola al abrir la calculadora; si el dato del día es distinto, podés editarla a mano.
 
 | Campo | Qué es |
 |---|---|
-| **USDT (ARS)** | Cotización del USDT en pesos: el precio de Binance P2P, tomado de dolarapi.com (difiere por centavos). Se autocompleta. Con esto se calcula el costo de los productos, la comisión del shipper, la fee de transferencia y todos los valores en dólares. |
+| **USDT (ARS)** | Cotización del USDT en pesos: el precio de Binance P2P, tomado de dolarapi.com (difiere por centavos). Se autocompleta. Con esto se calcula el costo de los productos, la comisión del shipper, la fee de transferencia y los valores en USDT. |
+| **Blue Córdoba venta (ARS)** | Dólar blue venta en Córdoba (de infodolar.com). Se autocompleta. Solo sirve para pasarle el precio en dólares al cliente que te paga en billetes: no cambia ningún costo ni margen. Si no se puede leer el de Córdoba, toma el blue nacional y te avisa con ⚠. |
 | **Comisión/producto** | Lo que cobra el shipper por producto, en USD. Se paga al valor del USDT. Generalmente 4. |
 | **Envío total (ARS)** | Lo que de verdad le pagás al fletero por todo el embarque. No se le cobra así al cliente: se usa solo para mostrarte tu costo y ROI reales en el resumen. |
 | **Envío fijo/producto** | Lo que le cobrás al cliente por cada producto, sin importar el costo real del embarque (por eso "fijo"). Si el cliente pide varios productos, cada uno suma este monto. |
 | **Fee transferencia USDT** | Fee fija (en USDT) por cada transferencia real que hacés. Se cuenta una vez por cada nombre distinto del campo "Pedido" (ver más abajo). |
 | **Redondeo precio** | Los precios de venta se redondean hacia arriba a este número. Es el mismo que usa el Generador de listas, así los precios de la calculadora y los del catálogo coinciden. |
 
-> El botón **Actualizar cotizaciones** vuelve a buscar el USDT en cualquier momento. La comisión, los envíos, la fee USDT y el redondeo son configuración tuya: se guardan solos y no se pierden al recargar la página.
+> El botón **Actualizar cotizaciones** vuelve a buscar el USDT y el blue en cualquier momento. La comisión, los envíos, la fee USDT y el redondeo son configuración tuya: se guardan solos y no se pierden al recargar la página.
 
 ### Cómo se calcula el costo
 
@@ -89,7 +90,8 @@ Los resultados están repartidos en **dos tablas**: la de arriba (costo real) y 
 **Tabla de abajo — Precio de venta (violeta), junto al Resumen:**
 - **Margen %** — Editable.
 - **Precio ARS** — El precio de venta para lograr ese margen, redondeado hacia arriba (Redondeo precio).
-- **Precio USD** — Ese precio en dólares, al valor del USDT.
+- **Precio USD** — Ese precio en dólares billete, al blue de Córdoba: lo que le pasás al cliente que te paga en dólares. Como el USDT suele estar más caro que el blue, es un número mayor que el de USDT, pero en pesos vale lo mismo.
+- **Precio USDT** — Ese precio en USDT, al valor del USDT.
 - **Ganancia** — Cuánto ganás en pesos después de cubrir todos los costos.
 - **Gan. USD/unid** — La ganancia por unidad en dólares, al valor del USDT. Editable (ver arriba).
 - **Margen real** — El margen que te queda después de redondear, con colores: verde (20% o más), amarillo (entre 10% y 20%), rojo (menos del 10%).
@@ -103,7 +105,7 @@ El panel de resumen muestra el total de la operación:
 - Unidades totales, USDT a mandar y costo en pesos del producto.
 - Comisiones y envío **real** (el que le pagás al fletero).
 - Costo total real: producto + comisiones + envío real + fees USDT.
-- Venta y ganancia de los productos para clientes (las filas STOCK no suman venta).
+- Venta y ganancia de los productos para clientes (las filas STOCK no suman venta), y la venta también en USD al blue.
 - Ganancia en USD (al valor del USDT).
 - ROI: ganancia sobre costo total real.
 - Si hay más de un cliente, un desglose por cliente con unidades, costo, venta y ganancia.
@@ -173,7 +175,8 @@ En el catálogo, tus clientes pueden:
 
 - **Buscar** con palabras en cualquier orden y sin acentos ("dior sauvage", "khamrah 100ml", "jpg"). Si escriben mal una letra, la página corrige ("aqua di gio" → Acqua di Gio). Si no hay resultados, les ofrece consultarte por WhatsApp.
 - **Filtrar** por precio, categoría (nicho, diseñador, árabe), tamaño, testers y marca, y **ordenar** por precio.
-- Ver cada perfume con el **nombre limpio** y sus **tamaños juntos** en un mismo renglón. Los testers y los perfumes sin código de lote llevan una etiqueta que, al tocarla, explica qué son.
+- Ver cada perfume con el **nombre limpio** y sus **tamaños** como etiquetas al lado de la concentración: al elegir un tamaño cambian el precio y el botón. Los testers y los perfumes sin código de lote llevan una etiqueta que, al tocarla, explica qué son.
+- **Saltar entre marcas:** el nombre de la marca queda fijo arriba mientras se recorre; al tocarlo se abre la lista de marcas (con buscador) para ir directo a otra.
 - **Armar el carrito y mandarte el pedido por WhatsApp** con su nombre, provincia, forma de entrega y de pago. Antes de enviarlo ven el mensaje tal cual te llega.
 
 La página también muestra las condiciones de los encargos: pedidos de sábado a jueves con cierre el viernes, llegada en 7 a 10 días hábiles, pago completo al encargar (transferencia, o tarjeta en 1, 2 o 3 cuotas con +9, 18 o 27 %) y envío a sucursal de Correo Argentino por $ 7.000, gratis sumando un decant (en Córdoba, en mano). Estos valores están fijos en el catálogo: si cambian, hay que actualizarlos en el código.
@@ -186,7 +189,7 @@ Los precios del catálogo quedan fijos al momento de publicar: si cambian las co
 
 ## Exportar resumen
 
-**Exportar resumen** descarga un archivo de texto con todos los datos de la compra: USDT y configuración del día, detalle por producto (costo, precio de venta y ganancia) y totales. Sirve para guardar como registro o compartir por WhatsApp.
+**Exportar resumen** descarga un archivo de texto con todos los datos de la compra: USDT, blue y configuración del día, detalle por producto (costo, precio de venta en pesos, USD al blue y USDT, y ganancia) y totales (con el total a cobrar en USD). Sirve para guardar como registro o compartir por WhatsApp.
 
 ---
 
