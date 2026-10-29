@@ -732,6 +732,20 @@
           onclick="event.preventDefault(); alert(MACEDONIA_BOOKMARKLET_HELP)"
           style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;"
           title="Arrastralo a la barra de marcadores. Después abrí compras.macedonia.com.py y tocalo: baja el catálogo en un archivo .json (~20 s).">⬇ Macedonia</a>
+        <button class="btn btn-outline" id="pl-madrid-btn" onclick="document.getElementById('pl-madrid-file').click()" title="Carga el archivo madridcenter-AAAA-MM-DD.json que baja el marcador ⬇ Madrid Center: perfumes y kits con stock (sin body splash, cremas, desodorantes ni infantiles), precio US$ del sitio. Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Importar archivo Madrid Center
+        </button>
+        <input type="file" id="pl-madrid-file" accept=".json,application/json" style="display:none"
+          onchange="importMadridCenterFile(this.files[0]); this.value=''" />
+        <a id="pl-madrid-bookmarklet" href="#" draggable="true"
+          onclick="event.preventDefault(); alert(MADRID_BOOKMARKLET_HELP)"
+          style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;"
+          title="Arrastralo a la barra de marcadores. Después abrí madridcenterimportados.com y tocalo: baja el catálogo en un archivo .json (~30 s).">⬇ Madrid Center</a>
         <button class="btn btn-outline" id="pl-elegancia-btn" onclick="importSiteCatalog('elegancia')" title="Trae los perfumes con stock de eleganciacompany.com (precio US$ sin IVA). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Elegancia
@@ -748,7 +762,19 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Star Company
         </button>
-        <button class="btn btn-outline" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove y Star Company uno detrás del otro (un par de minutos) y avisa al final. Macedonia se carga aparte con su archivo.">
+        <button class="btn btn-outline" id="pl-multipass-btn" onclick="importSiteCatalog('multipass')" title="Trae los perfumes con stock de multipass.com.py (precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Traer catálogo Multipass
+        </button>
+        <button class="btn btn-outline" id="pl-lg-btn" onclick="importSiteCatalog('lg')" title="Trae los perfumes con stock de lgimportados.com (precio US$ del sitio, promocional si tiene; sin infantiles ni fraccionados). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Traer catálogo LG Importados
+        </button>
+        <button class="btn btn-outline" id="pl-mobilezone-btn" onclick="importSiteCatalog('mobilezone')" title="Trae los perfumes con stock de mobilezone.com.py (precio US$ del sitio, sin body splash ni lociones). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Traer catálogo Mobile Zone
+        </button>
+        <button class="btn btn-outline" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados y Mobile Zone uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
           Traer todos
         </button>
         <label style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
@@ -1971,6 +1997,8 @@ const KNOWN_BRANDS = [
   ['Regalien'], ['The Fragrance'], ['Fabbrica della Musa'], ['M. Micallef', 'M MICALLEF'], ['Electimuss'],
   ['Adidas'], ['Cristiano Ronaldo', 'CR7', 'CRISTIANO ROLANDO'], ['Estee Lauder'], ['Roberto Capucci'], ['Lulu Castagnette'],
   ['Armand Basi'], ['Kylie Minogue', 'KYLIE MINOGUEDISCO'], ['Roccobarocco'], ['Morgan'], ['Guy Laroche'], ['Acquadì'],
+  // Multipass (2026-10-29)
+  ['Laura Biagiotti'], ['Aquolina'],
 
   // Agregadas por el catálogo de Macedonia (2026-10-13). Las que son una palabra suelta que aparece dentro
   // de otros nombres (Grandeur, Karma, Aris, Head, Royal Opera…) no van acá: ver MACEDONIA_PREFIX_BRANDS.
@@ -2028,6 +2056,7 @@ const BRAND_CATEGORY = (() => {
     'The House of Oud', 'Thomas Kosmala', 'Tiziana Terenzi', 'Tom Ford', 'Unique Luxury',
     'Van Cleef & Arpels', 'Vertus', 'Vilhelm', 'Xerjoff',
     'Fomowa', // 2026-10-23
+    'Esse Strikes The Notes', // Madrid Center (2026-10-29), US$ 145
     'Regalien', 'The Fragrance', 'Fabbrica della Musa', 'M. Micallef', 'Electimuss', // Ponto Com (2026-10-09)
     // Macedonia (2026-10-13)
     'Spirit of Kings', 'Laboratorio Olfattivo', 'Birkholz', 'Min New York', 'The Merchant of Venice', 'Amouroud',
@@ -2061,6 +2090,9 @@ const BRAND_CATEGORY = (() => {
     // Ponto Com (2026-10-09)
     'Adidas', 'Cristiano Ronaldo', 'Estee Lauder', 'Roberto Capucci', 'Lulu Castagnette', 'Armand Basi',
     'Kylie Minogue', 'Roccobarocco', 'Morgan', 'Guy Laroche', 'Acquadì',
+    // Multipass y LG Importados (2026-10-29)
+    'Laura Biagiotti', 'Aquolina', 'Alejandro Sanz', 'Porsche Design', 'Franck Olivier', 'Parfum de Palazzo', // + Madrid Center
+    'Nike', 'Malizia', 'Messi', 'Zara', 'La Florentina', // Mobile Zone
     // Macedonia (2026-10-13)
     'Guess', 'John Varvatos', 'Tonino Lamborghini', 'Zadig & Voltaire', 'Beverly Hills Polo Club', 'Hollister',
     'Alfa Romeo', 'Dsquared2', 'Boucheron', 'Emanuel Ungaro', 'Michel Germain', 'Head', '4711', 'Antonio Puig',
@@ -2098,7 +2130,13 @@ const BRAND_CATEGORY = (() => {
     'Risala', 'Vurv', 'Al Hunaidi', 'Royal Glory', 'Sweet Dreams of Dubai', 'Maison Ghandour', 'Swiss Arabian', 'Abyat',
     'Azha', 'Maison Awad', 'Modyafa', 'Akaro', "L'Affair", 'Olmas', 'Shaikh Mohd Saeed', 'Al Rehab', 'Al Atrab',
     'Al Ambra', 'Nylaa', 'Auraa', 'Novah Scents', 'Lafayette', 'Ramon Blazar', 'Coral',
-    'Marquisa Dubai' // Star Company (2026-10-16)
+    'Marquisa Dubai', // Star Company (2026-10-16)
+    // LG Importados (2026-10-29). Grace of London, Onlyou y Neeche son casas de clones: árabe por el mismo criterio.
+    'Grace of London', 'Isabelle la Belle', 'Afaq', 'LPDO', 'Sppc', 'Onlyou', 'Neeche',
+    // Madrid Center (2026-10-29). Eagle, Sea Blue, Memwa, Saint Hilaire, Roxanne y Devsana: clones sin origen claro.
+    'Ozareej', 'Zak Al Shiyukh', 'Al Gazal', 'Sterling', 'Style & Scents', 'Style & Scents Deluxe Edition', 'Dubai Sahara',
+    'Dubai Garden', 'Al Qurashi', 'Eagle', 'Sea Blue', 'Memwa', 'Saint Hilaire', 'Roxanne', 'Devsana',
+    'Atyab al Marshoud', 'Kalimat', 'Egy Orient' // Mobile Zone (2026-10-29)
   ]);
   return map;
 })();
@@ -4916,8 +4954,8 @@ const MACEDONIA_RATE_DEFAULT = 7484.5;
 const MACEDONIA_INFANTIL_CATS = [353, 354]; // "Kits infantil", "Infantil"
 // Body mist/splash, desodorantes, cremas, productos de cabello: se excluyen si el nombre no dice que
 // además trae perfume. En los kits solo se mira MIST/SPLASH: "KIT 100ML+B.LOTION" es un kit de perfume.
-const MACEDONIA_BODY_RE = /\b(BODY|BODDY|MIST|SPLASH|DEO|DESODORANTE|SHOWER|HAIR|BRUMA|LOTION|CREAM|CREMA|AFTER SHAVE|CORPORAL|PERFUME SPRAY|\d+ML SPRAY)\b/; // "MAISON ALHAMBRA … 150ML SPRAY" = body spray
-const MACEDONIA_KIT_BODY_RE = /\b(MIST|SPLASH)\b/;
+const MACEDONIA_BODY_RE = /\b(BODY|BODDY|MIST|SPLASH|DEO|DESODORANTE|SHOWER|HAIR|BRUMA|LOTION|LOCAO|LOCION|OLEO|CAPILAR|SHAMPOO|CONDICIONADOR|CREAM|CREMA|AFTER SHAVE|CORPORAL|PERFUME SPRAY|\d+ML SPRAY)\b/; // "MAISON ALHAMBRA … 150ML SPRAY" = body spray
+const MACEDONIA_KIT_BODY_RE = /\b(MIST|SPLASH|SHAMPOO|CONDICIONADOR)\b/;
 const MACEDONIA_PERFUME_RE = /\b(EAU DE|EDP|EDT|PARFUM|PERFUM|COLONIA|COLOGNE|EXTRAIT)\b/;
 // Marcas descartadas (2026-10-13, ver card 09): clones/marcas de muy bajo costo, las mismas que se
 // descartaron en Ponto Com, y lo que no es perfume (cabello/barbería, desodorantes, perfume para
@@ -5034,6 +5072,94 @@ const MACEDONIA_BOOKMARKLET_HELP = 'Este botón es un marcador: arrastralo a la 
 document.getElementById('pl-macedonia-bookmarklet').href =
   'javascript:' + encodeURIComponent(`(${macedoniaBookmarklet.toString()})()`);
 
+// ── Madrid Center (madridcenterimportados.com, card 17) ──
+// API propia (/bff/main/api/v4/productos/buscar) con desafío de Cloudflare a todo lo que no sea un navegador
+// (cf-mitigated: challenge, también al Worker): se baja con un marcador, como Macedonia. Categoría 936 "Perfumes",
+// solo con stock, 100 por página con cursor (~27 páginas). Precio en US$ (`precio.usd`, promocional si tiene).
+// Se serializa con toString(): no puede usar nada de afuera de la función.
+async function madridCenterBookmarklet() {
+  if (!/(^|\.)madridcenterimportados\.com$/.test(location.hostname)) {
+    alert('Abrí madridcenterimportados.com y tocá el marcador ahí.');
+    return;
+  }
+  const base = '/bff/main/api/v4/productos/buscar?categoria_id=936&solo_con_stock=true&limit=100&idioma=es&formato_simple=true';
+  const title = document.title;
+  try {
+    const items = [];
+    let cursor = null;
+    for (let page = 1; page <= 100; page++) {
+      const r = await fetch(base + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), { headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error(`página ${page}: ${r.status}`);
+      const d = await r.json();
+      for (const p of d.productos || []) {
+        const pr = p.precio || {};
+        items.push({
+          code: String(p.codigo),
+          name: String(p.titulo || '').replace(/\s+/g, ' ').trim(),
+          price: Number(pr.precio_promocional_usd) > 0 ? Number(pr.precio_promocional_usd) : Number(pr.usd) || 0,
+          brand: typeof p.marca === 'string' ? p.marca : (p.marca && p.marca.nombre) || '',
+          cat: typeof p.categoria === 'string' ? p.categoria : (p.categoria && p.categoria.nombre) || '',
+          stock: p.stock ? Number(p.stock.cantidad) || (p.stock.disponible ? 1 : 0) : 0,
+        });
+      }
+      document.title = `Madrid Center ${items.length}/${(d.paginacion && d.paginacion.total) || '?'}…`;
+      const pg = d.paginacion || {};
+      if (!pg.tiene_mas || !pg.siguiente_cursor) break;
+      cursor = pg.siguiente_cursor;
+    }
+    const date = new Date().toLocaleDateString('en-CA');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ source: 'madridcenter', date, items })], { type: 'application/json' }));
+    a.download = `madridcenter-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    alert(`Madrid Center: ${items.length} productos con stock descargados en ${a.download}. Importalo en el generador de listas.`);
+  } catch (err) {
+    alert(`No se pudo bajar el catálogo de Madrid Center: ${err.message}`);
+  } finally {
+    document.title = title;
+  }
+}
+const MADRID_BOOKMARKLET_HELP = 'Este botón es un marcador: arrastralo a la barra de marcadores del navegador '
+  + '(si no la ves: Cmd+Shift+B). Después abrí madridcenterimportados.com y tocá el marcador: en unos 30 segundos '
+  + 'descarga madridcenter-AAAA-MM-DD.json. Ese archivo se carga con "Importar archivo Madrid Center".';
+document.getElementById('pl-madrid-bookmarklet').href =
+  'javascript:' + encodeURIComponent(`(${madridCenterBookmarklet.toString()})()`);
+
+// Categorías del sitio que no son perfume. Casi todo viene como "Perfumes" a secas, así que el filtro fuerte es el
+// de nombre (plBuildSiteItems). "Belleza y Salud" tiene kits de perfume: no se excluye.
+const MADRID_EXCLUDE_CATS = /BODY SPLASH|CORPORAL|DESODORANTE|OLEO|INFANTIL/;
+
+// "Perfume Riiffs Seasons Rise - Eau de Parfum - Unisex - 100ML" → "RIIFFS SEASONS RISE EAU DE PARFUM UNI 100ML"
+function plCleanMadridName(raw) {
+  return plCleanGenoveName(raw)
+    .replace(/\bMASCULINO\b/g, 'MASC').replace(/\bFEMENINO\b/g, 'FEM').replace(/\bUNI(?:SSEX|SEX)\b/g, 'UNI')
+    .replace(/\s+/g, ' ').trim();
+}
+
+async function importMadridCenterFile(file) {
+  if (!file) return;
+  try {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch { throw new Error('el archivo no es un JSON válido'); }
+    if (!data || data.source !== 'madridcenter' || !Array.isArray(data.items)) {
+      throw new Error('no es un archivo bajado con el marcador ⬇ Madrid Center');
+    }
+    const rows = data.items
+      .filter(x => x.stock > 0 && !MADRID_EXCLUDE_CATS.test(plStripAccents(String(x.cat || '')).toUpperCase()))
+      .map(x => ({
+        code: x.code, name: plCleanMadridName(x.name || ''), price: Math.round(Number(x.price) * 100) / 100,
+        site: x.brand || plSiteBrandFromName(plCleanMadridName(x.name || '')),
+        siteCat: /ARABE/.test(plStripAccents(String(x.cat || '')).toUpperCase()) ? 'arabe' : ''
+      }));
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : undefined; // la de la descarga, no la de hoy
+    alert(plSetSiteSource('madridcenter', 'Madrid Center', rows, date).msg);
+  } catch (err) {
+    alert(`No se pudo importar el archivo de Madrid Center: ${err.message}. No se agregó nada.`);
+  }
+}
+
 async function importMacedoniaFile(file) {
   if (!file) return;
   const rate = macedoniaRate;
@@ -5108,14 +5234,32 @@ const PL_SITE_BRAND_MAP = {
   'ALHARAMAIN': 'Al Haramain', 'BANDERAS': 'Antonio Banderas', 'ALWATANIAH': 'Al Wataniah',
   'ALLURE PERFUMES-LAFFAIR': "L'Affair", "L'AFFAIR": "L'Affair", "L'AFFRAIR": "L'Affair", 'CHARISMA': 'By Charisma',
   'CASAMORATI 1888': 'Xerjoff', 'ETAT LIBRE D`ORANGE': "Etat Libre d'Orange", 'CERRUTTI': 'Cerruti',
-  'DUPONT': 'S.T. Dupont', 'NYLAA BY RASASI': 'Nylaa', '93MIL': '93MIL', 'MAISON': ''
+  'DUPONT': 'S.T. Dupont', 'NYLAA BY RASASI': 'Nylaa', '93MIL': '93MIL', 'MAISON': '',
+  // LG Importados (2026-10-29): a veces pone la línea o media marca
+  'ROYAL': 'Royal Opera', 'GRACE': 'Grace of London', 'GRACE OF LONDOM': 'Grace of London', 'SECRETS LONDON': 'Grace of London',
+  'BOULEVARD': 'Boulevard Paris', 'PRINCESSE HAUSSMANN': 'Boulevard Paris', 'ISABELLE': 'Isabelle la Belle',
+  'KARMA CHOICE': 'Karma', 'FW': 'Fragrance World', 'PORSCHE': 'Porsche Design', 'INVICTUS': 'Paco Rabanne',
+  // Madrid Center (2026-10-29)
+  'GRACE OF LONDON': 'Grace of London', 'ALMAS PERFUMES': 'Almas', 'AL QURASHU': 'Al Qurashi',
+  'PRESTIGIOUS PARFUMS': 'Prestigius Parfum', 'PARISIS': 'Born in France', 'MAISON MICALLEF': 'M. Micallef',
+  'PIEGE DE LULU': 'Lulu Castagnette', 'ZAK': 'Zak Al Shiyukh',
+  'RAVE': 'Lattafa', 'RAVE NOW': 'Lattafa' // Mobile Zone (2026-10-29): Rave es una línea de Lattafa
 };
 // Gama baja o no perfume (2026-10-14), comparado contra la marca del sitio. Las árabes baratas entran igual
 // (tienen sus tramos), como en Ponto Com y Macedonia. Además vale MACEDONIA_EXCLUDE_BRANDS_RE sobre el nombre.
 const PL_SITE_EXCLUDE_BRANDS = new Set([
   'JOLI JOLI', 'OMERTA', 'LINN YOUNG', 'BYPHASSE', 'DR.BRAND', 'DR.BRAND 30ML/LOTION-SPL', 'DEOMANIA',
   'BEAUTY BRAND', 'SMART COLLECTION', 'SHIRLEY MAY', 'CUBA', 'ULRIC DE VARENS', 'FRAGLUXE', 'MIRADA', 'SISTELLE',
-  'MINI BRAND COLLECTION', 'BABY THREE' // Star Company (2026-10-16): réplicas de 25 ml a US$ 3 y un juguete "blind box"
+  'MINI BRAND COLLECTION', 'BABY THREE', // Star Company (2026-10-16): réplicas de 25 ml a US$ 3 y un juguete "blind box"
+  // LG Importados (2026-10-29): imitaciones con nombre trucho (Locoscte, Vercage, Cool 2i2…) y gama baja
+  'CARRERA', 'THE MOST WANTS', 'CARLOTTA', 'LOCOSCTE', 'ATTRACIONE', 'BOON BOON', 'VERCAGE', 'MYSTICAL', 'COOL',
+  'COOL GIRL', 'BLUENICE', 'FANTASTIC', 'SCANDAL', 'UNIFLAME', '6AM REBEL', 'LEGACY KING COLLECTION', 'VALIDATION',
+  'OLUMAPEA', 'NYC', 'MISS ROSE', 'SOPHIE LA GIRAFE',
+  // Madrid Center (2026-10-29): clones de US$ 5–11, las mismas de Ponto Com y body
+  'PARIS ROYALE', 'PIERRE BERNARD', 'ICANDY', "CHIC 'N GLAM", 'DEAR BODY', 'GENERICA', 'INSTYLE', 'DORALL COLLECTION',
+  'COLOUR ME', 'MEGA COLLECTION', 'CREATION LAMIS', 'KANTARA PARIS', 'MB PARFUMS', 'MARXZELLE LUXURY COLLECTION', 'GALAXY',
+  'EVAFLOR PARIS', 'MB',
+  'AIR-VAL', 'DISNEY', 'MARVEL' // Mobile Zone (2026-10-29): infantiles con licencia
 ]);
 
 function plSiteBrandKey(raw) { return plStripAccents(String(raw || '')).toUpperCase().replace(/[\s.]+$/, '').replace(/\s+/g, ' ').trim(); }
@@ -5149,7 +5293,8 @@ function plBuildSiteItems(rows) {
     seen.add(r.code);
     if (!(r.price > 0)) continue;
     // Atacado: "Perfume Cuba …"; Star Company: "PERF TESTER FEM SCENTOLOGIA …"
-    const upper = plStripAccents(r.name).toUpperCase().replace(/^(KIT\s+)?(PERFUMES?|PERF)\s+(TESTER\s+)?((FEM|MASC|UNI|UNISEX)\s+)?/, '');
+    // Multipass: "KIT OMERTA …", "TESTER LINN YOUNG …" (sin "Perfume")
+    const upper = plStripAccents(r.name).toUpperCase().replace(/^((KIT|TESTER)\s+)?((PERFUMES?|PERF)\s+)?(TESTER\s+)?((FEM|MASC|UNI|UNISEX)\s+)?/, '');
     if (PL_SITE_EXCLUDE_BRANDS.has(plSiteBrandKey(r.site)) || MACEDONIA_EXCLUDE_BRANDS_RE.test(upper)) continue;
     if (plIsBodyProduct(upper) || plIsNonPerfumeCategory(upper)) continue;
     const brand = detectKnownBrand(r.name) || plSiteBrand(r.site);
@@ -5264,15 +5409,172 @@ async function plFetchGenoveRows(progress) {
   }));
 }
 
+// Multipass (multipass.com.py, card 17): PrestaShop sin CORS, vía Worker (/multipass), 36 por página. Lista también
+// los agotados (available: false). No informa la marca: sale del nombre.
+// "PERF LINN  Y. WILD…", "TESTER PERFUME J.P.G. CLASSIQUE…", "Perfume Al Haramain Olaf Eau de Parfum Unissex 100ML"
+// Abreviaturas y typos de la tienda (2026-10-29). "SIG", "JGA", "AS", "IP" son prefijos internos sin sentido.
+const MULTIPASS_NAME_FIXES = [
+  [/^(TESTER |KIT )?(?:PERUMEF |PERFUME )?(?:SIG|JGA|AS|IP) /, '$1'],
+  [/\bP\.\s?R\.?(?= )/g, 'PACO RABANNE'], [/\bC\.\s?H\.(?= )/g, 'CAROLINA HERRERA'], [/\bA\.\s?B\.(?= )/g, 'ANTONIO BANDERAS'],
+  [/\bV\.\s?R\.(?= )/g, 'VIKTOR & ROLF'], [/\bATONIO\b/g, 'ANTONIO'], [/\bLATAFFA\b/g, 'LATTAFA'], [/\bJENIFER\b/g, 'JENNIFER'],
+  [/^(TESTER |KIT )?JENNIFER (?!LOPEZ)/, '$1JENNIFER LOPEZ '], [/^(TESTER |KIT )?HARAMAIN\b/, '$1AL HARAMAIN'],
+  [/^(TESTER |KIT )?LAVIN\b/, '$1LANVIN'], [/\bLINN Y\./g, 'LINN YOUNG'], [/\bROCCO BARROCO\b/g, 'ROCCOBAROCCO'],
+  [/\bCOLLETION\b/g, 'COLLECTION'], [/^(TESTER |KIT )?FACONABLE\b/, '$1FACONNABLE'], [/^(TESTER |KIT )?GUY DRAKKAR\b/, '$1DRAKKAR'],
+  [/\bDOLCE GABBANA\b/g, 'DOLCE & GABBANA'], [/\bABERCROMBIE&FITCH\b/g, 'ABERCROMBIE & FITCH'],
+  [/(\dML) \d{3,}$/, '$1'] // código interno pegado al final: "… EDP 100ML 373"
+];
+// Líneas que la tienda escribe sin la marca. Se suman a MACEDONIA_PREFIX_BRANDS (mismo criterio: solo al principio).
+const MULTIPASS_PREFIX_BRANDS = [
+  [/^DRAKKAR\b/, 'Guy Laroche'], [/^(CLUB DE NUIT|ODYSSEY)\b/, 'Armaf'], [/^POLO\b/, 'Ralph Lauren'],
+  [/^PINK SUGAR\b/, 'Aquolina'], [/^VIVA LA JUICE?Y?\b/, 'Juicy Couture'], [/^CABOCHARD\b/, 'Gres'],
+  [/^PLEASURES\b/, 'Estee Lauder']
+];
+
+// "PERF LINN  Y. WILD…", "TESTER PERFUME J.P.G. CLASSIQUE…", "Perfume Al Haramain Olaf Eau de Parfum Unissex 100ML"
+function plCleanMultipassName(raw) {
+  let n = plStripAccents(String(raw)).toUpperCase().replace(/[’´`]/g, "'").replace(/\s+/g, ' ').trim()
+    .replace(/^((?:TESTER|KIT) )?(?:PERFUMR|PERF) /, '$1PERFUME ');
+  n = plCleanPontocomName(n).replace(/\bFEMENINO\b/g, 'FEM');
+  for (const [re, to] of MULTIPASS_NAME_FIXES) n = n.replace(re, to);
+  return n.replace(/\s+/g, ' ').trim();
+}
+
+function plMultipassPrefixBrand(name) {
+  const bare = name.replace(/^(TESTER|KIT) /, '');
+  const hit = [...MULTIPASS_PREFIX_BRANDS, ...MACEDONIA_PREFIX_BRANDS].find(([re]) => re.test(bare));
+  return hit ? hit[1] : '';
+}
+
+async function plFetchMultipassRows(progress) {
+  const page = p => plFetchJson(`${WORKER}/multipass?page=${p}`);
+  const first = await page(1);
+  progress(first.items.length);
+  const last = Math.min(Math.ceil((first.total || first.items.length) / 36), 60);
+  const rest = await plMapLimit(Array.from({ length: Math.max(0, last - 1) }, (_, i) => i + 2), 4, async p => {
+    const d = await page(p);
+    progress(d.items.length);
+    return d;
+  });
+  const rows = [first, ...rest].flatMap(d => d.items);
+  if (first.total && rows.length < first.total * 0.95) throw new Error(`llegaron ${rows.length} de ${first.total} productos`);
+  return rows.filter(x => x.available).map(x => {
+    const name = plCleanMultipassName(x.name);
+    return { code: x.code, name, price: x.price, site: plMultipassPrefixBrand(name) };
+  }).filter(x => !/^SPRAY\b/.test(x.name)); // "SPRAY CORPORAL …", "SPRAY KHAMRAH SPRAY 200ML": spray corporal
+}
+
+// LG Importados (lgimportados.com, card 17): API JSON del sitio vía Worker (/lgimportados, rechaza Origin ajeno),
+// 100 por página desde la 0. Trae marca (`brand`, vacía en ~10 %) y subcategorías: sub1 Feminino/Masculino/
+// Unissex/Kits/Infantil, sub2 = origen (Arabe/Europeu/Americano/Frances…). Lista también los sin stock.
+// "MAWWAL ARABIA EDEN SALAM 100ML EDP*", "GRANDEUR ELITE TRIBAL INTENSE MEM 100ML EDP 035907"
+function plCleanLgName(raw) {
+  return plStripAccents(String(raw)).toUpperCase().replace(/[’´`]/g, "'")
+    .replace(/\*/g, ' ').replace(/,/g, ' ')
+    .replace(/\bMEM\b/g, 'MEN')
+    .replace(/\s\d{5,}\s*$/, '') // código interno al final
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Sin marca del sitio (LG ~10 %, Madrid Center): la de MACEDONIA_PREFIX_BRANDS, o las primeras palabras si son una
+// marca ya conocida por el código de sitios ("CARLOTTA …" → excluida, "ONLYOU COLLECTION …" → Onlyou, "ISABELLE LA BELLE …").
+function plSiteBrandFromName(name) {
+  const prefix = MACEDONIA_PREFIX_BRANDS.find(([re]) => re.test(name));
+  if (prefix) return prefix[1];
+  const words = name.split(' ');
+  for (const n of [3, 2, 1]) {
+    const k = words.slice(0, n).join(' ');
+    if (PL_SITE_EXCLUDE_BRANDS.has(k) || k in PL_SITE_BRAND_MAP) return k;
+    const cat = Object.keys(BRAND_CATEGORY).find(b => b.toUpperCase() === k);
+    if (cat) return cat;
+  }
+  return '';
+}
+
+async function plFetchLgRows(progress) {
+  const page = p => plFetchJson(`${WORKER}/lgimportados?page=${p}`);
+  const first = await page(0);
+  progress(first.items.length);
+  const pages = Math.min(first.pages || 1, 80);
+  const rest = await plMapLimit(Array.from({ length: Math.max(0, pages - 1) }, (_, i) => i + 1), 4, async p => {
+    const d = await page(p);
+    progress(d.items.length);
+    return d;
+  });
+  const rows = [first, ...rest].flatMap(d => d.items);
+  if (first.total && rows.length < first.total * 0.95) throw new Error(`llegaron ${rows.length} de ${first.total} productos`);
+  return rows
+    // fraccionado = frasco abierto; "TUBETE …" = tubo de 35 ml a US$ 4,5; "B917-3", "MY057", "ZMA9898-185" = código de imitación
+    .filter(x => x.stock && x.sub1 !== 'Infantil' && !/FRACCIONADO|^TUBETE\b|\b(B\d{3,4}(-\d+)?|MY\d{3}|ZMA\d+(-\d+)?)\b/i.test(x.name))
+    .map(x => ({
+      code: x.code, name: plCleanLgName(x.name), price: Math.round(x.price * 100) / 100,
+      site: x.brand || plSiteBrandFromName(plCleanLgName(x.name)), siteCat: x.sub2 === 'Arabe' ? 'arabe' : ''
+    }));
+}
+
+// Mobile Zone (mobilezone.com.py, card 17): tienda de tecnología con API pública y CORS abierto. La categoría 219
+// "Perfume" no aparece en el menú del sitio pero sí en la API (~860 productos, una sola request). Subcategorías
+// 26310 Árabe y 59030 Nicho como siteCat. Mezcla body splash, lociones y "Colonia" de Victoria's Secret (250 ml,
+// son splash): se sacan por la primera palabra.
+const MOBILEZONE_API = 'https://products-api-dns.mobilezone.com.py/api/products';
+const MOBILEZONE_SUBCATS = { 26310: 'arabe', 59030: 'nicho' };
+const MOBILEZONE_NOT_PERFUME_RE = /^(SPLASH|BODY|MIST|LOCION|LOTION|CREMA|COLONIA|ACONDICIONADOR|PORTA|VELA)\b|\bPARA CABELLO\b/;
+
+async function plFetchMobileZoneRows(progress) {
+  const all = async cat => {
+    const out = [];
+    for (let offset = 0; offset < 5000; offset += 1000) {
+      const d = await plFetchJson(`${MOBILEZONE_API}?id_category=${cat}&offset=${offset}&limit=1000`);
+      out.push(...(d.products || []));
+      if (out.length >= (d.count || 0) || !(d.products || []).length) break;
+    }
+    return out;
+  };
+  const products = await all(219);
+  progress(products.length);
+  const subOf = {};
+  for (const [id, cat] of Object.entries(MOBILEZONE_SUBCATS)) (await all(id)).forEach(x => { subOf[x.id_product] = cat; });
+  return products.filter(x => x.stock > 0).map(x => {
+    const promo = Number(Array.isArray(x.promotionalPrice) && x.promotionalPrice[0] && x.promotionalPrice[0].price);
+    return {
+      code: String(x.internal_id || x.id_product),
+      name: plCleanMadridName(String(x.name_py || '')).replace(/^SET\b/, 'KIT'),
+      price: promo > 0 ? promo : Number(x.price),
+      site: (x.productHasBrands && x.productHasBrands[0] && x.productHasBrands[0].name_py) || '',
+      siteCat: subOf[x.id_product] || ''
+    };
+  }).filter(x => !MOBILEZONE_NOT_PERFUME_RE.test(x.name));
+}
+
 const PL_SITE_IMPORTS = {
   elegancia: { label: 'Elegancia', btn: 'pl-elegancia-btn', fetchRows: plFetchEleganciaRows },
   atacado:   { label: 'Atacado Connect', btn: 'pl-atacado-btn', fetchRows: plFetchAtacadoRows },
   genove:    { label: 'Genove', btn: 'pl-genove-btn', fetchRows: plFetchGenoveRows },
-  star:      { label: 'Star Company', btn: 'pl-star-btn', fetchRows: plFetchStarCompanyRows }
+  star:      { label: 'Star Company', btn: 'pl-star-btn', fetchRows: plFetchStarCompanyRows },
+  multipass: { label: 'Multipass', btn: 'pl-multipass-btn', fetchRows: plFetchMultipassRows },
+  lg:        { label: 'LG Importados', btn: 'pl-lg-btn', fetchRows: plFetchLgRows },
+  mobilezone: { label: 'Mobile Zone', btn: 'pl-mobilezone-btn', fetchRows: plFetchMobileZoneRows }
 };
 
-// Trae un sitio y reemplaza su carga anterior (marcada con `site`). Con quiet devuelve el aviso en vez de
-// mostrarlo (lo usa "Traer todos"). Si algo falla no agrega nada.
+// Arma los ítems de un sitio y reemplaza su carga anterior (marcada con `site`). Devuelve el aviso y si tiene
+// notas (marcas sin categoría, productos sin marca). Si no queda ningún producto, tira error y no toca nada.
+function plSetSiteSource(key, label, rows, date = new Date().toLocaleDateString('en-CA')) {
+  const { items, newBrands, noBrand } = plBuildSiteItems(rows);
+  if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
+  plSources = plSources.filter(s => s.site !== key);
+  plSources.push({ id: plNextSourceId++, name: `${label} · ${date}`, site: key, items });
+  savePlSources();
+  renderPlSourceTags();
+  const nb = Object.entries(newBrands).sort((a, b) => b[1] - a[1]);
+  const notes = [];
+  if (nb.length > 0) notes.push(`${nb.length} marca(s) sin categoría — se van a preciar con la fórmula de diseñador:\n` +
+    nb.map(([b, n]) => `• ${b} (${n})`).join('\n'));
+  if (noBrand > 0) notes.push(`${noBrand} producto(s) sin marca: aparecen con ⚠ en la revisión.`);
+  const msg = `${label}: ${items.length.toLocaleString('es-AR')} productos cargados.` + (notes.length ? '\n\n' + notes.join('\n\n') : '');
+  return { msg, hasNotes: notes.length > 0 };
+}
+
+// Trae un sitio y reemplaza su carga anterior. Con quiet devuelve el aviso en vez de mostrarlo (lo usa
+// "Traer todos"). Si algo falla no agrega nada.
 async function importSiteCatalog(key, { quiet = false } = {}) {
   const cfg = PL_SITE_IMPORTS[key];
   const btn = document.getElementById(cfg.btn);
@@ -5281,20 +5583,8 @@ async function importSiteCatalog(key, { quiet = false } = {}) {
   let read = 0;
   try {
     const rows = await cfg.fetchRows(n => { read += n; btn.textContent = `${cfg.label}: ${read.toLocaleString('es-AR')} leídos…`; });
-    const { items, newBrands, noBrand } = plBuildSiteItems(rows);
-    if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
-    const date = new Date().toLocaleDateString('en-CA');
-    plSources = plSources.filter(s => s.site !== key);
-    plSources.push({ id: plNextSourceId++, name: `${cfg.label} · ${date}`, site: key, items });
-    savePlSources();
-    renderPlSourceTags();
-    const nb = Object.entries(newBrands).sort((a, b) => b[1] - a[1]);
-    const notes = [];
-    if (nb.length > 0) notes.push(`${nb.length} marca(s) sin categoría — se van a preciar con los tramos generales:\n` +
-      nb.map(([b, n]) => `• ${b} (${n})`).join('\n'));
-    if (noBrand > 0) notes.push(`${noBrand} producto(s) sin marca: aparecen con ⚠ en la revisión.`);
-    const msg = `${cfg.label}: ${items.length.toLocaleString('es-AR')} productos cargados.` + (notes.length ? '\n\n' + notes.join('\n\n') : '');
-    if (!quiet && notes.length) alert(msg);
+    const { msg, hasNotes } = plSetSiteSource(key, cfg.label, rows);
+    if (!quiet && hasNotes) alert(msg);
     return msg;
   } catch (err) {
     const msg = `No se pudo traer el catálogo de ${cfg.label}: ${err.message}. No se agregó nada.`;
@@ -5306,15 +5596,15 @@ async function importSiteCatalog(key, { quiet = false } = {}) {
   }
 }
 
-// Ponto Com + los sitios de PL_SITE_IMPORTS, uno detrás del otro, con un solo aviso al final. Macedonia queda afuera:
-// necesita el archivo del marcador.
+// Ponto Com + los sitios de PL_SITE_IMPORTS, uno detrás del otro, con un solo aviso al final. Macedonia y Madrid Center
+// quedan afuera: necesitan el archivo del marcador.
 async function importAllSiteCatalogs() {
   const btn = document.getElementById('pl-all-sites-btn');
   btn.disabled = true;
   try {
     const msgs = [await importPontocom({ quiet: true })];
     for (const key of Object.keys(PL_SITE_IMPORTS)) msgs.push(await importSiteCatalog(key, { quiet: true }));
-    alert(msgs.filter(Boolean).join('\n\n') + '\n\nMacedonia se carga aparte, con el archivo del marcador ⬇ Macedonia.');
+    alert(msgs.filter(Boolean).join('\n\n') + '\n\nMacedonia y Madrid Center se cargan aparte, con el archivo de sus marcadores (⬇ Macedonia, ⬇ Madrid Center).');
   } finally {
     btn.disabled = false;
   }

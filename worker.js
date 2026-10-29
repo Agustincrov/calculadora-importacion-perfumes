@@ -1,6 +1,7 @@
 // Cloudflare Worker — comparapi-proxy
 // Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogos de perfumes de
-// Ponto Com (pontocom.com) y Star Company (starcompany-py.com), scraping del listado paginado, y publicación de docs/catalogo.html en GitHub
+// Ponto Com (pontocom.com) y Star Company (starcompany-py.com), scraping del listado paginado, Multipass
+// (multipass.com.py) y LG Importados (lgimportados.com), que tienen JSON pero no mandan CORS, y publicación de docs/catalogo.html en GitHub
 // (/publish-catalog). Macedonia no pasa por acá: su hosting (SiteGround) le responde con un captcha a todo
 // pedido que sale de Cloudflare; el catálogo se baja desde el navegador (ver index.html). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
 // se sacaron el 2026-10-10.
@@ -33,6 +34,12 @@ async function handle(req) {
     }
     if (path === '/starcompany') {
       return await fetchStarCompanyPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
+    }
+    if (path === '/multipass') {
+      return await fetchMultipassPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
+    }
+    if (path === '/lgimportados') {
+      return await fetchLgPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
     }
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
@@ -174,6 +181,61 @@ async function fetchStarCompanyPage(page) {
   }
   const total = html.match(/Existem\s+([\d.]+)\s+produtos/);
   return jsonResp({ page, total: total ? parseInt(total[1].replace(/\./g, ''), 10) : null, items });
+}
+
+// ── Multipass — catálogo de perfumes ─────────────────────────────
+// PrestaShop clásico (categoría 12 "Perfume"). Con Accept: application/json + X-Requested-With el listado
+// devuelve JSON (`products[]` con id_product, name, price_amount, availability) en lugar de HTML. Acepta
+// hasta resultsPerPage=36 (más vuelve a 12). Lista también los agotados (availability "unavailable").
+async function fetchMultipassPage(page) {
+  if (!Number.isInteger(page) || page < 1 || page > 100) return jsonResp({ error: 'page inválida' }, 400);
+  const r = await fetch(`https://multipass.com.py/12-perfume?resultsPerPage=36&page=${page}`, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'Accept': 'application/json, text/javascript, */*; q=0.01',
+      'X-Requested-With': 'XMLHttpRequest',
+    },
+    cf: { cacheTtl: 900, cacheEverything: true },
+  });
+  if (!r.ok) return jsonResp({ error: `multipass ${r.status}` }, 502);
+  let d;
+  try { d = await r.json(); } catch { return jsonResp({ error: 'multipass no devolvió JSON' }, 502); }
+  const items = (d.products || []).map(p => ({
+    code:  String(p.id_product),
+    name:  decodeEntities(String(p.name || '')).replace(/\s+/g, ' ').trim(),
+    price: Number(p.price_amount) || 0,
+    available: p.availability !== 'unavailable',
+  }));
+  return jsonResp({ page, total: Number(d.pagination && d.pagination.total_items) || null, items });
+}
+
+// ── LG Importados — catálogo de perfumes ─────────────────────────
+// La tienda (React) lee su API Spring en el mismo dominio: /produtos?categoriaPrincipal=PERFUMARIA&page=N
+// (desde 0)&size=100 (100 es el máximo). La API responde 403 "Invalid CORS request" a cualquier Origin
+// ajeno, así que el navegador no puede leerla; sin Origin (como acá) responde normal. Cada producto trae
+// descripciones HTML largas: se devuelven solo los campos que usa la app.
+async function fetchLgPage(page) {
+  if (!Number.isInteger(page) || page < 0 || page > 100) return jsonResp({ error: 'page inválida' }, 400);
+  const r = await fetch(`https://www.lgimportados.com/produtos?categoriaPrincipal=PERFUMARIA&page=${page}&size=100`, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+    },
+    cf: { cacheTtl: 900, cacheEverything: true },
+  });
+  if (!r.ok) return jsonResp({ error: `lgimportados ${r.status}` }, 502);
+  let d;
+  try { d = await r.json(); } catch { return jsonResp({ error: 'lgimportados no devolvió JSON' }, 502); }
+  const items = (d.produtos || []).map(p => ({
+    code:  String(p.sku),
+    name:  String(p.nome || '').replace(/\s+/g, ' ').trim(),
+    brand: p.nomeMarca || '',
+    price: Number(p.precoPromocional) > 0 ? Number(p.precoPromocional) : Number(p.precoVenda) || 0,
+    stock: p.temEstoque === 1 || p.temEstoque === true,
+    sub1:  p.subcategoria1 || '',
+    sub2:  p.subcategoria2 || '',
+  }));
+  return jsonResp({ page, total: d.totalElements ?? null, pages: d.totalPages ?? null, items });
 }
 
 // ── Publicar catalogo.html en GitHub Pages ─────────────────────────
