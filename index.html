@@ -375,6 +375,10 @@
       color: var(--accent);
     }
 
+    /* ── Líneas del generador (card 19): lo que es solo de una línea se oculta en la otra ── */
+    #view-pricelist[data-line="kbeauty"] .pl-perfume-only { display: none !important; }
+    #view-pricelist:not([data-line="kbeauty"]) .pl-kbeauty-only { display: none !important; }
+
   </style>
 </head>
 <body>
@@ -516,7 +520,7 @@
           Importar catálogo
         </button>
         <input type="file" id="catalog-file" accept=".xls,.xlsx,.pdf" multiple style="display:none"
-          onchange="importPlExcel(this.files); this.value=''" />
+          onchange="importPlExcel(this.files, 'perfumes'); this.value=''" />
         <div id="catalog-tags" class="catalog-tags"></div>
         <button class="btn btn-outline" onclick="resetCurrentList()" style="color:var(--danger);border-color:var(--danger);">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -681,11 +685,21 @@
   </div>
   </div><!-- /view-calc -->
 
-  <div id="view-pricelist" style="display:none">
+  <div id="view-pricelist" style="display:none" data-line="perfumes">
+
+    <div class="lists-tabs" id="pl-line-tabs" style="margin-bottom:16px;">
+      <button class="tab-btn active" id="pl-line-perfumes" onclick="setPlLine('perfumes')">Perfumes</button>
+      <button class="tab-btn" id="pl-line-kbeauty" onclick="setPlLine('kbeauty')">Cosmética coreana</button>
+    </div>
 
     <div class="card" style="margin-bottom:20px;">
       <div class="card-title">1. Importar listas de proveedor</div>
-      <div style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
+      <div class="pl-kbeauty-only" style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
+        Lista aparte de la de perfumes: lo que cargues acá no se mezcla con los perfumes ni aparece en la Calculadora.
+        Por ahora se carga a mano (texto pegado o Excel/PDF). Al generar entra solo el <strong>skincare</strong> de las marcas coreanas conocidas;
+        las demás marcas y el maquillaje, cabello, aparatos y fragancias quedan excluidos (se pueden restaurar en la revisión).
+      </div>
+      <div class="pl-perfume-only" style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
         Pegá el texto de WhatsApp del proveedor (con marcas en negrita y viñetas ▪), subí uno o más Excel/Numbers/PDF, traé los catálogos de Ponto Com, Elegancia, Atacado Connect y Genove directo de sus sitios (o todos juntos con "Traer todos"), o importá el archivo de Macedonia (se baja con el marcador ⬇ Macedonia).
         Podés importar varias listas — si un mismo producto aparece repetido, se resuelve automáticamente al generar la lista.
       </div>
@@ -710,15 +724,15 @@
           Importar Excel/Numbers/PDF
         </button>
         <input type="file" id="pl-file" accept=".xls,.xlsx,.pdf" multiple style="display:none"
-          onchange="importPlExcel(this.files); this.value=''" />
-        <button class="btn btn-outline" id="pl-pontocom-btn" onclick="importPontocom()" title="Trae los perfumes y kits con stock de pontocom.com (sin body splash, sprays corporales ni decants). Si ya estaba cargado, lo reemplaza.">
+          onchange="importPlExcel(this.files, plLine); this.value=''" />
+        <button class="btn btn-outline pl-perfume-only" id="pl-pontocom-btn" onclick="importPontocom()" title="Trae los perfumes y kits con stock de pontocom.com (sin body splash, sprays corporales ni decants). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="23 4 23 10 17 10"/>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
           </svg>
           Traer catálogo Ponto Com
         </button>
-        <button class="btn btn-outline" id="pl-macedonia-btn" onclick="document.getElementById('pl-macedonia-file').click()" title="Carga el archivo macedonia-AAAA-MM-DD.json que baja el marcador ⬇ Macedonia: perfumes y kits con stock (sin body mist, splash, desodorantes, infantiles ni marcas de muy bajo costo), convertidos a USD con la tasa de al lado. Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-macedonia-btn" onclick="document.getElementById('pl-macedonia-file').click()" title="Carga el archivo macedonia-AAAA-MM-DD.json que baja el marcador ⬇ Macedonia: perfumes y kits con stock (sin body mist, splash, desodorantes, infantiles ni marcas de muy bajo costo), convertidos a USD con la tasa de al lado. Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17 8 12 3 7 8"/>
@@ -728,11 +742,11 @@
         </button>
         <input type="file" id="pl-macedonia-file" accept=".json,application/json" style="display:none"
           onchange="importMacedoniaFile(this.files[0]); this.value=''" />
-        <a id="pl-macedonia-bookmarklet" href="#" draggable="true"
+        <a id="pl-macedonia-bookmarklet" class="pl-perfume-only" href="#" draggable="true"
           onclick="event.preventDefault(); alert(MACEDONIA_BOOKMARKLET_HELP)"
           style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;"
           title="Arrastralo a la barra de marcadores. Después abrí compras.macedonia.com.py y tocalo: baja el catálogo en un archivo .json (~20 s).">⬇ Macedonia</a>
-        <button class="btn btn-outline" id="pl-madrid-btn" onclick="document.getElementById('pl-madrid-file').click()" title="Carga el archivo madridcenter-AAAA-MM-DD.json que baja el marcador ⬇ Madrid Center: perfumes y kits con stock (sin body splash, cremas, desodorantes ni infantiles), precio US$ del sitio. Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-madrid-btn" onclick="document.getElementById('pl-madrid-file').click()" title="Carga el archivo madridcenter-AAAA-MM-DD.json que baja el marcador ⬇ Madrid Center: perfumes y kits con stock (sin body splash, cremas, desodorantes ni infantiles), precio US$ del sitio. Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17 8 12 3 7 8"/>
@@ -742,42 +756,42 @@
         </button>
         <input type="file" id="pl-madrid-file" accept=".json,application/json" style="display:none"
           onchange="importMadridCenterFile(this.files[0]); this.value=''" />
-        <a id="pl-madrid-bookmarklet" href="#" draggable="true"
+        <a id="pl-madrid-bookmarklet" class="pl-perfume-only" href="#" draggable="true"
           onclick="event.preventDefault(); alert(MADRID_BOOKMARKLET_HELP)"
           style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;"
           title="Arrastralo a la barra de marcadores. Después abrí madridcenterimportados.com y tocalo: baja el catálogo en un archivo .json (~30 s).">⬇ Madrid Center</a>
-        <button class="btn btn-outline" id="pl-elegancia-btn" onclick="importSiteCatalog('elegancia')" title="Trae los perfumes con stock de eleganciacompany.com (precio US$ sin IVA). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-elegancia-btn" onclick="importSiteCatalog('elegancia')" title="Trae los perfumes con stock de eleganciacompany.com (precio US$ sin IVA). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Elegancia
         </button>
-        <button class="btn btn-outline" id="pl-atacado-btn" onclick="importSiteCatalog('atacado')" title="Trae los perfumes con stock de atacadoconnect.com (los mismos nombres que su Excel &quot;Baixar lista&quot;, sin infantiles, body splash ni viales). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-atacado-btn" onclick="importSiteCatalog('atacado')" title="Trae los perfumes con stock de atacadoconnect.com (los mismos nombres que su Excel &quot;Baixar lista&quot;, sin infantiles, body splash ni viales). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Atacado Connect
         </button>
-        <button class="btn btn-outline" id="pl-genove-btn" onclick="importSiteCatalog('genove')" title="Trae los perfumes con stock de genove.com.py (precio minorista en US$, sin la categoría Kids). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-genove-btn" onclick="importSiteCatalog('genove')" title="Trae los perfumes con stock de genove.com.py (precio minorista en US$, sin la categoría Kids). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Genove
         </button>
-        <button class="btn btn-outline" id="pl-star-btn" onclick="importSiteCatalog('star')" title="Trae los perfumes con stock de starcompany-py.com (los mismos nombres que sus listas de WhatsApp, precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-star-btn" onclick="importSiteCatalog('star')" title="Trae los perfumes con stock de starcompany-py.com (los mismos nombres que sus listas de WhatsApp, precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Star Company
         </button>
-        <button class="btn btn-outline" id="pl-multipass-btn" onclick="importSiteCatalog('multipass')" title="Trae los perfumes con stock de multipass.com.py (precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-multipass-btn" onclick="importSiteCatalog('multipass')" title="Trae los perfumes con stock de multipass.com.py (precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Multipass
         </button>
-        <button class="btn btn-outline" id="pl-lg-btn" onclick="importSiteCatalog('lg')" title="Trae los perfumes con stock de lgimportados.com (precio US$ del sitio, promocional si tiene; sin infantiles ni fraccionados). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-lg-btn" onclick="importSiteCatalog('lg')" title="Trae los perfumes con stock de lgimportados.com (precio US$ del sitio, promocional si tiene; sin infantiles ni fraccionados). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo LG Importados
         </button>
-        <button class="btn btn-outline" id="pl-mobilezone-btn" onclick="importSiteCatalog('mobilezone')" title="Trae los perfumes con stock de mobilezone.com.py (precio US$ del sitio, sin body splash ni lociones). Si ya estaba cargado, lo reemplaza.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-mobilezone-btn" onclick="importSiteCatalog('mobilezone')" title="Trae los perfumes con stock de mobilezone.com.py (precio US$ del sitio, sin body splash ni lociones). Si ya estaba cargado, lo reemplaza.">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Mobile Zone
         </button>
-        <button class="btn btn-outline" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados y Mobile Zone uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados y Mobile Zone uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
           Traer todos
         </button>
-        <label style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
+        <label class="pl-perfume-only" style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
           Gs/USD
           <input type="number" id="pl-macedonia-rate" step="0.5" min="1"
             style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:var(--bg);color:var(--text);"
@@ -795,6 +809,11 @@
 
       <div id="pl-source-tags" class="catalog-tags"></div>
 
+      <div class="pl-kbeauty-only" style="font-size:.78rem;color:var(--muted);margin-top:12px;">
+        Marcas coreanas reconocidas: <span id="pl-kbeauty-brands"></span>
+      </div>
+
+      <div class="pl-perfume-only">
       <hr class="divider" style="margin-top:16px;" />
       <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
         Marcas conocidas <span class="col-tip" data-tip="La marca se detecta buscando estos nombres dentro del nombre del producto — no depende del formato del mensaje. Si falta una, agregala acá o corregila directo en la tabla de revisión."></span>
@@ -805,6 +824,7 @@
           style="flex:1;max-width:280px;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;"
           onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomBrandFromInput();}" />
         <button class="btn btn-outline" onclick="addCustomBrandFromInput()">Agregar</button>
+      </div>
       </div>
     </div>
 
@@ -827,6 +847,9 @@
         <span class="col-tip" data-tip="Ganancia = monto fijo + % del producto (precio del proveedor × USDT). La comisión, el envío fijo y el fee USDT se suman al costo, sin ganancia encima. La ganancia en pesos siempre crece con el costo, sin saltos entre tramos. Se usa en el generador y en el autocompletado de la calculadora. Los productos sin categoría usan la de Diseñador."></span>
       </div>
       <div id="pl-formulas"></div>
+      <div class="pl-kbeauty-only" style="font-size:.78rem;color:#b45309;margin-top:4px;">
+        Precio provisorio: la cosmética usa por ahora la fórmula de Diseñador. La fórmula propia de cosmética va en una card aparte.
+      </div>
 
       <div class="btn-group" style="margin-top:16px;">
         <button class="btn btn-success" onclick="generatePriceList()">
@@ -859,13 +882,13 @@
         <h2>3. Revisión final</h2>
         <div class="btn-group">
           <span id="pl-summary" style="font-size:.8rem;color:var(--muted);align-self:center;"></span>
-          <button class="btn btn-outline" id="pl-publish-btn" onclick="publishCatalogAuto()" title="Sube catalogo.html directo a tu GitHub Pages — sin tocar archivos ni git a mano">
+          <button class="btn btn-outline pl-perfume-only" id="pl-publish-btn" onclick="publishCatalogAuto()" title="Sube catalogo.html directo a tu GitHub Pages — sin tocar archivos ni git a mano">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             Publicar catálogo
           </button>
-          <button class="btn btn-outline" onclick="exportPlSearchablePage()" title="Descarga el archivo en vez de publicarlo — para revisar antes o subirlo a mano">
+          <button class="btn btn-outline pl-perfume-only" onclick="exportPlSearchablePage()" title="Descarga el archivo en vez de publicarlo — para revisar antes o subirlo a mano">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -905,7 +928,7 @@
 
       <div id="pl-publish-result" style="font-size:.8rem;margin-bottom:10px;min-height:1.2em;"></div>
 
-      <details style="margin-bottom:14px;">
+      <details class="pl-perfume-only" style="margin-bottom:14px;">
         <summary style="font-size:.76rem;color:var(--muted);cursor:pointer;">
           🔑 Configurar publicación automática (una sola vez) — <span id="pl-publish-secret-status"></span>
         </summary>
@@ -1051,8 +1074,9 @@ function invalidateCalcCatalog() { calcCatalogCache = null; }
 function getCalcCatalog() {
   if (calcCatalogCache) return calcCatalogCache;
   const all = [];
-  // Misma re-detección de marca que generatePriceList, así calculadora y generador coinciden.
-  plSources.forEach(src => src.items.forEach(it => all.push({
+  // Misma re-detección de marca que generatePriceList, así calculadora y generador coinciden. Solo perfumes:
+  // la cosmética coreana (card 19) todavía no entra a la calculadora.
+  plLineSources('perfumes').forEach(src => src.items.forEach(it => all.push({
     ...it,
     brand: detectKnownBrand(it.name) || plCanonicalBrand(it.brand),
     sourceLabel: src.name
@@ -1818,13 +1842,38 @@ function savePlSources() {
   invalidateCalcCatalog(); // el catálogo de la calculadora sale de estas mismas fuentes
 }
 
+// ── Líneas del generador (card 19) ──
+// Perfumes y cosmética coreana comparten el motor (limpieza, agrupado, precio, revisión) pero no las fuentes,
+// el resultado ni el filtro de marcas. Cada fuente lleva `line`; las guardadas antes no la tienen y son de perfumes,
+// así importo-pl-sources no necesita migración. La calculadora solo ve perfumes.
+const PL_LINES = { perfumes: { label: 'Perfumes' }, kbeauty: { label: 'Cosmética coreana' } };
+let plLine = 'perfumes';
+try {
+  const savedLine = localStorage.getItem('importo-pl-line');
+  if (savedLine && PL_LINES[savedLine]) plLine = savedLine;
+} catch { /* se queda en perfumes */ }
+
+function plSourceLine(src) { return src.line === 'kbeauty' ? 'kbeauty' : 'perfumes'; }
+function plLineSources(line = plLine) { return plSources.filter(s => plSourceLine(s) === line); }
+// Fuente nueva de la línea dada: perfumes no lleva el campo (igual que las fuentes viejas).
+function plNewSource(fields, line = 'perfumes') {
+  const src = { id: plNextSourceId++, ...fields };
+  if (line !== 'perfumes') src.line = line;
+  return src;
+}
+// Claves de localStorage por línea: perfumes conserva las de siempre.
+function plLineStorageKey(base, line = plLine) { return line === 'perfumes' ? base : `${base}-${line}`; }
+
 function clearAllPlSources() {
-  if (plSources.length === 0 && plItems.length === 0) return;
-  if (!confirm('¿Borrar todas las listas cargadas y el resultado generado? No se puede deshacer.')) return;
-  plSources = [];
-  plNextSourceId = 1;
+  const lineSources = plLineSources();
+  if (lineSources.length === 0 && plItems.length === 0) return;
+  const what = plLine === 'perfumes' ? '' : ` de ${PL_LINES[plLine].label}`;
+  if (!confirm(`¿Borrar todas las listas cargadas${what} y el resultado generado? No se puede deshacer.`)) return;
+  plSources = plSources.filter(s => plSourceLine(s) !== plLine);
+  if (plSources.length === 0) plNextSourceId = 1;
   plItems = [];
   plFuzzyPairs = [];
+  plAutoExcluded = {};
   savePlSources();
   renderPlSourceTags();
   document.getElementById('pl-result-card').style.display = 'none';
@@ -1862,7 +1911,12 @@ function savePlFormulas() {
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
 let plShowExcluded = false;
-let plAutoExcludedCategory = 0;
+let plAutoExcluded = {}; // { motivo: cantidad } de la última generación (category | notKbeauty | notSkincare)
+const PL_AUTO_EXCLUDED_REASONS = {
+  category:    { icon: '🚫', label: 'no es perfume' },
+  notKbeauty:  { icon: '🌐', label: 'no es marca coreana' },
+  notSkincare: { icon: '🚫', label: 'no es skincare' }
+};
 
 // ── Filtro de marcas para publicar ──
 // Clave de comparación normalizada — "Hermes Paris" y "HERMES PARIS " (mayúsculas/espacios
@@ -1874,26 +1928,27 @@ function plBrandKey(brand) {
 
 // Se guardan las marcas OCULTAS (no las elegidas): así al cargar una lista nueva no perdés de
 // vista marcas que ya tenías visibles — solo se ocultan las que vos apagaste a propósito.
-let plHiddenBrands = new Set();
-try {
-  const savedHidden = JSON.parse(localStorage.getItem('importo-hidden-brands') || '[]');
-  if (Array.isArray(savedHidden)) plHiddenBrands = new Set(savedHidden);
-} catch { /* se queda vacío */ }
+// Cada línea (card 19) tiene su propio filtro: perfumes en importo-hidden-brands, cosmética en -kbeauty.
+function plLoadBrandSet(base) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(plLineStorageKey(base)) || '[]');
+    if (Array.isArray(saved)) return new Set(saved);
+  } catch { /* se queda vacío */ }
+  return new Set();
+}
+
+let plHiddenBrands = plLoadBrandSet('importo-hidden-brands');
 
 function savePlHiddenBrands() {
-  localStorage.setItem('importo-hidden-brands', JSON.stringify([...plHiddenBrands]));
+  localStorage.setItem(plLineStorageKey('importo-hidden-brands'), JSON.stringify([...plHiddenBrands]));
 }
 
 // Marcas ya vistas alguna vez — para avisar "nueva" la primera vez que aparece una marca
 // distinta y que no se cuele sin que la veas al menos una vez.
-let plSeenBrands = new Set();
-try {
-  const savedSeen = JSON.parse(localStorage.getItem('importo-seen-brands') || '[]');
-  if (Array.isArray(savedSeen)) plSeenBrands = new Set(savedSeen);
-} catch { /* se queda vacío */ }
+let plSeenBrands = plLoadBrandSet('importo-seen-brands');
 
 function savePlSeenBrands() {
-  localStorage.setItem('importo-seen-brands', JSON.stringify([...plSeenBrands]));
+  localStorage.setItem(plLineStorageKey('importo-seen-brands'), JSON.stringify([...plSeenBrands]));
 }
 
 // Ítems que realmente se publican: ni excluidos en la revisión ni de una marca apagada acá.
@@ -5814,6 +5869,75 @@ function detectStaticBrand(norm) {
   if (customBrands.length !== before) saveCustomBrands();
 }
 
+// ── Marcas de cosmética coreana (línea kbeauty, card 19; marcas relevadas en la card 18) ──
+// [nombre a mostrar, ...alias]. Los alias se comparan normalizados igual que el nombre (plNormalizeForBrandMatch:
+// mayúsculas, sin acentos, . / , _ ( ) - partidos), por palabra completa; gana el más largo. A propósito NO están
+// "VT" ni "ALTHEA" sueltos (calzan en otras cosas): solo "VT COSMETICS" y "DR ALTHEA".
+const KBEAUTY_BRANDS = [
+  ['Medicube'], ['SKIN1004', 'SKIN 1004'], ['Anua'], ['Celimax'], ['Dr. Althea', 'DR ALTHEA', 'DRALTHEA'],
+  ['Beauty of Joseon', 'BEAUTY OF JOSEON'], ['numbuzin'], ['COSRX'], ['Round Lab', 'ROUND LAB', 'ROUNDLAB'],
+  ['Mixsoon'], ['Purito', 'PURITO SEOUL'], ['Isntree'], ['Haruharu Wonder', 'HARUHARU', 'HARU HARU'], ['Heimish'],
+  ['Abib'], ['Biodance', 'BIO DANCE'], ['Some By Mi', 'SOME BY MI', 'SOMEBYMI', 'SOME BY ME'],
+  ["d'Alba", "D'ALBA", 'DALBA', 'D ALBA'], ['Axis-Y', 'AXIS Y', 'AXISY'], ['Centellian24', 'CENTELLIAN 24'],
+  ['VT Cosmetics', 'VT COSMETICS'], ['TIRTIR'], ['Missha'], ['Torriden'], ['Mediheal'], ["I'm From", "I'M FROM", 'IM FROM'],
+  ['Arencia'], ['Mary & May', 'MARY & MAY', 'MARY&MAY', 'MARY AND MAY'], ['Meditherapy'],
+  ['Dr. Melaxin', 'DR MELAXIN', 'MELAXIN'], ['Klasme'], ['Tocobo'], ['Laneige'], ['Innisfree'],
+  ['Banila Co', 'BANILA CO', 'BANILA'], ['K-Secret', 'K SECRET'], ['Aestura'], ['Illiyoon'], ['Beplain'], ['Goodal'],
+  ['Skinfood', 'SKIN FOOD'], ['Etude', 'ETUDE HOUSE'], ['Dr.G', 'DR G']
+];
+
+// Igual que plNormalizeForBrandMatch, más el acento agudo suelto como apóstrofo (Terra Nova escribe "D´Alba").
+function plNormalizeKbeauty(text) {
+  return plNormalizeForBrandMatch(String(text || '').replace(/[´`]/g, "'"));
+}
+
+let kbeautyBrandCandidates = null;
+const kbeautyBrandCache = new Map();
+function detectKbeautyBrand(text) {
+  if (!text) return null;
+  if (kbeautyBrandCache.has(text)) return kbeautyBrandCache.get(text);
+  if (!kbeautyBrandCandidates) {
+    kbeautyBrandCandidates = [];
+    for (const entry of KBEAUTY_BRANDS) {
+      for (const cand of [entry[0], ...entry.slice(1)]) {
+        const c = plNormalizeKbeauty(cand);
+        kbeautyBrandCandidates.push({ label: entry[0], c, len: c.length });
+      }
+    }
+  }
+  const norm = plNormalizeKbeauty(text);
+  let best = null, bestLen = 0;
+  for (const { label, c, len } of kbeautyBrandCandidates) {
+    if (len > bestLen && norm.includes(c)) { best = label; bestLen = len; }
+  }
+  kbeautyBrandCache.set(text, best);
+  return best;
+}
+
+// Alcance de la primera versión: solo skincare. Maquillaje, cabello, aparatos y fragancias se excluyen solos
+// (con Restaurar en la revisión). Se compara contra el nombre normalizado (con espacios en los bordes).
+const PL_NOT_SKINCARE_RE = new RegExp(' (' + [
+  // maquillaje
+  // (sin BASE, POLVO, POWDER, PRIMER, SPLASH ni BB/CC sueltos: "a base de", "limpiador en polvo", "enzyme powder
+  // wash", "primer paso", "splash mask" y "Azelaic Acid 16 BB" son skincare)
+  'CUSHION', 'BB CREAM', 'CC CREAM', 'BASE LIQUIDA', 'BASE DE MAQUILLAJE', 'FOUNDATION', 'LABIAL', 'LIPSTICK',
+  'BATOM', 'LIP TINT', 'TINT', 'GLOSS', 'LIP GLOSS', 'RIMEL', 'MASCARA DE PESTANAS', 'MASCARA PARA CILIOS', 'DELINEADOR',
+  'EYELINER', 'LAPIZ', 'LAPIS', 'SOMBRA', 'CORRECTOR', 'CORRETIVO', 'CONCEALER', 'PO COMPACTO', 'POLVO COMPACTO',
+  'POLVO SUELTO', 'SETTING POWDER', 'LOOSE POWDER', 'PRESSED POWDER', 'BLUSH', 'RUBOR', 'MAQUILLAJE', 'MAQUIAGEM',
+  'MAKEUP', 'MAKE UP', 'CEJAS', 'SOBRANCELHA', 'EYEBROW', 'PALETA', 'PALETTE',
+  // cabello
+  'SHAMPOO', 'XAMPU', 'CHAMPU', 'CONDICIONADOR', 'ACONDICIONADOR', 'CONDITIONER', 'CAPILAR', 'CABELLO', 'CABELO', 'HAIR',
+  // aparatos (AGE-R solo con BOOSTER: "AGE-R Glutathione Glow" es una línea de cremas, no el aparato)
+  'DEVICE', 'DISPOSITIVO', 'APARELHO', 'APARATO', 'AGE R BOOSTER', 'BOOSTER PRO', 'CLEANSER HEAD', 'CABEZAL',
+  'REPUESTO', 'CAPA',
+  // fragancias y cuerpo; vinos ("Barbera d'Alba" calza con la marca d'Alba en las búsquedas de comprasparaguai)
+  'PERFUME', 'EAU DE', 'EDP', 'EDT', 'BODY MIST', 'BODY SPLASH', 'DESODORANTE', 'DEO', 'VINO', 'VINHO', 'WINE'
+].join('|') + ') ');
+
+function plIsNotSkincare(name) {
+  return PL_NOT_SKINCARE_RE.test(plNormalizeKbeauty(name));
+}
+
 function detectKnownBrand(name) {
   if (knownBrandCache.has(name)) return knownBrandCache.get(name);
   const norm = plNormalizeForBrandMatch(name);
@@ -5915,7 +6039,7 @@ function importPastedText() {
   // fuente para que plCategoryFromSource pueda usarlo con las marcas sin clasificar.
   const section = plCategoryFromSource((text.match(/PERFUMES\s+(DE\s+NICHO|INTERNACIONA\w*|[ÁA]RABES)/i) || [''])[0]);
   const sectionLabel = section ? ` · ${PL_CATEGORY_LABELS[section]}` : '';
-  plSources.push({ id: plNextSourceId++, name: `Texto pegado${sectionLabel} (${items.length})`, items });
+  plSources.push(plNewSource({ name: `Texto pegado${sectionLabel} (${items.length})`, items }, plLine));
   ta.value = '';
   savePlSources();
   renderPlSourceTags();
@@ -6004,7 +6128,7 @@ function parsePdfPriceListPage(textItems, state = {}) {
   return items;
 }
 
-async function importPlPdf(file) {
+async function importPlPdf(file, line = 'perfumes') {
   if (typeof pdfjsLib === 'undefined') { alert('No se pudo cargar el lector de PDF. Revisá la conexión y recargá la página.'); return; }
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   try {
@@ -6019,7 +6143,7 @@ async function importPlPdf(file) {
       alert(`No se encontraron productos en "${file.name}". El PDF tiene que tener texto seleccionable con precios en "U$" o "$" (no sirve uno escaneado).`);
       return;
     }
-    plSources.push({ id: plNextSourceId++, name: file.name.replace(/\.[^.]+$/, ''), items });
+    plSources.push(plNewSource({ name: file.name.replace(/\.[^.]+$/, ''), items }, line));
     savePlSources();
     renderPlSourceTags();
   } catch (err) {
@@ -6027,9 +6151,10 @@ async function importPlPdf(file) {
   }
 }
 
-function importPlExcel(fileList) {
+// line: a qué lista va (card 19). El botón de la Calculadora siempre carga perfumes; el del Generador, la línea activa.
+function importPlExcel(fileList, line = 'perfumes') {
   Array.from(fileList).forEach(file => {
-    if (/\.pdf$/i.test(file.name)) { importPlPdf(file); return; }
+    if (/\.pdf$/i.test(file.name)) { importPlPdf(file, line); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
       const wb     = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
@@ -6037,7 +6162,7 @@ function importPlExcel(fileList) {
       const rows2d = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       const items  = parseExcelPriceList(rows2d);
       const label  = file.name.replace(/\.[^.]+$/, '');
-      plSources.push({ id: plNextSourceId++, name: label, items });
+      plSources.push(plNewSource({ name: label, items }, line));
       savePlSources();
       renderPlSourceTags();
     };
@@ -6151,7 +6276,7 @@ async function importPontocom({ quiet = false } = {}) {
 
     // Reemplaza la carga anterior: si no, al refrescar cada producto aparecería dos veces.
     const date = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-    plSources = plSources.filter(s => !s.pontocom);
+    plSources = plSources.filter(s => !(s.pontocom && plSourceLine(s) === 'perfumes'));
     plSources.push({ id: plNextSourceId++, name: `Ponto Com · ${date}`, pontocom: true, items });
     savePlSources();
     renderPlSourceTags();
@@ -6422,7 +6547,7 @@ async function importMacedoniaFile(file) {
 
     // Reemplaza la carga anterior, igual que Ponto Com. La fecha es la de la descarga, no la de hoy.
     const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : new Date().toLocaleDateString('en-CA');
-    plSources = plSources.filter(s => !s.macedonia);
+    plSources = plSources.filter(s => !(s.macedonia && plSourceLine(s) === 'perfumes'));
     plSources.push({
       id: plNextSourceId++, name: `Macedonia · ${date} · ${rate.toLocaleString('es-AR')} Gs/USD`, macedonia: true, items
     });
@@ -6798,11 +6923,12 @@ const PL_SITE_IMPORTS = {
 
 // Arma los ítems de un sitio y reemplaza su carga anterior (marcada con `site`). Devuelve el aviso y si tiene
 // notas (marcas sin categoría, productos sin marca). Si no queda ningún producto, tira error y no toca nada.
-function plSetSiteSource(key, label, rows, date = new Date().toLocaleDateString('en-CA')) {
+// line (card 19): un mismo sitio puede tener una carga por línea; solo se reemplaza la de la misma línea.
+function plSetSiteSource(key, label, rows, date = new Date().toLocaleDateString('en-CA'), line = 'perfumes') {
   const { items, newBrands, noBrand } = plBuildSiteItems(rows);
   if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
-  plSources = plSources.filter(s => s.site !== key);
-  plSources.push({ id: plNextSourceId++, name: `${label} · ${date}`, site: key, items });
+  plSources = plSources.filter(s => !(s.site === key && plSourceLine(s) === line));
+  plSources.push(plNewSource({ name: `${label} · ${date}`, site: key, items }, line));
   savePlSources();
   renderPlSourceTags();
   const nb = Object.entries(newBrands).sort((a, b) => b[1] - a[1]);
@@ -6857,19 +6983,63 @@ function removePlSource(id) {
   renderPlSourceTags();
 }
 
-// Las listas cargadas son un único pool compartido (plSources) — se muestran igual en las
-// dos vistas: acá (Generador) y en "catalog-tags" (Calculadora), cualquiera sea desde dónde
-// se cargaron.
+// Las listas de perfumes son un pool compartido entre el Generador y la Calculadora ("catalog-tags"),
+// cualquiera sea desde dónde se cargaron. El Generador muestra las de la línea activa (card 19); la
+// Calculadora, solo las de perfumes.
 function renderPlSourceTags() {
-  const html = plSources.map(s => `
+  const tagsHtml = sources => sources.map(s => `
     <span class="catalog-tag">
       ${esc(s.name)} <span style="opacity:.7">(${s.items.length})</span>
       <button class="catalog-tag-close" onclick="removePlSource(${s.id})" title="Quitar">×</button>
     </span>`).join('');
-  ['pl-source-tags', 'catalog-tags'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
-  });
+  const plEl = document.getElementById('pl-source-tags');
+  if (plEl) plEl.innerHTML = tagsHtml(plLineSources());
+  const calcEl = document.getElementById('catalog-tags');
+  if (calcEl) calcEl.innerHTML = tagsHtml(plLineSources('perfumes'));
+}
+
+// Resultado generado de cada línea, en memoria: al volver a una línea su revisión (precios editados y exclusiones
+// a mano incluidos) sigue ahí. No se persiste, igual que plItems.
+const plLineResults = {};
+
+function setPlLine(line) {
+  if (!PL_LINES[line] || line === plLine) return;
+  plLineResults[plLine] = { items: plItems, fuzzy: plFuzzyPairs, autoExcluded: plAutoExcluded, showExcluded: plShowExcluded };
+  plLine = line;
+  try { localStorage.setItem('importo-pl-line', line); } catch { /* no es crítico */ }
+  const saved = plLineResults[line] || { items: [], fuzzy: [], autoExcluded: {}, showExcluded: false };
+  plItems = saved.items;
+  plFuzzyPairs = saved.fuzzy;
+  plAutoExcluded = saved.autoExcluded;
+  plShowExcluded = saved.showExcluded;
+  plHiddenBrands = plLoadBrandSet('importo-hidden-brands');
+  plSeenBrands = plLoadBrandSet('importo-seen-brands');
+  const search = document.getElementById('pl-search');
+  if (search) search.value = '';
+  plTableLimit = PL_TABLE_PAGE;
+  const publishResult = document.getElementById('pl-publish-result');
+  if (publishResult) publishResult.textContent = '';
+  renderPlLine();
+  if (plItems.length) {
+    recomputePlPricing(); // la cotización pudo cambiar mientras la línea estaba guardada
+    document.getElementById('pl-result-card').style.display = '';
+    renderPlFuzzyPanel();
+    renderPlTable();
+    renderPlBrandFilter();
+  } else {
+    document.getElementById('pl-result-card').style.display = 'none';
+    document.getElementById('pl-fuzzy-card').style.display = 'none';
+  }
+}
+
+// Muestra lo que corresponde a la línea activa (los .pl-perfume-only / .pl-kbeauty-only van por CSS).
+function renderPlLine() {
+  const view = document.getElementById('view-pricelist');
+  if (view) view.dataset.line = plLine;
+  Object.keys(PL_LINES).forEach(l => document.getElementById(`pl-line-${l}`)?.classList.toggle('active', l === plLine));
+  const brandsEl = document.getElementById('pl-kbeauty-brands');
+  if (brandsEl && !brandsEl.textContent) brandsEl.textContent = KBEAUTY_BRANDS.map(b => b[0]).join(', ') + '.';
+  renderPlSourceTags();
 }
 
 // ── Ganancia por categoría UI ──
@@ -7235,7 +7405,8 @@ function recomputePlPricing() {
   const cfg = plGetConfig();
   plItems.forEach(it => {
     it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.rates, cfg.envioFijo);
-    it.marginPct   = marginForPriceUsd(it.priceUsd, plCategoryFor(it));
+    // Cosmética (card 19): precio provisorio con la fórmula de Diseñador ('' = sin categoría) hasta su card de pricing.
+    it.marginPct   = marginForPriceUsd(it.priceUsd, it.line === 'kbeauty' ? '' : plCategoryFor(it));
     it.finalPriceArs = plFinalPrice(it.costTotal, it.marginPct, cfg.roundStep);
   });
 }
@@ -7254,9 +7425,15 @@ function generatePriceList() {
   // La marca se vuelve a detectar acá (no solo al importar): así las marcas y alias agregados
   // después también aplican a listas ya cargadas. Si no se detecta nada, queda la marca que vino
   // con la lista (encabezado del texto pegado o columna "marca" del Excel).
-  plSources.forEach(src => src.items.forEach(it => all.push({
+  // Cada línea (card 19) genera solo con sus fuentes. En cosmética la marca sale de KBEAUTY_BRANDS, no de las de
+  // perfumes: así una marca de perfumes nunca "gana" sobre una coreana y lo que no es coreano queda sin marca.
+  const line = plLine;
+  const isKbeauty = line === 'kbeauty';
+  plLineSources(line).forEach(src => src.items.forEach(it => all.push({
     ...it,
-    brand: detectKnownBrand(it.name) || plCanonicalBrand(it.brand),
+    brand: isKbeauty
+      ? (detectKbeautyBrand(it.name) || detectKbeautyBrand(it.brand) || plCanonicalBrand(it.brand))
+      : (detectKnownBrand(it.name) || plCanonicalBrand(it.brand)),
     sourceLabel: src.name
   })));
   if (all.length === 0) {
@@ -7272,16 +7449,27 @@ function generatePriceList() {
   });
 
   plItems = [];
-  let idc = 1, autoExcludedCategory = 0;
+  let idc = 1;
+  const autoExcluded = {};
   for (const arr of groups.values()) {
     arr.sort((a, b) => a.price - b.price);
     const cheapest = arr[0];
     const overrideBrand = plBrandOverrides[plBrandOverrideKey(cheapest.name)];
-    const brand = overrideBrand || cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
-    const isNonPerfume = plIsNonPerfumeCategory(cheapest.name);
-    if (isNonPerfume) autoExcludedCategory++;
+    let brand = overrideBrand || cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
+    let reason = null;
+    if (isKbeauty) {
+      // La corrección puntual manda si es una marca coreana (así corregir en la tabla destraba el producto).
+      const kb = (overrideBrand && detectKbeautyBrand(` ${overrideBrand} `))
+        || arr.map(a => detectKbeautyBrand(a.name) || detectKbeautyBrand(a.brand)).find(Boolean);
+      if (kb) brand = kb;
+      reason = !kb ? 'notKbeauty' : plIsNotSkincare(cheapest.name) ? 'notSkincare' : null;
+    } else if (plIsNonPerfumeCategory(cheapest.name)) {
+      reason = 'category';
+    }
+    if (reason) autoExcluded[reason] = (autoExcluded[reason] || 0) + 1;
     plItems.push({
       id: idc++,
+      line,
       name: cheapest.name,
       brand,
       // Nombre limpio cacheado: plCleanName compila varias RegExp por llamada — calcularlo una
@@ -7292,14 +7480,15 @@ function generatePriceList() {
       sourceLabel: cheapest.sourceLabel,
       alternates: arr.slice(1).map(a => ({ source: a.sourceLabel, price: a.price })),
       multiSource: arr.length > 1,
-      excluded: isNonPerfume,
-      autoExcludedReason: isNonPerfume ? 'category' : null,
+      excluded: !!reason,
+      autoExcludedReason: reason,
       manualPrice: null
     });
   }
 
-  plAutoExcludedCategory = autoExcludedCategory;
-  plFuzzyPairs = detectFuzzyDuplicates(plItems);
+  plAutoExcluded = autoExcluded;
+  // El detector de duplicados difusos compara ml y género de perfumes: en cosmética no se usa todavía (sprint 3).
+  plFuzzyPairs = isKbeauty ? [] : detectFuzzyDuplicates(plItems);
 
   // Los pares que ya confirmaste como "el mismo producto" en otra sesión se fusionan solos,
   // sin volver a preguntar.
@@ -7649,7 +7838,7 @@ function plRowHtml(it) {
           onchange="updatePlBrand(${it.id}, this.value)" />
       </td>
       <td style="min-width:220px;" title="${esc(it.name)}">
-        ${it.autoExcludedReason === 'category' ? '<span title="Excluido automático — no es perfume" style="margin-right:4px;">🚫</span>' : ''}${esc(it.displayName)}
+        ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason] ? `<span title="Excluido automático — ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].label}" style="margin-right:4px;">${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].icon}</span>` : ''}${esc(it.displayName)}
       </td>
       <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
       <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
@@ -7663,7 +7852,7 @@ function plRowHtml(it) {
       </td>
       <td class="cell-computed" id="pl-gain-${it.id}" style="white-space:nowrap;">${plGainHtml(it)}</td>
       <td style="white-space:nowrap;">
-        <button class="del-btn" id="pl-add-calc-${it.id}" title="Agregar como fila a la lista activa de la Calculadora" onclick="addPlItemToCalc(${it.id})">
+        <button class="del-btn pl-perfume-only" id="pl-add-calc-${it.id}" title="Agregar como fila a la lista activa de la Calculadora" onclick="addPlItemToCalc(${it.id})">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
         ${it.excluded
@@ -7680,7 +7869,7 @@ function plRowHtml(it) {
 // La usa el botón "+ Calculadora" de cada fila de la tabla de revisión.
 function addPlItemToCalc(id) {
   const it = plItems.find(x => x.id === id);
-  if (!it) return;
+  if (!it || it.line === 'kbeauty') return; // la calculadora es solo de perfumes por ahora (card 19)
   addRowFromProduct({ name: plComposeName(it.brand, it.displayName), priceUsd: it.priceUsd, category: plCategoryFor(it) });
 
   // Feedback breve en el propio botón — sin cambiar de pestaña (se sigue viendo la revisión).
@@ -7749,7 +7938,10 @@ function renderPlSummary() {
     || it.displayName.toLowerCase().includes(query);
   const rowsToShow = (plShowExcluded ? plItems : visible).filter(matchesQuery);
 
-  const autoExcludedNote = plAutoExcludedCategory > 0 ? ` (${plAutoExcludedCategory} no es perfume 🚫)` : '';
+  const autoExcludedParts = Object.entries(plAutoExcluded)
+    .filter(([reason, n]) => n > 0 && PL_AUTO_EXCLUDED_REASONS[reason])
+    .map(([reason, n]) => `${n} ${PL_AUTO_EXCLUDED_REASONS[reason].label} ${PL_AUTO_EXCLUDED_REASONS[reason].icon}`);
+  const autoExcludedNote = autoExcludedParts.length ? ` (${autoExcludedParts.join(', ')})` : '';
 
   document.getElementById('pl-summary').textContent = query
     ? `${rowsToShow.length} resultado${rowsToShow.length !== 1 ? 's' : ''} de ${visible.length}`
@@ -7791,10 +7983,17 @@ function updatePlBrand(id, val) {
   }
   // Si lo que escribiste ya matchea una marca/alias existente, usamos el nombre canónico
   // (ej. escribís "Hermes" y queda "Hermes Paris") en vez de crear una marca duplicada.
-  const canonical = detectKnownBrand(` ${clean} `);
+  // En cosmética (card 19) se compara contra KBEAUTY_BRANDS y no se aprende nada en las marcas de perfumes;
+  // si quedó una marca coreana, el producto deja de estar excluido por "no es marca coreana".
+  const isKbeauty = it.line === 'kbeauty';
+  const canonical = isKbeauty ? detectKbeautyBrand(` ${clean} `) : detectKnownBrand(` ${clean} `);
   it.brand = canonical || clean;
   it.displayName = plCleanName(it.name, it.brand);
-  if (!canonical) addCustomBrand(clean); // recién si es realmente nueva se aprende para la próxima
+  if (isKbeauty && canonical && it.autoExcludedReason === 'notKbeauty') {
+    it.autoExcludedReason = plIsNotSkincare(it.name) ? 'notSkincare' : null;
+    it.excluded = !!it.autoExcludedReason;
+  }
+  if (!canonical && !isKbeauty) addCustomBrand(clean); // recién si es realmente nueva se aprende para la próxima
   // Además del aprendizaje por palabra, recordamos este producto puntual — así la corrección
   // sobrevive aunque el nombre de la marca no aparezca en el texto del producto.
   plBrandOverrides[key] = it.brand;
@@ -7842,7 +8041,8 @@ function exportPlExcel() {
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Lista de precios');
-  XLSX.writeFile(wb, `lista_precios_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const fileBase = plLine === 'kbeauty' ? 'lista_cosmetica_coreana' : 'lista_precios';
+  XLSX.writeFile(wb, `${fileBase}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 // Archivo único (sin hosting) con buscador en vivo — se lo mandás al cliente como cualquier
@@ -9527,7 +9727,16 @@ ${SC}
   return html;
 }
 
+// El catálogo publicado es solo de perfumes: desde otra línea pisaría docs/catalogo.html (card 19). Los botones
+// ya están ocultos en esa línea; esto es la segunda barrera.
+function plCanPublishLine() {
+  if (plLine === 'perfumes') return true;
+  alert(`El catálogo de ${PL_LINES[plLine].label} todavía no se publica: Publicar y Descargar página buscable son solo de Perfumes.`);
+  return false;
+}
+
 function exportPlSearchablePage() {
+  if (!plCanPublishLine()) return;
   const html = buildCatalogHtml();
   if (!html) { alert('No hay productos para exportar.'); return; }
 
@@ -9569,6 +9778,7 @@ function renderPublishSecretStatus() {
 }
 
 async function publishCatalogAuto() {
+  if (!plCanPublishLine()) return;
   const html = buildCatalogHtml();
   if (!html) { alert('No hay productos para exportar.'); return; }
 
@@ -9615,7 +9825,7 @@ renderPlSharedConfigPreview();
 
 renderPlFormulas();
 renderPlBrandTags();
-renderPlSourceTags();
+renderPlLine(); // también pinta las fuentes de la línea activa (card 19)
 renderPublishSecretStatus();
 document.getElementById('pl-macedonia-rate').value = macedoniaRate;
 
