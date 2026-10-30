@@ -165,6 +165,13 @@ Apretá **Generar lista de precios**.
 
 El mismo perfume suele venir escrito distinto en cada proveedor. Si un producto está igual en varias listas, la app se queda con el más barato. Si dos nombres se parecen pero no son iguales, te los muestra en **Posibles duplicados a revisar**: elegí **Es el mismo** o **Son distintos**. La app recuerda tu respuesta y no te lo vuelve a preguntar.
 
+**Precios rotos.** A veces una tienda publica un precio que no puede ser real (un perfume a USD 0,01). Como la app se queda con el más barato, ese precio le ganaría a la oferta real de otra tienda. Por eso:
+
+- Si una oferta cuesta menos de USD 1, se ignora sola.
+- Si cuesta menos de la cuarta parte que la siguiente tienda para el mismo producto, aparece en **Precios sospechosos a revisar**: elegí **Es real** (se usa ese precio) o **Es un error** (se ignora). Mientras no decidas, se usa la siguiente tienda. La app recuerda tu respuesta; si la tienda cambia ese precio, te lo vuelve a preguntar.
+
+El resumen de la lista dice cuántos precios rotos se ignoraron.
+
 Nunca se mezclan tamaños distintos, versiones masculina y femenina, testers con productos normales, ni variantes como Intense, Elixir o recargable.
 
 ### 4. Revisión final
@@ -228,7 +235,7 @@ No. La calculadora funciona directo desde el navegador.
 Sí, aunque se ve mejor en computadora por la cantidad de columnas.
 
 **¿Los datos se guardan?**
-Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, la ganancia por categoría, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.
+Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, la ganancia por categoría, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y precios sospechosos, y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.
 
 **¿Con qué frecuencia se actualiza el USDT?**
 Cada vez que abrís la calculadora o apretás "Actualizar cotizaciones". No se actualizan solas mientras la tenés abierta.

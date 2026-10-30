@@ -870,6 +870,14 @@
       </div>
     </div>
 
+    <div class="card" id="pl-price-review-card" style="margin-bottom:20px;display:none;">
+      <div class="card-title">Precios sospechosos a revisar</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:12px;">
+        Estas ofertas cuestan menos de la cuarta parte que la siguiente tienda para el mismo producto. Mientras no decidas, se usa la siguiente. Lo que elijas queda guardado (si la tienda cambia el precio, se vuelve a preguntar).
+      </div>
+      <div id="pl-price-review-list"></div>
+    </div>
+
     <div class="card" id="pl-fuzzy-card" style="margin-bottom:20px;display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
         <div class="card-title">Posibles duplicados a revisar</div>
@@ -1080,6 +1088,36 @@ function plComposeName(brand, displayName) {
 let calcCatalogCache = null;
 function invalidateCalcCatalog() { calcCatalogCache = null; }
 
+// Precios rotos de las tiendas (p. ej. un Sauvage EDP 100 ml a USD 0,01): como cada producto se queda con la oferta
+// más barata, uno así le gana a la oferta real de otra tienda. Las ofertas por debajo de PL_MIN_PRICE_USD se
+// descartan solas. Las que cuestan menos que PL_MAX_PRICE_DROP × la siguiente del mismo producto son sospechosas:
+// las decidís vos en "Precios sospechosos a revisar" (plPriceDecisions); mientras no las decidas, no se usan.
+// Ordena arr de menor a mayor y lo deja solo con las ofertas que se usan.
+const PL_MIN_PRICE_USD = 1;
+const PL_MAX_PRICE_DROP = 0.25;
+let plPriceDecisions = {}; // { "NOMBRE|precio": "real" | "error" }
+try { plPriceDecisions = JSON.parse(localStorage.getItem('importo-price-decisions') || '{}'); } catch { plPriceDecisions = {}; }
+function savePriceDecisions() {
+  localStorage.setItem('importo-price-decisions', JSON.stringify(plPriceDecisions));
+}
+// Con el precio en la clave: si la tienda cambia el precio, se vuelve a preguntar.
+function plPriceDecisionKey(it) {
+  return `${String(it.name || '').trim().toUpperCase()}|${Number(it.price).toFixed(2)}`;
+}
+function plDropBrokenPrices(arr) {
+  arr.sort((a, b) => a.price - b.price);
+  const dropped = [], pending = [];
+  while (arr.length && arr[0].price < PL_MIN_PRICE_USD) dropped.push(arr.shift());
+  while (arr.length > 1 && arr[0].price < arr[1].price * PL_MAX_PRICE_DROP) {
+    const decision = plPriceDecisions[plPriceDecisionKey(arr[0])];
+    if (decision === 'real') break;
+    const it = arr.shift();
+    if (decision === 'error') dropped.push(it);
+    else pending.push(it);
+  }
+  return { dropped, pending };
+}
+
 function getCalcCatalog() {
   if (calcCatalogCache) return calcCatalogCache;
   const all = [];
@@ -1100,7 +1138,8 @@ function getCalcCatalog() {
 
   const out = [];
   groups.forEach(arr => {
-    arr.sort((a, b) => a.price - b.price);
+    plDropBrokenPrices(arr); // los sospechosos sin decidir no se usan (se deciden en el Generador)
+    if (!arr.length) return;
     const cheapest = arr[0];
     // Misma corrección de marca puntual que aplica el Generador al generar (ver plBrandOverrides).
     const overrideBrand = plBrandOverrides[plBrandOverrideKey(cheapest.name)];
@@ -1882,11 +1921,13 @@ function clearAllPlSources() {
   if (plSources.length === 0) plNextSourceId = 1;
   plItems = [];
   plFuzzyPairs = [];
+  plPriceReviews = [];
   plAutoExcluded = {};
   savePlSources();
   renderPlSourceTags();
   document.getElementById('pl-result-card').style.display = 'none';
   document.getElementById('pl-fuzzy-card').style.display = 'none';
+  document.getElementById('pl-price-review-card').style.display = 'none';
 }
 // Ganancia por categoría = monto fijo + % del producto (card 14, 2026-10-22/23). Reemplaza a los
 // tramos de margen: bajar el margen al cruzar un borde hacía que un perfume más caro dejara menos
@@ -1919,12 +1960,15 @@ function savePlFormulas() {
 }
 let plItems      = []; // working items after "Generar"
 let plFuzzyPairs = [];
+let plPriceReviews = []; // ofertas sospechosas sin decidir de la última generación (ver plDropBrokenPrices)
 let plShowExcluded = false;
-let plAutoExcluded = {}; // { motivo: cantidad } de la última generación (category | notKbeauty | notSkincare)
+let plAutoExcluded = {}; // { motivo: cantidad } de la última generación (category | notKbeauty | notSkincare | brokenPrice)
 const PL_AUTO_EXCLUDED_REASONS = {
   category:    { icon: '🚫', label: 'no es perfume' },
   notKbeauty:  { icon: '🌐', label: 'no es marca coreana' },
-  notSkincare: { icon: '🚫', label: 'no es skincare' }
+  notSkincare: { icon: '🚫', label: 'no es skincare' },
+  // Ofertas descartadas (no productos): el producto queda con la siguiente tienda (ver plDropBrokenPrices).
+  brokenPrice: { icon: '⚠', label: 'precio roto ignorado' }
 };
 
 // ── Filtro de marcas para publicar ──
@@ -7171,12 +7215,13 @@ const plLineResults = {};
 
 function setPlLine(line) {
   if (!PL_LINES[line] || line === plLine) return;
-  plLineResults[plLine] = { items: plItems, fuzzy: plFuzzyPairs, autoExcluded: plAutoExcluded, showExcluded: plShowExcluded };
+  plLineResults[plLine] = { items: plItems, fuzzy: plFuzzyPairs, priceReviews: plPriceReviews, autoExcluded: plAutoExcluded, showExcluded: plShowExcluded };
   plLine = line;
   try { localStorage.setItem('importo-pl-line', line); } catch { /* no es crítico */ }
   const saved = plLineResults[line] || { items: [], fuzzy: [], autoExcluded: {}, showExcluded: false };
   plItems = saved.items;
   plFuzzyPairs = saved.fuzzy;
+  plPriceReviews = saved.priceReviews || [];
   plAutoExcluded = saved.autoExcluded;
   plShowExcluded = saved.showExcluded;
   plHiddenBrands = plLoadBrandSet('importo-hidden-brands');
@@ -7190,12 +7235,14 @@ function setPlLine(line) {
   if (plItems.length) {
     recomputePlPricing(); // la cotización pudo cambiar mientras la línea estaba guardada
     document.getElementById('pl-result-card').style.display = '';
+    renderPlPriceReviewPanel();
     renderPlFuzzyPanel();
     renderPlTable();
     renderPlBrandFilter();
   } else {
     document.getElementById('pl-result-card').style.display = 'none';
     document.getElementById('pl-fuzzy-card').style.display = 'none';
+    document.getElementById('pl-price-review-card').style.display = 'none';
   }
 }
 
@@ -7618,9 +7665,17 @@ function generatePriceList() {
   plItems = [];
   let idc = 1;
   const autoExcluded = {};
+  const brokenPrices = [];
+  plPriceReviews = [];
   for (const arr of groups.values()) {
-    arr.sort((a, b) => a.price - b.price);
+    const { dropped, pending } = plDropBrokenPrices(arr);
+    brokenPrices.push(...dropped);
+    if (!arr.length) continue;
     const cheapest = arr[0];
+    pending.forEach(p => plPriceReviews.push({
+      itemId: idc, name: p.name, price: p.price, sourceLabel: p.sourceLabel,
+      nextName: cheapest.name, nextPrice: cheapest.price, nextSource: cheapest.sourceLabel
+    }));
     const overrideBrand = plBrandOverrides[plBrandOverrideKey(cheapest.name)];
     let brand = overrideBrand || cheapest.brand || (arr.find(a => a.brand)?.brand) || '';
     let reason = null;
@@ -7653,6 +7708,10 @@ function generatePriceList() {
     });
   }
 
+  if (brokenPrices.length) {
+    autoExcluded.brokenPrice = brokenPrices.length;
+    console.info('Precios rotos ignorados:', brokenPrices.map(b => `${b.name} — USD ${b.price} (${b.sourceLabel})`));
+  }
   plAutoExcluded = autoExcluded;
   // El detector de duplicados difusos compara ml y género de perfumes: en cosmética no se usa todavía (sprint 3).
   plFuzzyPairs = isKbeauty ? [] : detectFuzzyDuplicates(plItems);
@@ -7665,9 +7724,63 @@ function generatePriceList() {
   recomputePlPricing();
 
   document.getElementById('pl-result-card').style.display = '';
+  renderPlPriceReviewPanel();
   renderPlFuzzyPanel();
   renderPlTable();
   renderPlBrandFilter();
+}
+
+// ── Precios sospechosos ──
+function renderPlPriceReviewPanel() {
+  const card = document.getElementById('pl-price-review-card');
+  const list = document.getElementById('pl-price-review-list');
+  if (!plPriceReviews.some(r => !r.resolved)) { card.style.display = 'none'; return; }
+  card.style.display = '';
+  list.innerHTML = plPriceReviews.map((r, idx) => r.resolved ? '' : `
+    <div id="pl-price-review-${idx}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;
+                 padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+      <div style="font-size:.82rem;line-height:1.5;">
+        <div><strong>${esc(r.name)}</strong> — USD ${r.price.toFixed(2)} <span style="color:var(--muted);">(${esc(r.sourceLabel)})</span></div>
+        <div style="color:var(--muted);">Siguiente: ${esc(r.nextName)} — USD ${r.nextPrice.toFixed(2)} (${esc(r.nextSource)})</div>
+      </div>
+      <div class="btn-group" style="flex-shrink:0;">
+        <button class="btn btn-outline" onclick="resolvePlPriceReview(${idx}, true)">Es real</button>
+        <button class="btn btn-outline" onclick="resolvePlPriceReview(${idx}, false)">Es un error</button>
+      </div>
+    </div>`).join('');
+}
+
+function resolvePlPriceReview(idx, isReal) {
+  const r = plPriceReviews[idx];
+  if (!r || r.resolved) return;
+  r.resolved = true;
+  plPriceDecisions[plPriceDecisionKey(r)] = isReal ? 'real' : 'error';
+  savePriceDecisions();
+  invalidateCalcCatalog();
+  if (isReal) {
+    const it = plItems.find(x => x.id === r.itemId);
+    if (!it) {
+      // El producto se fusionó con otro por un duplicado: más simple volver a generar con la decisión ya guardada.
+      generatePriceList();
+      return;
+    }
+    if (r.price < it.priceUsd) {
+      it.alternates.unshift({ source: it.sourceLabel, price: it.priceUsd });
+      it.multiSource = true;
+      it.priceUsd = r.price;
+      it.sourceLabel = r.sourceLabel;
+      it.name = r.name;
+      it.displayName = plCleanName(r.name, it.brand);
+      recomputePlPricing();
+      const row = document.getElementById(`pl-row-${it.id}`);
+      if (row) row.outerHTML = plRowHtml(it);
+    }
+  } else {
+    plAutoExcluded.brokenPrice = (plAutoExcluded.brokenPrice || 0) + 1;
+    renderPlSummary();
+  }
+  document.getElementById(`pl-price-review-${idx}`)?.remove();
+  if (plPriceReviews.every(x => x.resolved)) document.getElementById('pl-price-review-card').style.display = 'none';
 }
 
 // ── Fuzzy review panel ──

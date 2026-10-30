@@ -505,6 +505,12 @@
 
     <h3>3. Posibles duplicados</h3>
     <p>El mismo perfume suele venir escrito distinto en cada proveedor. Si un producto está igual en varias listas, la app se queda con el más barato. Si dos nombres se parecen pero no son iguales, te los muestra en <strong>Posibles duplicados a revisar</strong>: elegí <strong>Es el mismo</strong> o <strong>Son distintos</strong>. La app recuerda tu respuesta y no te lo vuelve a preguntar.</p>
+    <p><strong>Precios rotos.</strong> A veces una tienda publica un precio que no puede ser real (un perfume a USD 0,01). Como la app se queda con el más barato, ese precio le ganaría a la oferta real de otra tienda. Por eso:</p>
+    <ul>
+      <li>Si una oferta cuesta menos de USD 1, se ignora sola.</li>
+      <li>Si cuesta menos de la cuarta parte que la siguiente tienda para el mismo producto, aparece en <strong>Precios sospechosos a revisar</strong>: elegí <strong>Es real</strong> (se usa ese precio) o <strong>Es un error</strong> (se ignora). Mientras no decidas, se usa la siguiente tienda. La app recuerda tu respuesta; si la tienda cambia ese precio, te lo vuelve a preguntar.</li>
+    </ul>
+    <p>El resumen de la lista dice cuántos precios rotos se ignoraron.</p>
     <p>Nunca se mezclan tamaños distintos, versiones masculina y femenina, testers con productos normales, ni variantes como Intense, Elixir o recargable.</p>
 
     <h3>4. Revisión final</h3>
@@ -570,7 +576,7 @@
 
     <div class="faq-item">
       <p class="faq-q">¿Los datos se guardan?</p>
-      <p class="faq-a">Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, la ganancia por categoría, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.</p>
+      <p class="faq-a">Sí, en el navegador que estés usando: las listas de productos, tu configuración, las listas de proveedores, la ganancia por categoría, las marcas que agregaste o corregiste, tus respuestas sobre duplicados y precios sospechosos, y el filtro de marcas. La cotización del USDT no se guarda: se vuelve a buscar al abrir. Si cambiás de navegador o de computadora, no vas a ver tus datos.</p>
     </div>
 
     <div class="faq-item">
