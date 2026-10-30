@@ -41,6 +41,9 @@ async function handle(req) {
     if (path === '/lgimportados') {
       return await fetchLgPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
     }
+    if (path === '/terranova') return await fetchTerraNovaPage(Number(new URL(req.url).searchParams.get('page')));
+    if (path === '/bigs') return await fetchBigsPage(Number(new URL(req.url).searchParams.get('page')));
+    if (path === '/shoppingchina') return await fetchShoppingChina(new URL(req.url).searchParams);
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
   } catch (e) {
@@ -97,6 +100,7 @@ async function fetchBlueCordoba() {
 const PONTOCOM_MAIN = 'perfumes-body-splash-perfume-feminino-masculino-unissex';
 const PONTOCOM_CATS = new Set([
   PONTOCOM_MAIN,
+  'cuidado-e-beleza',
   'perfumes-arabes', 'perfumes-nicho',                              // señal de categoría
   'body-splash', 'spray-corporal', 'spray', 'perfume-para-cabelo',  // se excluyen del import
 ]);
@@ -236,6 +240,113 @@ async function fetchLgPage(page) {
     sub2:  p.subcategoria2 || '',
   }));
   return jsonResp({ page, total: d.totalElements ?? null, pages: d.totalPages ?? null, items });
+}
+
+// ── Cosmética coreana — una página o ficha por pedido ─────────────
+async function fetchKbeautyPage(url, json = false) {
+  const r = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+      'Accept': json ? 'application/json' : 'text/html,application/xhtml+xml',
+      ...(json ? { 'X-Requested-With': 'XMLHttpRequest' } : {}),
+    },
+    cf: { cacheTtl: 900, cacheEverything: true },
+  });
+  if (!r.ok) throw new Error(`${new URL(url).hostname} respondió ${r.status}`);
+  return json ? r.json() : r.text();
+}
+
+function kbeautyHtmlText(s) {
+  return decodeEntities(String(s || '').replace(/<[^>]*>/g, ' ')).replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Delimita el elemento completo para no incluir tarjetas del menú o productos recomendados.
+function kbeautyHtmlBlocks(html, className) {
+  const out = [];
+  const tags = /<\/?([a-z][a-z0-9]*)\b[^>]*>/gi;
+  let m, start = -1, tag = '', depth = 0;
+  while ((m = tags.exec(html))) {
+    const closing = m[0][1] === '/';
+    if (start < 0) {
+      const cls = m[0].match(/\bclass=["']([^"']*)["']/i);
+      if (!closing && cls && cls[1].split(/\s+/).includes(className)) {
+        start = m.index; tag = m[1].toLowerCase(); depth = 1;
+      }
+    } else if (m[1].toLowerCase() === tag) {
+      depth += closing ? -1 : 1;
+      if (!depth) { out.push(html.slice(start, tags.lastIndex)); start = -1; }
+    }
+  }
+  return out;
+}
+
+async function fetchTerraNovaPage(page) {
+  if (!Number.isInteger(page) || page < 1 || page > 80) return jsonResp({ error: 'page inválida' }, 400);
+  const suffix = page === 1 ? '' : `,${page},destaque`;
+  const html = await fetchKbeautyPage(`https://www.shoppingterranova.com.py/CategoriaId_4${suffix}/ESTETICA-FACIAL.html`);
+  const listing = kbeautyHtmlBlocks(html, 'collapse-products')[0];
+  if (!listing) return jsonResp({ error: 'terranova: no se encontró el listado' }, 502);
+  const total = kbeautyHtmlText(listing).match(/([\d.]+)\s+productos/);
+  const items = kbeautyHtmlBlocks(listing, 'prod-item').map(card => ({
+    code: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'prod-cod')[0]).replace(/^Cód\.\s*/i, ''),
+    name: kbeautyHtmlText(card.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]),
+    price: Number(kbeautyHtmlText(kbeautyHtmlBlocks(card, 'price')[0]).match(/USD\s*([\d,]+\.\d{2})/)?.[1]?.replace(/,/g, '')) || null,
+  })).filter(x => x.code && x.name);
+  return jsonResp({ page, total: total ? Number(total[1].replace(/\./g, '')) : null, items });
+}
+
+async function fetchBigsPage(page) {
+  if (!Number.isInteger(page) || page < 1 || page > 60) return jsonResp({ error: 'page inválida' }, 400);
+  const d = await fetchKbeautyPage(`https://bigs.com.py/188-cosmeticos?page=${page}&ajax=1`, true);
+  if (!Array.isArray(d.products) || !d.pagination) return jsonResp({ error: 'bigs: listado inválido' }, 502);
+  const cards = new Map([...String(d.rendered_products || '').matchAll(/<article\b[^>]*data-id-product="(\d+)"[^>]*>[\s\S]*?<\/article>/g)].map(m => [m[1], m[0]]));
+  const items = d.products.map(p => {
+    const card = cards.get(String(p.id_product)) || '';
+    const stock = kbeautyHtmlText(kbeautyHtmlBlocks(card, 'in-stock')[0]).match(/(\d+)\s+In Stock/i);
+    return {
+      code: String(p.reference || p.id_product), name: kbeautyHtmlText(p.name), price: Number(p.price_amount) || null,
+      brand: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'manufacturer')[0]), stock: stock ? Number(stock[1]) : null,
+    };
+  });
+  return jsonResp({ page, pages: Number(d.pagination.pages_count), items });
+}
+
+async function fetchShoppingChina(q) {
+  const product = q.get('product');
+  if (product !== null) {
+    if (!/^\/producto\/[a-z0-9-]+$/.test(product)) return jsonResp({ error: 'product inválido' }, 400);
+    const html = await fetchKbeautyPage(`https://www.shoppingchina.com.py${product}`);
+    let data;
+    for (const m of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        const list = Array.isArray(parsed) ? parsed : parsed['@graph'] || [parsed];
+        data = list.find(x => x['@type'] === 'Product') || data;
+      } catch { /* Un bloque ajeno inválido no impide leer el producto. */ }
+    }
+    const section = kbeautyHtmlBlocks(html, 'product-variation-container')[0] || '';
+    const usd = kbeautyHtmlText(section).match(/U\$\s*([\d.]+,\d{2})\s*TAX FREE/i);
+    const availability = data?.offers?.availability || '';
+    return jsonResp({
+      code: product.match(/-(\d+)$/)?.[1] || '',
+      name: kbeautyHtmlText(section.match(/<h3\b[^>]*>([\s\S]*?)<\/h3>/i)?.[1] || data?.name),
+      price: usd ? parseArNum(usd[1]) : null,
+      inStock: /\/InStock$/.test(availability) ? true : /\/OutOfStock$/.test(availability) ? false : null,
+      brand: kbeautyHtmlText(data?.brand?.name),
+    });
+  }
+  const query = (q.get('query') || '').trim(), page = Number(q.get('page') || 1);
+  if (!query || query.length > 60) return jsonResp({ error: 'query inválida' }, 400);
+  if (!Number.isInteger(page) || page < 1 || page > 20) return jsonResp({ error: 'page inválida' }, 400);
+  const html = await fetchKbeautyPage('https://www.shoppingchina.com.py/site/search?' + new URLSearchParams({ query, page }));
+  const items = kbeautyHtmlBlocks(html, 'product-item').map(card => {
+    const path = card.match(/href="(\/producto\/[a-z0-9-]+)"/)?.[1] || '';
+    return { code: path.match(/-(\d+)$/)?.[1] || '', name: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'lightning-prod-desc')[0]), path };
+  }).filter(x => x.code && x.name);
+  const text = kbeautyHtmlText(html);
+  const total = text.match(/Mostrando productos\b.*?\bde\s+([\d.,]+)\s+en total/i) || text.match(/Mostrando (?:todos\/as los\/as|tod[oa]s?\s+l[oa]s?)\s+([\d.,]+)\s+productos/i);
+  if (!items.length && !/Mostrando|No se encontr|No hay productos/i.test(text)) return jsonResp({ error: 'shoppingchina: no se encontró el listado' }, 502);
+  return jsonResp({ page, total: total ? Number(total[1].replace(/[.,]/g, '')) : items.length, items });
 }
 
 // ── Publicar catalogo.html en GitHub Pages ─────────────────────────

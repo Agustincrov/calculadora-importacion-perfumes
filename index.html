@@ -696,7 +696,7 @@
       <div class="card-title">1. Importar listas de proveedor</div>
       <div class="pl-kbeauty-only" style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
         Lista aparte de la de perfumes: lo que cargues acá no se mezcla con los perfumes ni aparece en la Calculadora.
-        Por ahora se carga a mano (texto pegado o Excel/PDF). Al generar entra solo el <strong>skincare</strong> de las marcas coreanas conocidas;
+        Podés traer los catálogos de las tiendas o cargar texto, Excel/PDF. Al generar entra solo el <strong>skincare</strong> de las marcas coreanas conocidas;
         las demás marcas y el maquillaje, cabello, aparatos y fragancias quedan excluidos (se pueden restaurar en la revisión).
       </div>
       <div class="pl-perfume-only" style="font-size:.8rem;color:var(--muted);margin-bottom:14px;">
@@ -805,6 +805,15 @@
           </svg>
           Borrar todo
         </button>
+      </div>
+
+      <div class="pl-kbeauty-only" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-terranova-btn" onclick="importKbeautySiteCatalog('terranova')">Traer Terra Nova</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-atacado-btn" onclick="importKbeautySiteCatalog('atacado')">Traer Atacado Connect</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-bigs-btn" onclick="importKbeautySiteCatalog('bigs')">Traer Bigs</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-shoppingchina-btn" onclick="importKbeautySiteCatalog('shoppingchina')">Traer Shopping China</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-pontocom-btn" onclick="importKbeautySiteCatalog('pontocom')">Traer Ponto Com</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
       </div>
 
       <div id="pl-source-tags" class="catalog-tags"></div>
@@ -5882,7 +5891,7 @@ const KBEAUTY_BRANDS = [
   ['VT Cosmetics', 'VT COSMETICS'], ['TIRTIR'], ['Missha'], ['Torriden'], ['Mediheal'], ["I'm From", "I'M FROM", 'IM FROM'],
   ['Arencia'], ['Mary & May', 'MARY & MAY', 'MARY&MAY', 'MARY AND MAY'], ['Meditherapy'],
   ['Dr. Melaxin', 'DR MELAXIN', 'MELAXIN'], ['Klasme'], ['Tocobo'], ['Laneige'], ['Innisfree'],
-  ['Banila Co', 'BANILA CO', 'BANILA'], ['K-Secret', 'K SECRET'], ['Aestura'], ['Illiyoon'], ['Beplain'], ['Goodal'],
+  ['Banila Co', 'BANILA CO', 'BANILA'], ['K-Secret', 'K SECRET', 'KSECRET'], ['Aestura'], ['Illiyoon'], ['Beplain'], ['Goodal'],
   ['Skinfood', 'SKIN FOOD'], ['Etude', 'ETUDE HOUSE'], ['Dr.G', 'DR G']
 ];
 
@@ -5921,7 +5930,7 @@ const PL_NOT_SKINCARE_RE = new RegExp(' (' + [
   // (sin BASE, POLVO, POWDER, PRIMER, SPLASH ni BB/CC sueltos: "a base de", "limpiador en polvo", "enzyme powder
   // wash", "primer paso", "splash mask" y "Azelaic Acid 16 BB" son skincare)
   'CUSHION', 'BB CREAM', 'CC CREAM', 'BASE LIQUIDA', 'BASE DE MAQUILLAJE', 'FOUNDATION', 'LABIAL', 'LIPSTICK',
-  'BATOM', 'LIP TINT', 'TINT', 'GLOSS', 'LIP GLOSS', 'RIMEL', 'MASCARA DE PESTANAS', 'MASCARA PARA CILIOS', 'DELINEADOR',
+  'BATOM', 'LIP TINT', 'TINT', 'TINTA PARA LABIOS', 'TINTA LABIAL', 'GLOSS', 'LIP GLOSS', 'RIMEL', 'MASCARA DE PESTANAS', 'MASCARA PARA CILIOS', 'DELINEADOR',
   'EYELINER', 'LAPIZ', 'LAPIS', 'SOMBRA', 'CORRECTOR', 'CORRETIVO', 'CONCEALER', 'PO COMPACTO', 'POLVO COMPACTO',
   'POLVO SUELTO', 'SETTING POWDER', 'LOOSE POWDER', 'PRESSED POWDER', 'BLUSH', 'RUBOR', 'MAQUILLAJE', 'MAQUIAGEM',
   'MAKEUP', 'MAKE UP', 'CEJAS', 'SOBRANCELHA', 'EYEBROW', 'PALETA', 'PALETTE',
@@ -5934,8 +5943,16 @@ const PL_NOT_SKINCARE_RE = new RegExp(' (' + [
   'PERFUME', 'EAU DE', 'EDP', 'EDT', 'BODY MIST', 'BODY SPLASH', 'DESODORANTE', 'DEO', 'VINO', 'VINHO', 'WINE'
 ].join('|') + ') ');
 
+// Cuidado de labios es skincare: "Máscara Labial Hidratante" no es un labial.
+const PL_LIP_CARE_RE = / (MASCARA|BALSAMO|PROTETOR|PROTECTOR|HIDRATANTE|SERUM) LABIAL(?= )/g;
+
+// Protector solar es skincare aunque venga en formato cushion ("Water Powder Sun Cushion SPF 50+").
+const PL_SUN_CARE_RE = / (SUN|SOLAR|SPF|FPS|SUNSCREEN|SUNBLOCK) /;
+
 function plIsNotSkincare(name) {
-  return PL_NOT_SKINCARE_RE.test(plNormalizeKbeauty(name));
+  let norm = plNormalizeKbeauty(name).replace(PL_LIP_CARE_RE, ' $1');
+  if (PL_SUN_CARE_RE.test(norm)) norm = norm.replace(/ CUSHION(?= )/g, '');
+  return PL_NOT_SKINCARE_RE.test(norm);
 }
 
 function detectKnownBrand(name) {
@@ -6687,8 +6704,11 @@ async function plMapLimit(list, n, fn) {
   return out;
 }
 
+// Corta a los 60 s: un pedido colgado dejaba el botón trabado para siempre.
 async function plFetchJson(url, headers = {}) {
-  const r = await fetch(url, { headers });
+  let r;
+  try { r = await fetch(url, { headers, signal: AbortSignal.timeout(60000) }); }
+  catch (err) { throw err.name === 'TimeoutError' ? new Error('no respondió en 60 s') : err; }
   if (!r.ok) throw new Error(`respondió ${r.status}`);
   return r.json();
 }
@@ -6911,6 +6931,149 @@ async function plFetchMobileZoneRows(progress) {
   }).filter(x => !MOBILEZONE_NOT_PERFUME_RE.test(x.name));
 }
 
+// ── Importadores de cosmética coreana ────────────────────────────
+// Separados de perfumes: las exclusiones de skincare se aplican recién al generar.
+function plBuildKbeautySiteItems(rows) {
+  const items = [], discardedBrands = Object.create(null), seen = new Set();
+  for (const r of rows) {
+    if (seen.has(r.code)) continue;
+    seen.add(r.code);
+    if (!Number.isFinite(r.price) || !(r.price > 0) || r.inStock !== true) continue;
+    const brand = detectKbeautyBrand(r.name) || detectKbeautyBrand(r.site);
+    if (!brand) {
+      const raw = String(r.site || 'Sin marca informada').trim();
+      discardedBrands[raw] = (discardedBrands[raw] || 0) + 1;
+      continue;
+    }
+    items.push({ name: r.name, brand, price: r.price, code: r.code, site: r.site || '' });
+  }
+  return { items, discardedBrands };
+}
+
+// Espacia los inicios por tienda, incluso con cuatro fichas en vuelo; reintenta 429/503 con pausa.
+const plKbeautyNextRequest = new Map();
+async function plFetchKbeautyJson(site, url, headers = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const start = Math.max(Date.now(), plKbeautyNextRequest.get(site) || 0);
+    plKbeautyNextRequest.set(site, start + 600);
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, start - Date.now())));
+    try { return await plFetchJson(url, headers); }
+    catch (err) {
+      if (attempt >= 2 || !/429|503|502|500|60 s|Failed to fetch/.test(err.message)) throw err;
+      await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+    }
+  }
+}
+
+async function plFetchKbeautyWorkerRows(key, progress) {
+  const rows = [];
+  const max = key === 'terranova' ? 80 : key === 'bigs' ? 60 : 300;
+  for (let page = 1; page <= max; page++) {
+    const path = key === 'pontocom' ? '/pontocom?cat=cuidado-e-beleza&' : `/${key}?`;
+    const d = await plFetchKbeautyJson(key, `${WORKER}${path}page=${page}`);
+    if (!Array.isArray(d.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    rows.push(...d.items.map(x => ({
+      code: x.code, name: x.name, price: x.price, site: x.brand || '',
+      inStock: key === 'terranova' ? true : x.stock > 0 && !x.out,
+    })));
+    const last = key === 'bigs' ? d.pages : key === 'terranova' && d.total ? Math.ceil(d.total / 18) : null;
+    if (last > max) throw new Error(`el catálogo supera el límite de ${max} páginas`);
+    if (!d.items.length || (last && page >= last)) return rows;
+  }
+  throw new Error('se alcanzó el límite de páginas sin terminar el catálogo');
+}
+
+async function plFetchAtacadoKbeautyRows(progress) {
+  const classes = ['Hidratantes', 'Sérum', 'Máscaras', 'Pads e Patchs', 'Limpeza e Demaquilantes', 'Tônicos', 'Protetor Solar', 'Contorno de Olhos'];
+  const filter = `classificacao_br:=[${classes.map(c => '`' + c + '`').join(',')}] && estoque:=true`;
+  const rows = [];
+  for (let page = 1; ; page++) {
+    const url = `${ATACADO_SEARCH}?` + new URLSearchParams({ q: '*', query_by: 'nome_site_es', filter_by: filter, per_page: 250, page });
+    const d = await plFetchKbeautyJson('atacado', url, { 'X-TYPESENSE-API-KEY': ATACADO_KEY });
+    progress(d.hits.length);
+    rows.push(...d.hits.map(h => {
+      const x = h.document;
+      return { code: String(x.produto_id || x.id), name: String(x.nome_site_es || x.nome_site_br || '').replace(/\s+/g, ' ').trim(),
+        price: Number(x.preco_promocional > 0 ? x.preco_promocional : x.preco_base), site: x.fabricante_site_es || x.fabricante_site_br, inStock: x.estoque === true };
+    }));
+    if (page * 250 >= d.found) return rows;
+    if (!d.hits.length || page >= 40) throw new Error('catálogo incompleto');
+  }
+}
+
+async function plFetchShoppingChinaRows(progress) {
+  const products = new Map();
+  for (const [brand] of KBEAUTY_BRANDS) {
+    const query = brand === 'Dr. Althea' ? 'Althea' : brand === 'VT Cosmetics' ? 'VT COSMETICS' : brand;
+    for (let page = 1; page <= 20; page++) {
+      const d = await plFetchKbeautyJson('shoppingchina', `${WORKER}/shoppingchina?` + new URLSearchParams({ query, page }));
+      progress(d.items.length);
+      for (const x of d.items) if (detectKbeautyBrand(x.name) && !plIsNotSkincare(x.name)) products.set(x.code, x);
+      if (!d.items.length || page * 24 >= d.total) break;
+      if (page === 20) throw new Error(`la búsqueda ${query} supera las 20 páginas`);
+    }
+  }
+  let failed = 0;
+  const rows = await plMapLimit([...products.values()], 4, async x => {
+    try {
+      const d = await plFetchKbeautyJson('shoppingchina', `${WORKER}/shoppingchina?` + new URLSearchParams({ product: x.path }));
+      if (!d.name || !(d.price > 0) || d.inStock === null) { failed++; return null; }
+      return { code: x.code, name: d.name, price: d.price, site: d.brand, inStock: d.inStock };
+    } catch { failed++; return null; }
+    finally { progress(1); }
+  });
+  const result = rows.filter(Boolean);
+  result.importNote = failed ? `${failed} ficha(s) descartadas por error, precio ausente o stock desconocido.` : '';
+  return result;
+}
+
+const PL_KBEAUTY_SITE_IMPORTS = {
+  terranova: { label: 'Terra Nova', fetchRows: progress => plFetchKbeautyWorkerRows('terranova', progress) },
+  atacado: { label: 'Atacado Connect', fetchRows: plFetchAtacadoKbeautyRows },
+  bigs: { label: 'Bigs', fetchRows: progress => plFetchKbeautyWorkerRows('bigs', progress) },
+  shoppingchina: { label: 'Shopping China', fetchRows: plFetchShoppingChinaRows },
+  pontocom: { label: 'Ponto Com', fetchRows: progress => plFetchKbeautyWorkerRows('pontocom', progress) },
+};
+let plKbeautyImportBusy = false;
+
+async function importKbeautySiteCatalog(key, { quiet = false } = {}) {
+  const cfg = PL_KBEAUTY_SITE_IMPORTS[key];
+  if (!cfg || (!quiet && plKbeautyImportBusy)) return;
+  if (!quiet) plSetKbeautyImportBusy(true);
+  const btn = document.getElementById(`pl-kbeauty-${key}-btn`), html = btn.innerHTML;
+  let read = 0;
+  try {
+    const rows = await cfg.fetchRows(n => { read += n; btn.textContent = `${cfg.label}: ${read.toLocaleString('es-AR')} leídos…`; });
+    const { msg } = plSetSiteSource(key, cfg.label, rows, undefined, 'kbeauty');
+    const result = msg + (rows.importNote ? '\n' + rows.importNote : '');
+    if (!quiet) alert(result);
+    return result;
+  } catch (err) {
+    const msg = `No se pudo traer el catálogo de ${cfg.label}: ${err.message}. No se agregó nada.`;
+    if (!quiet) alert(msg);
+    return msg;
+  } finally {
+    btn.innerHTML = html;
+    if (!quiet) plSetKbeautyImportBusy(false);
+  }
+}
+
+function plSetKbeautyImportBusy(busy) {
+  plKbeautyImportBusy = busy;
+  for (const btn of document.querySelectorAll('[data-kbeauty-import]')) btn.disabled = busy;
+}
+
+async function importAllKbeautySiteCatalogs() {
+  if (plKbeautyImportBusy) return;
+  plSetKbeautyImportBusy(true);
+  try {
+    const msgs = [];
+    for (const key of Object.keys(PL_KBEAUTY_SITE_IMPORTS)) msgs.push(await importKbeautySiteCatalog(key, { quiet: true }));
+    alert(msgs.join('\n\n'));
+  } finally { plSetKbeautyImportBusy(false); }
+}
+
 const PL_SITE_IMPORTS = {
   elegancia: { label: 'Elegancia', btn: 'pl-elegancia-btn', fetchRows: plFetchEleganciaRows },
   atacado:   { label: 'Atacado Connect', btn: 'pl-atacado-btn', fetchRows: plFetchAtacadoRows },
@@ -6925,14 +7088,18 @@ const PL_SITE_IMPORTS = {
 // notas (marcas sin categoría, productos sin marca). Si no queda ningún producto, tira error y no toca nada.
 // line (card 19): un mismo sitio puede tener una carga por línea; solo se reemplaza la de la misma línea.
 function plSetSiteSource(key, label, rows, date = new Date().toLocaleDateString('en-CA'), line = 'perfumes') {
-  const { items, newBrands, noBrand } = plBuildSiteItems(rows);
+  const { items, newBrands = {}, noBrand = 0, discardedBrands = {} } = line === 'kbeauty' ? plBuildKbeautySiteItems(rows) : plBuildSiteItems(rows);
   if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
   plSources = plSources.filter(s => !(s.site === key && plSourceLine(s) === line));
-  plSources.push(plNewSource({ name: `${label} · ${date}`, site: key, items }, line));
+  plSources.push(plNewSource({ name: `${label}${line === 'kbeauty' ? ' · cosmética' : ''} · ${date}`, site: key, items }, line));
   savePlSources();
   renderPlSourceTags();
   const nb = Object.entries(newBrands).sort((a, b) => b[1] - a[1]);
   const notes = [];
+  if (line === 'kbeauty') {
+    const discarded = Object.entries(discardedBrands).sort((a, b) => b[1] - a[1]);
+    notes.push(discarded.length ? 'Marcas descartadas (hasta 15):\n' + discarded.slice(0, 15).map(([b, n]) => `• ${b} (${n})`).join('\n') : 'No se descartaron marcas entre los productos con stock y precio.');
+  }
   if (nb.length > 0) notes.push(`${nb.length} marca(s) sin categoría — se van a preciar con la fórmula de diseñador:\n` +
     nb.map(([b, n]) => `• ${b} (${n})`).join('\n'));
   if (noBrand > 0) notes.push(`${noBrand} producto(s) sin marca: aparecen con ⚠ en la revisión.`);
