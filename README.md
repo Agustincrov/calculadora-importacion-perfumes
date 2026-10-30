@@ -37,11 +37,12 @@ Importo fetches all rates automatically and computes every number in real time a
 - Fully reactive — recalculates on every input change, persists business config (commission, shipping, fees, rounding) across reloads
 
 **Price-list generator**
-- Imports supplier lists from pasted WhatsApp text, Excel/Numbers, PDF catalogs, or scrapes the Ponto Com online catalog (paginated, through the Worker)
+- Imports supplier lists from pasted WhatsApp text, Excel/Numbers, PDF catalogs, or pulls the online catalogs of a dozen Ciudad del Este stores (public APIs, or through the Worker when the site has no CORS)
 - Detects the brand from the product name (300+ known brands with aliases, accent-insensitive) and classifies it as niche, designer or Arabic
 - Merges the same product across suppliers keeping the cheapest, and suggests fuzzy duplicates for one-click review (decisions are remembered)
-- Prices every product with margin tiers by original cost (a separate tier set for Arabic brands), using the same costing and rounding as the calculator
+- Prices every product with a per-category profit formula (fixed ARS amount + % of the product cost, one each for designer, Arabic and niche), using the same costing and rounding as the calculator
 - Excludes non-perfume items automatically; per-brand publish filter
+- A separate Korean cosmetics line (skincare only): its own sources, store importers, brand list, review and Excel export, never mixed with the perfumes
 - Exports to Excel, or publishes a searchable client catalog (`docs/catalogo.html`) to GitHub Pages in one click — with category, brand and price filters, a cart and a WhatsApp order button
 
 **Access control**

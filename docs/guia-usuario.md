@@ -126,6 +126,17 @@ El PDF tiene que tener texto seleccionable (no sirve uno escaneado o sacado como
 
 En la pestaña **Generador de listas** armás tu lista de precios para clientes a partir de las listas de tus proveedores.
 
+### Perfumes y cosmética coreana
+
+Arriba del generador hay dos pestañas: **Perfumes** y **Cosmética coreana**. Son dos listas separadas: lo que cargás en una no aparece en la otra, y cada una tiene su propio resultado, su filtro de marcas y su Excel. Al cambiar de pestaña y volver, la revisión sigue como la dejaste. La Calculadora usa solo la de perfumes.
+
+En **Cosmética coreana**:
+
+- **Traer Terra Nova / Atacado Connect / Bigs / Shopping China / Ponto Com** (y **Traer todos (cosmética)**): traen el skincare con stock de cada tienda y reemplazan la carga anterior de esa tienda en cosmética, sin tocar la de perfumes. Se guardan solo los productos de las marcas coreanas que la app conoce (Medicube, SKIN1004, Anua, Round Lab, Mixsoon, Celimax, Dr. Althea, Beauty of Joseon, COSRX y otras); el aviso final dice cuántos cargó cada tienda y qué marcas descartó. Shopping China tarda unos 7 minutos (tiene que abrir la ficha de cada producto para ver el precio en dólares); el resto, segundos.
+- **Texto pegado y Excel/PDF** también funcionan: se cargan en la pestaña que esté abierta.
+- Al generar entra solo el **skincare** de marcas coreanas: limpieza, tónicos, sérums, cremas, máscaras, protectores solares (también los cushion con SPF), cuidado de labios y kits. Quedan excluidos 🌐 las marcas que no son coreanas y 🚫 el maquillaje (cushions, bases, tintas, labiales), cabello, aparatos (AGE-R Booster y sus repuestos) y fragancias. Se pueden ver y restaurar con **Mostrar excluidos**; si corregís la marca de un producto a una coreana, deja de estar excluido.
+- Por ahora el precio es **provisorio** (fórmula de diseñador) y no se puede publicar como catálogo ni pasar a la calculadora: solo **Exportar Excel** (`lista_cosmetica_coreana_AAAA-MM-DD.xlsx`). **Borrar todo** borra solo la pestaña abierta.
+
 ### 1. Importar listas de proveedor
 
 Podés cargar varias listas, de cualquiera de estas formas:
@@ -138,7 +149,7 @@ Podés cargar varias listas, de cualquiera de estas formas:
 - **Traer catálogo Elegancia / Atacado Connect / Genove / Star Company / Multipass / LG Importados / Mobile Zone:** igual que Ponto Com, cada uno trae los perfumes con stock de su sitio (eleganciacompany.com, atacadoconnect.com, genove.com.py, starcompany-py.com, multipass.com.py, lgimportados.com y mobilezone.com.py) en unos segundos y reemplaza la carga anterior. Los precios ya vienen en dólares: Elegancia sin IVA, Genove el precio minorista. Atacado Connect trae lo mismo que su Excel "Baixar lista", así que ya no hace falta descargarlo. Star Company usa los mismos nombres que sus listas de WhatsApp, así que reemplaza a pegarlas. LG Importados usa el precio promocional cuando lo tiene y deja afuera los frascos fraccionados y las imitaciones con nombre parecido (Locoscte, Vercage, Cool…). No se cargan los infantiles, body splash, cremas, viales ni las marcas de muy bajo costo.
 - **Traer todos:** trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados y Mobile Zone uno detrás del otro (un par de minutos) y al final muestra un solo aviso con lo que cargó cada uno. Macedonia y Madrid Center quedan aparte porque necesitan su archivo.
 
-**Borrar todo** quita todas las listas cargadas y el resultado.
+**Borrar todo** quita todas las listas cargadas y el resultado de la pestaña abierta (Perfumes o Cosmética coreana).
 
 **Marcas conocidas:** la marca de cada producto se detecta buscando su nombre dentro del nombre del producto (la app ya conoce más de 300 marcas). Si falta una, agregala acá, o corregila directamente en la tabla de revisión: la próxima vez la reconoce sola.
 
