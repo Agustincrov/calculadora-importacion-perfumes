@@ -1883,6 +1883,7 @@ async function fetchAllRates() {
 // ─────────────────────────────────────────────
 let plSources     = []; // [{ id, name, items: [{name, brand, price}] }]
 let plNextSourceId = 1;
+// Versiones anteriores las guardaban en localStorage: se leen igual (y se migran a IndexedDB, ver abajo).
 try {
   const savedPlSources = JSON.parse(localStorage.getItem('importo-pl-sources') || 'null');
   if (savedPlSources && Array.isArray(savedPlSources.sources)) {
@@ -1891,9 +1892,83 @@ try {
   }
 } catch { /* se queda vacío */ }
 
+// ── Fuentes en IndexedDB (card 20) ──
+// localStorage tiene ~5 MB por sitio y las fuentes de perfumes + cosmética lo pasan ("The quota has been
+// exceeded"): se guardan en IndexedDB (cientos de MB). Al abrir: si IndexedDB tiene fuentes, mandan; si no, se
+// copian las de localStorage, se releen y recién ahí se borra la clave vieja. Sin IndexedDB (algún modo privado)
+// se sigue usando localStorage.
+const PL_IDB_NAME = 'importo', PL_IDB_STORE = 'kv', PL_IDB_KEY = 'pl-sources';
+let plIdbAvailable = typeof indexedDB !== 'undefined';
+let plSourcesLoaded = false, plSourcesDirty = false;
+let plIdbDbPromise = null;
+
+function plIdbDb() {
+  return plIdbDbPromise ||= new Promise((resolve, reject) => {
+    const req = indexedDB.open(PL_IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(PL_IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function plIdb(mode, op) {
+  const db = await plIdbDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PL_IDB_STORE, mode);
+    const req = op(tx.objectStore(PL_IDB_STORE));
+    tx.oncomplete = () => resolve(req.result);
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('IndexedDB'));
+  });
+}
+
+let plSaveChain = Promise.resolve();
 function savePlSources() {
-  localStorage.setItem('importo-pl-sources', JSON.stringify({ sources: plSources, nextId: plNextSourceId }));
   invalidateCalcCatalog(); // el catálogo de la calculadora sale de estas mismas fuentes
+  if (!plSourcesLoaded) plSourcesDirty = true;
+  const data = { sources: plSources, nextId: plNextSourceId };
+  if (!plIdbAvailable) {
+    try { localStorage.setItem('importo-pl-sources', JSON.stringify(data)); }
+    catch (err) { alert(`No se pudieron guardar las listas cargadas (${err.message}): al recargar la página vuelven a como estaban.`); }
+    return;
+  }
+  // put() copia los datos en el momento: se encadena para que los guardados no se pisen fuera de orden.
+  plSaveChain = plSaveChain
+    .then(() => plIdb('readwrite', store => store.put(data, PL_IDB_KEY)))
+    .catch(err => alert(`No se pudieron guardar las listas cargadas (${err.message}): al recargar la página vuelven a como estaban.`));
+}
+
+async function plLoadSources() {
+  if (plIdbAvailable) {
+    try {
+      const saved = await plIdb('readonly', store => store.get(PL_IDB_KEY));
+      if (saved && Array.isArray(saved.sources)) {
+        if (plSourcesDirty) {
+          // Se cargó algo antes de terminar de leer: se suma a lo guardado, con ids nuevos.
+          let next = Math.max(saved.nextId || 1, saved.sources.reduce((m, s) => Math.max(m, s.id), 0) + 1);
+          const ids = new Set(saved.sources.map(s => s.id));
+          const added = plSources.filter(s => !ids.has(s.id) || !saved.sources.some(o => o.id === s.id && o.name === s.name))
+            .map(s => ({ ...s, id: next++ }));
+          plSources = [...saved.sources, ...added];
+          plNextSourceId = next;
+        } else {
+          plSources = saved.sources;
+          plNextSourceId = saved.nextId || (plSources.reduce((m, s) => Math.max(m, s.id), 0) + 1);
+        }
+      }
+      // Migración: lo de localStorage (o lo cargado recién) pasa a IndexedDB; se relee antes de borrar lo viejo.
+      if (!saved || plSourcesDirty) {
+        await plIdb('readwrite', store => store.put({ sources: plSources, nextId: plNextSourceId }, PL_IDB_KEY));
+        const check = await plIdb('readonly', store => store.get(PL_IDB_KEY));
+        if (!check || check.sources.length !== plSources.length) throw new Error('la copia en IndexedDB no coincide');
+      }
+      localStorage.removeItem('importo-pl-sources');
+    } catch (err) {
+      console.warn('IndexedDB no disponible, las listas siguen en localStorage:', err);
+      plIdbAvailable = false;
+    }
+  }
+  plSourcesLoaded = true;
+  invalidateCalcCatalog();
 }
 
 // ── Líneas del generador (card 19) ──
@@ -10463,6 +10538,7 @@ renderPlSharedConfigPreview();
 renderPlFormulas();
 renderPlBrandTags();
 renderPlLine(); // también pinta las fuentes de la línea activa (card 19)
+plLoadSources().then(renderPlSourceTags); // IndexedDB es asincrónico: se repintan las fuentes al terminar de leer
 renderPublishSecretStatus();
 document.getElementById('pl-macedonia-rate').value = macedoniaRate;
 
