@@ -819,6 +819,9 @@
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-bigs-btn" onclick="importKbeautySiteCatalog('bigs')">Traer Bigs</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-shoppingchina-btn" onclick="importKbeautySiteCatalog('shoppingchina')">Traer Shopping China</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-pontocom-btn" onclick="importKbeautySiteCatalog('pontocom')">Traer Ponto Com</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-lg-btn" onclick="importKbeautySiteCatalog('lg')">Traer LG Importados</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-megaeletro-btn" onclick="importKbeautySiteCatalog('megaeletro')">Traer Mega Eletro</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-flash-btn" onclick="importKbeautySiteCatalog('flash')">Traer Flash Importados</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
       </div>
 
@@ -6216,7 +6219,7 @@ const KBEAUTY_BRANDS = [
   ['Banila Co', 'BANILA CO', 'BANILA'], ['K-Secret', 'K SECRET', 'KSECRET'], ['Aestura'], ['Illiyoon'], ['Beplain'], ['Goodal'],
   ['Skinfood', 'SKIN FOOD'], ['Etude', 'ETUDE HOUSE'], ['Dr.G', 'DR G'],
   // Sumadas el 2026-10-31 desde las descartadas de Terra Nova y Bigs (verificadas una por una, card 20).
-  ['Sungboon Editor'], ['Eqqualberry'], ['Mizon'], ['Jumiso'], ['Hanskin'], ['Medipeel', 'MEDI PEEL'],
+  ['Sungboon Editor', 'SUNGBOON'], ['Eqqualberry'], ['Mizon'], ['Jumiso'], ['Hanskin'], ['Medipeel', 'MEDI PEEL'],
   ['Standard Seoul'], ['Eunyul'], ['Ilso'], ['Lindsay'], ['Ma:nyo', 'MANYO', 'MANYO FACTORY'],
   ['Nine Less', 'NINELESS'], ['OMG', 'DOUBLE DARE'], ['Look at Me', 'LOOKATME'], ['Midha'], ['Soonding'],
   ['Auio'], ['Lolovegan'], ['Selenus'], ['Skin627', 'SKIN 627'], ['Tovegan'], ['Hidehere'],
@@ -6290,8 +6293,14 @@ const PL_MAKEUP_REMOVER_RE = / (CLEANSING|CLEANSER|REMOVER|REMOVE|REMOVAL|DESMAQ
 // Protector solar es skincare aunque venga en formato cushion ("Water Powder Sun Cushion SPF 50+").
 const PL_SUN_CARE_RE = / (SUN|SOLAR|SPF|FPS|SUNSCREEN|SUNBLOCK) /;
 
+// BASE y PRIMER solo al principio del nombre (Mega Eletro y LG escriben "Base Missha…", "Primer de rosto…"): en el
+// medio son "a base de" o "primer paso".
+const PL_MAKEUP_START_RE = /^ (BASE|PRIMER) /;
+
 function plIsNotSkincare(name) {
-  let norm = plNormalizeKbeauty(name).replace(PL_LIP_CARE_RE, ' $1');
+  // "+" separa: "Serum 100ML+DISPOSITIVO FACIAL" es un kit con aparato.
+  let norm = plNormalizeKbeauty(String(name || '').replace(/\+/g, ' + ')).replace(PL_LIP_CARE_RE, ' $1');
+  if (PL_MAKEUP_START_RE.test(norm)) return true;
   if (PL_SUN_CARE_RE.test(norm)) norm = norm.replace(/ CUSHION(?= )/g, '');
   if (PL_MAKEUP_REMOVER_RE.test(norm)) norm = norm.replace(/ (MAKE UP|MAKEUP)(?= )/g, '');
   return PL_NOT_SKINCARE_RE.test(norm);
@@ -7524,11 +7533,69 @@ async function plFetchShoppingChinaRows(progress) {
   return rows;
 }
 
+// LG Importados (card 20, tanda 2): la misma API que perfumes, categoría COSMETICOS (~32 páginas de 100). Se pide
+// entera y no solo "Skin Care": hay coreanos en Bronzeadores (protectores solares) y Kits.
+async function plFetchLgKbeautyRows(progress) {
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/lgimportados?cat=COSMETICOS&page=${n}`);
+    if (!Array.isArray(d.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page(0);
+  if (!(first.pages >= 1) || first.pages > 100) throw new Error('cantidad de páginas inválida');
+  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 1), 8, page);
+  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
+}
+
+// Mega Eletro corta la conexión desde la página 20: se lee la mitad del listado ordenado por nombre A–Z y la otra
+// mitad Z–A (las páginas del medio se repiten: se deduplica por código al armar los ítems). De a uno: con 2 a la vez
+// a veces da 429 y con 4 casi siempre; 38 seguidos de a uno pasaron sin error (2026-10-31). Si igual corta, espera
+// más que el reintento común antes de volver a pedir.
+async function plFetchMegaEletroRows(progress) {
+  const page = async ([n, order]) => {
+    const url = `${WORKER}/megaeletro?page=${n}&order=${order}`;
+    let d;
+    try { d = await plFetchKbeautyJson(url); }
+    catch (err) {
+      if (!/429|50\d/.test(err.message)) throw err;
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      d = await plFetchKbeautyJson(url);
+    }
+    if (!Array.isArray(d.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page([1, 'asc']);
+  const half = Math.ceil(first.pages / 2);
+  if (!(first.pages >= 1) || half > 19) throw new Error('cantidad de páginas inválida (¿creció el catálogo?)');
+  const tasks = [...Array.from({ length: half - 1 }, (_, k) => [k + 2, 'asc']), ...Array.from({ length: first.pages > 1 ? half : 0 }, (_, k) => [k + 1, 'desc'])];
+  const rest = await plMapLimit(tasks, 1, page);
+  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
+}
+
+// Flash Importados: categoría Facial (~25 páginas de 50). Los agotados vienen sin precio y quedan afuera.
+async function plFetchFlashRows(progress) {
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/flash?page=${n}`);
+    if (!Array.isArray(d.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page(1);
+  if (!(first.pages >= 1) || first.pages > 60) throw new Error('cantidad de páginas inválida');
+  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 2), 4, page);
+  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
+}
+
 const PL_KBEAUTY_SITE_IMPORTS = {
   atacado: { label: 'Atacado Connect', fetchRows: plFetchAtacadoKbeautyRows },
   bigs: { label: 'Bigs', fetchRows: plFetchBigsKbeautyRows },
   shoppingchina: { label: 'Shopping China', fetchRows: plFetchShoppingChinaRows },
   pontocom: { label: 'Ponto Com', fetchRows: plFetchPontocomKbeautyRows },
+  lg: { label: 'LG Importados', fetchRows: plFetchLgKbeautyRows },
+  megaeletro: { label: 'Mega Eletro', fetchRows: plFetchMegaEletroRows },
+  flash: { label: 'Flash Importados', fetchRows: plFetchFlashRows },
 };
 let plKbeautyImportBusy = false;
 
