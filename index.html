@@ -6214,7 +6214,20 @@ const KBEAUTY_BRANDS = [
   ['Arencia'], ['Mary & May', 'MARY & MAY', 'MARY&MAY', 'MARY AND MAY', 'MARYMAY'], ['Meditherapy'],
   ['Dr. Melaxin', 'DR MELAXIN', 'MELAXIN'], ['Klasme'], ['Tocobo'], ['Laneige'], ['Innisfree'],
   ['Banila Co', 'BANILA CO', 'BANILA'], ['K-Secret', 'K SECRET', 'KSECRET'], ['Aestura'], ['Illiyoon'], ['Beplain'], ['Goodal'],
-  ['Skinfood', 'SKIN FOOD'], ['Etude', 'ETUDE HOUSE'], ['Dr.G', 'DR G']
+  ['Skinfood', 'SKIN FOOD'], ['Etude', 'ETUDE HOUSE'], ['Dr.G', 'DR G'],
+  // Sumadas el 2026-10-31 desde las descartadas de Terra Nova y Bigs (verificadas una por una, card 20).
+  ['Sungboon Editor'], ['Eqqualberry'], ['Mizon'], ['Jumiso'], ['Hanskin'], ['Medipeel', 'MEDI PEEL'],
+  ['Standard Seoul'], ['Eunyul'], ['Ilso'], ['Lindsay'], ['Ma:nyo', 'MANYO', 'MANYO FACTORY'],
+  ['Nine Less', 'NINELESS'], ['OMG', 'DOUBLE DARE'], ['Look at Me', 'LOOKATME'], ['Midha'], ['Soonding'],
+  ['Auio'], ['Lolovegan'], ['Selenus'], ['Skin627', 'SKIN 627'], ['Tovegan'], ['Hidehere'],
+  ['Infodplus', 'INFOD PLUS'], ['Mania Holic', 'MANIA HOLLIC', 'MANIAHOLIC'],
+  // "BOM" (bueno en portugués) y "POINT" sueltos calzan con cualquier cosa: solo el nombre largo y sus líneas.
+  ['B.O.M', 'BEAUTY OF MAJESTY', 'BOM SNAIL MUCIN', 'BOM PEPTIDE POWER', 'BOM HYALURONIC ACID', 'BOM THE REAL',
+    'BOM GOODBYE', 'BOM REAL PARTY', 'BOM REARL PARTY'],
+  ['point&', 'POINT DEEP CLEAN', 'POINT CLEAN FORMULA', 'POINT PORE'],
+  ['Graceday'], ['Orjena'], ['Be the Skin'], ['Nextbeau'], ['Commonlabs', 'COMMON LABS'], ['Catch Me Patch'],
+  ['Miguhara'], ['Make Prem', 'MAKEPREM'], ['Kocostar'], ['Papa Recipe'], ['Moms Bath Recipe', "MOM'S BATH RECIPE"],
+  ['Nature Republic'], ['AHC'], ['Rejuran'], ['Dr.Reju-All', 'DR REJU ALL'], ['Bergamo'], ['Elroel']
 ];
 
 // Igual que plNormalizeForBrandMatch, más el acento agudo suelto como apóstrofo (Terra Nova escribe "D´Alba").
@@ -6255,12 +6268,15 @@ const PL_NOT_SKINCARE_RE = new RegExp(' (' + [
   'BATOM', 'LIP TINT', 'TINT', 'TINTA PARA LABIOS', 'TINTA LABIAL', 'GLOSS', 'LIP GLOSS', 'RIMEL', 'MASCARA DE PESTANAS', 'MASCARA PARA CILIOS', 'DELINEADOR',
   'EYELINER', 'LAPIZ', 'LAPIS', 'SOMBRA', 'CORRECTOR', 'CORRETIVO', 'CONCEALER', 'PO COMPACTO', 'POLVO COMPACTO',
   'POLVO SUELTO', 'SETTING POWDER', 'LOOSE POWDER', 'PRESSED POWDER', 'BLUSH', 'RUBOR', 'MAQUILLAJE', 'MAQUIAGEM',
-  'MAKEUP', 'MAKE UP', 'CEJAS', 'SOBRANCELHA', 'EYEBROW', 'PALETA', 'PALETTE',
+  'MAKEUP', 'MAKE UP', 'CEJAS', 'SOBRANCELHA', 'EYEBROW', 'PALETA', 'PALETTE', 'GLITTER', 'GLTTER',
   // cabello
   'SHAMPOO', 'XAMPU', 'CHAMPU', 'CONDICIONADOR', 'ACONDICIONADOR', 'CONDITIONER', 'CAPILAR', 'CABELLO', 'CABELO', 'HAIR',
   // aparatos (AGE-R solo con BOOSTER: "AGE-R Glutathione Glow" es una línea de cremas, no el aparato)
   'DEVICE', 'DISPOSITIVO', 'APARELHO', 'APARATO', 'AGE R BOOSTER', 'BOOSTER PRO', 'CLEANSER HEAD', 'CABEZAL',
   'REPUESTO', 'CAPA',
+  // accesorios (2026-10-31, "OMG Cosmetic Brush", "OMG Beauty Bag"): afuera por ahora, quizá otra categoría después.
+  // Sin BOLSA ni BAG sueltos: "bolsas de ojos" y "eye bag" son skincare.
+  'BRUSH', 'PINCEL', 'BROCHA', 'BEAUTY BAG', 'COSMETIC BAG', 'MAKEUP BAG', 'POUCH', 'NECESSAIRE', 'NECESER',
   // fragancias y cuerpo; vinos ("Barbera d'Alba" calza con la marca d'Alba en las búsquedas de comprasparaguai)
   'PERFUME', 'EAU DE', 'EDP', 'EDT', 'BODY MIST', 'BODY SPLASH', 'DESODORANTE', 'DEO', 'VINO', 'VINHO', 'WINE'
 ].join('|') + ') ');
@@ -6268,12 +6284,16 @@ const PL_NOT_SKINCARE_RE = new RegExp(' (' + [
 // Cuidado de labios es skincare: "Máscara Labial Hidratante" no es un labial.
 const PL_LIP_CARE_RE = / (MASCARA|BALSAMO|PROTETOR|PROTECTOR|HIDRATANTE|SERUM) LABIAL(?= )/g;
 
+// Desmaquillante es skincare: "Goodbye Make Up Cleansing Oil", "Cleansing Oil Gently Remove Makeup".
+const PL_MAKEUP_REMOVER_RE = / (CLEANSING|CLEANSER|REMOVER|REMOVE|REMOVAL|DESMAQUILLANTE|DEMAQUILANTE) /;
+
 // Protector solar es skincare aunque venga en formato cushion ("Water Powder Sun Cushion SPF 50+").
 const PL_SUN_CARE_RE = / (SUN|SOLAR|SPF|FPS|SUNSCREEN|SUNBLOCK) /;
 
 function plIsNotSkincare(name) {
   let norm = plNormalizeKbeauty(name).replace(PL_LIP_CARE_RE, ' $1');
   if (PL_SUN_CARE_RE.test(norm)) norm = norm.replace(/ CUSHION(?= )/g, '');
+  if (PL_MAKEUP_REMOVER_RE.test(norm)) norm = norm.replace(/ (MAKE UP|MAKEUP)(?= )/g, '');
   return PL_NOT_SKINCARE_RE.test(norm);
 }
 
