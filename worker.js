@@ -41,7 +41,6 @@ async function handle(req) {
     if (path === '/lgimportados') {
       return await fetchLgPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
     }
-    if (path === '/terranova') return await fetchTerraNovaPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/bigs') return await fetchBigsPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/shoppingchina') return await fetchShoppingChina(new URL(req.url).searchParams);
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
@@ -280,24 +279,9 @@ function kbeautyHtmlBlocks(html, className) {
   return out;
 }
 
-async function fetchTerraNovaPage(page) {
-  if (!Number.isInteger(page) || page < 1 || page > 80) return jsonResp({ error: 'page inválida' }, 400);
-  const suffix = page === 1 ? '' : `,${page},destaque`;
-  const html = await fetchKbeautyPage(`https://www.shoppingterranova.com.py/CategoriaId_4${suffix}/ESTETICA-FACIAL.html`);
-  const listing = kbeautyHtmlBlocks(html, 'collapse-products')[0];
-  if (!listing) return jsonResp({ error: 'terranova: no se encontró el listado' }, 502);
-  const total = kbeautyHtmlText(listing).match(/([\d.]+)\s+productos/);
-  const items = kbeautyHtmlBlocks(listing, 'prod-item').map(card => ({
-    code: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'prod-cod')[0]).replace(/^Cód\.\s*/i, ''),
-    name: kbeautyHtmlText(card.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]),
-    price: Number(kbeautyHtmlText(kbeautyHtmlBlocks(card, 'price')[0]).match(/USD\s*([\d,]+\.\d{2})/)?.[1]?.replace(/,/g, '')) || null,
-  })).filter(x => x.code && x.name);
-  return jsonResp({ page, total: total ? Number(total[1].replace(/\./g, '')) : null, items });
-}
-
 async function fetchBigsPage(page) {
-  if (!Number.isInteger(page) || page < 1 || page > 60) return jsonResp({ error: 'page inválida' }, 400);
-  const d = await fetchKbeautyPage(`https://bigs.com.py/188-cosmeticos?page=${page}&ajax=1`, true);
+  if (!Number.isInteger(page) || page < 1 || page > 20) return jsonResp({ error: 'page inválida' }, 400);
+  const d = await fetchKbeautyPage(`https://bigs.com.py/188-cosmeticos?page=${page}&resultsPerPage=100&ajax=1`, true);
   if (!Array.isArray(d.products) || !d.pagination) return jsonResp({ error: 'bigs: listado inválido' }, 502);
   const cards = new Map([...String(d.rendered_products || '').matchAll(/<article\b[^>]*data-id-product="(\d+)"[^>]*>[\s\S]*?<\/article>/g)].map(m => [m[1], m[0]]));
   const items = d.products.map(p => {
@@ -335,18 +319,34 @@ async function fetchShoppingChina(q) {
       brand: kbeautyHtmlText(data?.brand?.name),
     });
   }
-  const query = (q.get('query') || '').trim(), page = Number(q.get('page') || 1);
-  if (!query || query.length > 60) return jsonResp({ error: 'query inválida' }, 400);
-  if (!Number.isInteger(page) || page < 1 || page > 20) return jsonResp({ error: 'page inválida' }, 400);
-  const html = await fetchKbeautyPage('https://www.shoppingchina.com.py/site/search?' + new URLSearchParams({ query, page }));
+  // ?brands=1: marcas del filtro de la categoría Cosméticos. ?brandIds=[..]&page=N: esa categoría filtrada por
+  // esas marcas, 24 por página (una sola lista para todas las marcas coreanas, sin usar el buscador del sitio).
+  const base = 'https://www.shoppingchina.com.py/cosmeticos';
+  if (q.get('brands') === '1') {
+    const html = await fetchKbeautyPage(base);
+    const brands = [...html.matchAll(/name="brand"[^>]*value="(\d+)"[^>]*>\s*<label\b[^>]*>\s*([^<]+?)\s*<\/label>/g)]
+      .map(m => ({ id: Number(m[1]), name: decodeEntities(m[2]) }));
+    if (!brands.length) return jsonResp({ error: 'shoppingchina: no se encontró el filtro de marcas' }, 502);
+    return jsonResp({ brands });
+  }
+  let ids;
+  try { ids = JSON.parse(q.get('brandIds') || ''); } catch { ids = null; }
+  if (!Array.isArray(ids) || !ids.length || ids.length > 80 || !ids.every(n => Number.isInteger(n) && n > 0 && n < 1e6)) {
+    return jsonResp({ error: 'brandIds inválido' }, 400);
+  }
+  const page = Number(q.get('page') || 1);
+  if (!Number.isInteger(page) || page < 1 || page > 60) return jsonResp({ error: 'page inválida' }, 400);
+  const html = await fetchKbeautyPage(base + '?' + new URLSearchParams({ filter: '', brands: JSON.stringify(ids), page }));
   const items = kbeautyHtmlBlocks(html, 'product-item').map(card => {
     const path = card.match(/href="(\/producto\/[a-z0-9-]+)"/)?.[1] || '';
-    return { code: path.match(/-(\d+)$/)?.[1] || '', name: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'lightning-prod-desc')[0]), path };
+    // Precio en guaraníes: el último "Gs." de la tarjeta (con oferta, los anteriores son los tachados).
+    const gs = [...kbeautyHtmlText(card).matchAll(/Gs\.\s*([\d.]+)/g)].pop();
+    return { code: path.match(/-(\d+)$/)?.[1] || '', name: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'lightning-prod-desc')[0]), path,
+      pyg: gs ? Number(gs[1].replace(/\./g, '')) : null };
   }).filter(x => x.code && x.name);
-  const text = kbeautyHtmlText(html);
-  const total = text.match(/Mostrando productos\b.*?\bde\s+([\d.,]+)\s+en total/i) || text.match(/Mostrando (?:todos\/as los\/as|tod[oa]s?\s+l[oa]s?)\s+([\d.,]+)\s+productos/i);
-  if (!items.length && !/Mostrando|No se encontr|No hay productos/i.test(text)) return jsonResp({ error: 'shoppingchina: no se encontró el listado' }, 502);
-  return jsonResp({ page, total: total ? Number(total[1].replace(/[.,]/g, '')) : items.length, items });
+  const total = kbeautyHtmlText(html).match(/Mostrando productos\b.*?\bde\s+([\d.,]+)\s+en total/i);
+  if (!total) return jsonResp({ error: 'shoppingchina: no se encontró el listado' }, 502);
+  return jsonResp({ page, total: Number(total[1].replace(/[.,]/g, '')), items });
 }
 
 // ── Publicar catalogo.html en GitHub Pages ─────────────────────────

@@ -808,7 +808,13 @@
       </div>
 
       <div class="pl-kbeauty-only" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-terranova-btn" onclick="importKbeautySiteCatalog('terranova')">Traer Terra Nova</button>
+        <button class="btn btn-outline pl-kbeauty-only" id="pl-kbeauty-terranova-btn" onclick="document.getElementById('pl-terranova-file').click()" title="Carga el archivo terranova-AAAA-MM-DD.json que baja el marcador ⬇ Terra Nova. Si ya estaba cargado, lo reemplaza.">Importar archivo Terra Nova</button>
+        <input type="file" id="pl-terranova-file" accept=".json,application/json" style="display:none"
+          onchange="importTerraNovaFile(this.files[0]); this.value=''" />
+        <a id="pl-terranova-bookmarklet" class="pl-kbeauty-only" href="#" draggable="true"
+          onclick="event.preventDefault(); alert(TERRANOVA_BOOKMARKLET_HELP)"
+          style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;align-self:center;"
+          title="Arrastralo a la barra de marcadores. Después abrí shoppingterranova.com.py y tocalo: baja la estética facial en un archivo .json (~1 min).">⬇ Terra Nova</a>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-atacado-btn" onclick="importKbeautySiteCatalog('atacado')">Traer Atacado Connect</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-bigs-btn" onclick="importKbeautySiteCatalog('bigs')">Traer Bigs</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-shoppingchina-btn" onclick="importKbeautySiteCatalog('shoppingchina')">Traer Shopping China</button>
@@ -5835,7 +5841,204 @@ const PL_DUPLICATE_DECISIONS_SEED = {
   "BOGART EDT INFINITE JACQUES SCENT SILVER::BOGART EDT JACQUES MEN SCENT SILVER": "different",
   "BAD BOY CAROLINA EDP ELIXIR HERRERA MEN::BOY CAROLINA EDP ELIXIR HERRERA": "same",
   "ARMAD EDP MEGA ODYSSEY::ARMAF EDP MEGA MEN ODYSSEY": "same",
-  "12 12 BLANC EDT L LACOSTE MEN::12 BLANC EDT L12 LACOSTE": "same"
+  "12 12 BLANC EDT L LACOSTE MEN::12 BLANC EDT L12 LACOSTE": "same",
+  // Ronda 11 (2026-10-30): pares con Diseñador/Árabes/Nichos mayorista 28-10-26, LG Importados, Ponto Com, Madrid Center, Elegancia, Star Company, Macedonia, Mobile Zone, Genove y Atacado Connect
+  "BORN EDT IN MELANCHOLIA MEN PURPLE ROMA UOMO VALENTINO::BORN EDT IN MELANCHOLIA P PURPLE ROMA UOMO VALENTINO": "same",
+  "BLUE CAPRI DOLCE EDP GABBANA IN LIGHT LOVE::BLUE CAPRI DOLCE EDP GABBANA IN LIGHT LOVE MASCULINO P": "same",
+  "AHMED AHMED BY EXTRAIT MOON P PROMETHEUS SERIES THE::AHMED AL EXTRAIT MAGHRIBI MOON PROMETHEUS SERIES THE": "same",
+  "D EDP G GOLD INTENSE M ONE THE::DOLCE EDP GABANNA GOLD INTENSE ONE THE": "same",
+  "COMBAT DE EDP LATTAFA MEN PRIDE TAUREAU::COMBAT DE EDP LATTAFA P PRIDE TAUREAU": "same",
+  "EDC ENGLISH JO LONDON MALONE PEA PEAR SWEET::ENGLISH JO LONDON MALONE P PEA PEAR SWEET": "same",
+  "BLUE DOLCE EDT GABBANA LIGHT MEN SUMMER VIBES::BLUE DOLCE EDT GABBANA LIGHT SUMMER VIBES": "same",
+  "EDP FOR GOLD HER MILLION PACO RABANNE::EDP GOLD HER MILLION PACO RABANNE": "same",
+  "AL EDP LATAFFA NOBLE SAFEER::AL EDP LATTAFA NOBLE SAFEER": "same",
+  "BEAU EDP GAULTIER INTENSE JEAN LE LE PARFUM PAUL::BEAU G INTENSE JEAN LE LE PARFUM PAUL": "same",
+  "ARABIA EDP KING LATTAFA OF::ARABIA EDP KING LATTAFA OF P PRIDE": "same",
+  "ALHAMBRA EDP MAISON MEN NOIR OPUS PHILOS::ALHAMBRA EDP MAISON NOIR OPUS P PHILOS": "same",
+  "DIGGER EDP GOLD HAWAS MEN RASASI::DIGGER EDP GOLD HAWAS P RASASI": "same",
+  "AZZARO MEN MOST PARFUM THE WANTED::AZZARO MOST P PARFUM THE WANTED": "same",
+  "ELIXIR GAULTIER JEAN LE MALE MEN PARFUM PAUL::ELIXIR GAULTIER JEAN LE MALE P PARFUM PAUL": "same",
+  "BLACK EDP LUNA M P PRADA ROSSA::BLACK EDP LUNA MEN PRADA ROSSA": "same",
+  "CARBON EDT LUNA M P PRADA ROSSA::CARBON EDT LUNA MEN PRADA ROSSA": "same",
+  "CREED EDP GREEN IRISH M P TWEED::CREED EDP GREEN IRISH MEN TWEED": "same",
+  "5TH AVENUE BOIS DU FRAGRANCE P PARFUM YORK::5TH AVENUE BOIS DU FRAGRANCE PARFUM UNISSEX YORK": "same",
+  "COLOGNE ENGLISH FREESIA JO LONDON MALONE PEAR::ENGLISH FREESIA JO LONDON MALONE P PEAR U": "same",
+  "212 BLACK CAROLINA EDP HERRERA MEN VIP::212 BLACK CAROLINA EDP M VIP": "same",
+  "AL AL ATTAR EDP ELIXIR WATANIAH WESAL::AL AL ATTAR ELIXIR P WATANIAH WESAL": "same",
+  "DOLCE EDP GABBANA ONE THE::DOLCE EDP GABBANNA ONE THE": "same",
+  "COACH M PARFUM PLATINUM PURE::COACH PARFUM PLATINUM PURE YORK": "same",
+  "1886 ANTIQUITES D EDP LATTAFA M P PRIDE::1886 ANTIQUITES EDP LATTAFA": "same",
+  "EDP ENERGY EROS MEN VERSACE::EDP ENERGY EROS VERSACE": "same",
+  "BE EDP F POLICE TO::BE EDP POLICE TATTOOART TO": "different",
+  "CAROLINA EDP F GIRL GOOD::CAROLINA EDP GIRL GOOD HERRERA VERY": "different",
+  "AL AL BAREEQ DHAHAB EDP M P WATANIAH::AL AL BAREEQ DHAHAB EDP MEN WATANIAH": "same",
+  "AL AL EDP KENZ M MALIK P WATANIAH::AL AL EDP KENZ MALIK MEN WATANIAH": "same",
+  "AL AL EDP LAIL MEN SULTAN WATANIAH::AL AL EDP LAIL P SULTAN WATANIAH": "same",
+  "ALHAMBRA DECADENT EDP MAISON P WONDER::ALHAMBRA DECADENT EDP MAISON UNISSEX WONDER": "same",
+  "ALHAMBRA EDP ENCODE MAISON MEN MOUNTAIN::ALHAMBRA EDP ENCODE MAISON MOUNTAIN P": "same",
+  "ALHAMBRA EDP HEROIC MAISON MEN VICTORIOSO::ALHAMBRA EDP HEROIC MAISON P VICTORIOSO": "same",
+  "CORNER EDP EMIR PARIS PATISSERIE VOUX VOUX::CORNER EDP P PARIS PATISSERIE VOUX": "same",
+  "BLACK EDP HAWAS MEN RASASI::BLACK EDP HAWAS P RASASI": "same",
+  "EDP ELIXIR HAWAS MEN RASASI::EDP ELIXIR HAWAS P RASASI U": "same",
+  "EDP HAWAS MEN RASASI THUNDER::EDP HAWAS P RASASI THUNDER": "same",
+  "EDP HAWAS MEN RASASI VERDE::EDP HAWAS P RASASI VERDE": "same",
+  "EDP JUNGLE MEN RAYHAAN VIBE::EDP JUNGLE P RAYHAAN VIBE": "same",
+  "ALOHA EDP MEN PACIFIC RAYHAAN::ALOHA EDP P PACIFIC RAYHAAN": "same",
+  "BOGART EDT JACQUES MEN SCENT SILVER::BOGART EDT M P SCENT SILVER": "same",
+  "15ML AMETHYSTE BVLGARI EDT EDT OMNIA::15ML AMETHYSTE BVLGARI F OMNIA P": "same",
+  "BLUE DOLCE EDP GABBANA LIGHT M P::BLUE DOLCE EDP GABBANA LIGHT MEN": "same",
+  "BLUE DOLCE EDT GABBANA LIGHT M P::BLUE DOLCE EDT GABBANA LIGHT MEN": "same",
+  "DEVOTION DOLCE EDP GABBANA INTENSE::DEVOTION DOLCE EDP GABBANA INTENSE MY P": "same",
+  "EDP GENTLEMAN GIVENCHY M P SOCIETY::EDP GENTLEMAN GIVENCHY MEN SOCIETY": "same",
+  "BLOOM BY EDP GUCCI GUCCI INTENSE::BLOOM EDP F GUCCI INTENSE P": "same",
+  "BEYOND BOSS BOTTLED EDP HUGO MEN::BEYOND BOSS BOTTLED EDP HUGO P": "same",
+  "BOSS BOTTLED EDT HUGO MEN UNLIMITED::BOSS BOTTLED EDT HUGO P UNLIMITED": "same",
+  "BLUE BOSS DARK EDT HUGO HUGO M P::BLUE BOSS DARK EDT HUGO MEN": "same",
+  "BLOSSOM EDC HONEY JO MALONE NECTARINE::BLOSSOM HONEY JO MALONE NECTARINE P": "same",
+  "12 12 BLANC EDT L LACOSTE M P::12 BLANC EDT L12 LACOSTE": "same",
+  "EDP EROS FLAME M P VERSACE::EDP EROS FLAME MEN VERSACE": "same",
+  "BDK CITRUS EDP P RIVIERA::BDK CITRUS EDP PARFUMS RIVIERA UNISSEX": "same",
+  "BYREDO EDP GHOST MOJAVE P::BYREDO EDP GHOST MOJAVE UNISSEX": "same",
+  "COLOGNE CREED EDP M P VIKING::COLOGNE CREED EDP MEN VIKING": "same",
+  "BRULANT EDP FORD P SOLEIL TOM::BRULANT EDP FORD SOLEIL TOM UNISSEX": "same",
+  "22 EDP P TORINO U XERJOFF::22 EDP TORINO UNISSEX XERJOFF": "same",
+  "BOMBA CAROLINA EDP F HERRERA LA::BOMBA CAROLINA EDP HERRERA INTENSA LA": "different",
+  "AND CHEAP CHIC EDT MOSCHINO::CHEAP CHIC EDT F MOSCHINO": "same",
+  "BLUSH CAROLINA EDP GIRL GOOD HERRERA::CAROLINA EDP F GIRL GOOD": "different",
+  "ANTONIO BANDERAS BLACK EDT MEN SEDUCTION::ANTONIO BLACK EDT M SEDUCTION": "same",
+  "212 CAROLINA EDT HERRERA MEN SEXY::212 CAROLINA EDT M SEXY": "same",
+  "BOSS BOTTLED EDP HUGO INFINITE M::BOSS BOTTLED EDP HUGO INFINITE MEN": "same",
+  "EDT GAULTIER JEAN LE MALE MEN PAUL::EDT JEAN LE MALE PAUL": "same",
+  "AL EDP HAYAATI LATTAFA MALEKY::EDP HAYAATI LATTAFA MALEKY": "same",
+  "2 BOY EDP MEN MOSCHINO TOY::BOY EDP M MOSCHINO TOY": "different",
+  "BLUE EDT JEANS M VERSACE::BLUE EDT JEANS MEN VERSACE": "same",
+  "ARMAF EDP INFINITY MEN SILVER::ARMAF EDP INFINITY SILVER": "same",
+  "ASAD EDP LATTAFA MEN ZANZIBAR::ASAD EDP LATTAFA ZANZIBAR": "same",
+  "ANTONIO BANDERAS BLUE EDT MEN SEDUCTION::ANTONIO BANDERAS BLUE EDT SEDUCTION": "same",
+  "AL BADE BLACK E EDP EXPOSED LATTAFA OUD::AL BADEE BLACK EDP EXPOSED LATTAFA OUD P": "same",
+  "COLOGNE EDP JO MALONE P SAGE SALT SEA U WOOD::EDP JO MALONE MEN SAGE SALT SEA WOOD": "same",
+  "EDP ENERGY EROS VERSACE::EDP EROS VERSACE": "different",
+  "BAKHUR BLUE EDP LAVERNE LAVERNE::BLUE EDP LAVERNE LAVERNE": "same",
+  "BAKHOOR BLUE EDP LAVERNE P::BLUE EDP LAVERNE LAVERNE": "same",
+  "DOLCE EDP GABANNA INTENSO::DOLCE EDP GABBANA INTENSO M P": "same",
+  "AL AMEERATI EDP KHUSUSI WATANIAH::AL AMEERATI EDP WATANIAH": "same",
+  "D D EAU EDP ISSEY ISSEY L LUMIERE::D EDP ISSEY ISSEY LUMIERE MIYAKE": "same",
+  "212 BLACK CAROLINA EDP ELIXIR HERRERA VIP::212 BLACK CAROLINA ELIXIR HERRERA NYC VIP": "same",
+  "AVENUE EDP FRENCH M P SPECTRE::EDP FA SPECTRE": "same",
+  "DAIMAN EDP KRIP M P::DAIMAN EDP KRIP MEN": "same",
+  "EDP JABAL KRIP M P::EDP JABAL KRIP MEN": "same",
+  "EDP KRIP M P SAMA::EDP KRIP MEN SAMA": "same",
+  "EDP LATTAFA MASCULINO MUSAMAN P::EDP LATTAFA MUSAMAN": "same",
+  "ALHAMBRA EDP GALATEA MAISON MEN::ALHAMBRA EDP GALATEA MAISON P": "same",
+  "ALHAMBRA EDP GUSTA MAISON MEN::ALHAMBRA EDP GUSTA MAISON P": "same",
+  "CHROME EDP FOR HAWAS HIM MEN RASASI::EDP FOR HAWAS HIM P RASASI": "different",
+  "EDP ELIXIR MEN RAYHAAN::EDP ELIXIR P RAYHAAN": "same",
+  "ARI ARIANA BY EDP GRANDE::ARI ARIANA EDP F GRANDE P": "same",
+  "CALVIN EDT ESCAPE KLEIN M P::CALVIN EDT ESCAPE KLEIN MEN": "same",
+  "212 CAROLINA EDT F HERRERA NYC P::212 CAROLINA EDT HERRERA": "same",
+  "CARTIER EDP F P PANTHERE::CARTIER EDP LA PANTHERE": "same",
+  "BY CHLOE CHLOE EDP INTENSE INTENSE::CHLOE EDP F INTENSE P": "same",
+  "DOLCE EDP GABBANA INTENSO M P::DOLCE EDP GABBANA INTENSO MEN": "same",
+  "EDT GIVENCHY M P PI::EDT GIVENCHY MEN PI": "same",
+  "CABOTINE EDT F GRES P::CABOTINE EDT GRES ROSE": "different",
+  "BOSS BOTTLED EDP HUGO INFINITE M::BOSS BOTTLED EDP HUGO M P": "different",
+  "BLUE BOSS DARK EDT HUGO HUGO M P::BLUE BOSS DARK HUGO": "same",
+  "D EDT FUSION ISSEY ISSEY MEN MIYAKE::EDT FUSION ISSEY MIYAKE P": "same",
+  "BAY BLACKBERRY COLOGNE JO MALONE Y::BAY BLACKBERRY JO MALONE P": "same",
+  "CARDAMON EDC JO MALONE MIMOSA::CARDAMON JO MALONE MIMOSA P": "same",
+  "EDT JOOP JUMP MEN::EDT JOOP JUMP P": "same",
+  "BOOSTER EDT LACOSTE M P::BOOSTER EDT LACOSTE MEN": "same",
+  "M P PACO PARFUM PHANTOM RABANNE::MEN PACO PARFUM PHANTOM RABANNE": "same",
+  "EDP FERRAGAMO LIBERA P SALVATORE SIGNORINA::EDP FERRAGAMO SALVATORE SIGNORINA": "different",
+  "AMOUAGE EDP INTERLUDE MEN::AMOUAGE EDP INTERLUDE P": "same",
+  "BLUEBELL COLOGNE JO MALONE WILD::BLUEBELL JO MALONE P WILD": "same",
+  "DE EDP GREENLEY M MARLY P PARFUMS::DE EDP GREENLEY MARLY MEN PARFUMS": "same",
+  "BRIDGE CLUB CLUB EDP JOIN K P THE WOMEN XERJOFF::BRIDGE CLUB EDP K THE XERJOFF": "same",
+  "DOLCE EDP FOR GABBANA INTENSE MEN ONE THE::DOLCE EDP GABBANA INTENSE ONE THE": "same",
+  "BOSS BOTTLED HUGO MEN PARFUM::BOSS BOTTLED HUGO PARFUM": "same",
+  "BLUSH CAROLINA CLASS CRISTAL EDP GIRL GOOD HERRERA::BLUSH CAROLINA EDP GIRL GOOD HERRERA": "different",
+  "D EAU EDT ISSEY ISSEY L MIYAKE::DIISSEY EAU EDT ISSEY L MIYAKE": "same",
+  "BHARARA EDP NICHE::BHARARA EDP NICHE PARFUM": "same",
+  "CHRISTIAN DIOR EDT HYPNOTIC POISON::DIOR EDT F POISON": "different",
+  "CHERIE EDP KATE SPADE YORK::EDP F KATE SPADE YORK": "different",
+  "EDP LATTAFA NEBRAS::EDP LATTAFA NEBRAS PRIDE": "same",
+  "EDP FIORE ORIANA VURV::EDP ORIANA VURV": "different",
+  "CASTLEY DE EDP M MARLY PARFUMS::CASTLEY DE EDP MARLY MASCULINO PARFUMS PERFUME": "same",
+  "CAPITAN EDP EL GULF LAGACY MEN ORCHID::CAPITAN EDP EL GULF ORCHID": "same",
+  "ARMAF CANDEE EDITION EDP ODYSSEY SPECIAL::ARMAF CANDEE EDP ODYSSEY": "same",
+  "ARTE BELLISSIMA EDP ORIENTICA P ROMANTIC::ARTE BELLISSIMO EDP ORIENTICA ROMANTIC": "same",
+  "EDP ENERGY EROS HOMME POUR VERSACE::EDP ENERGY EROS VERSACE": "same",
+  "CAROLINA CH EDICION EDP HERRERA LIMITED SWING::CAROLINA CH EDP HERRERA SWING": "same",
+  "ARMANI EDP GIORGIO MY NECTAR WAY::ARMANI EDP GIORGIO MY PARFUM WAY": "different",
+  "AMALFI BLEU DE EDP HOMME MAISON MILAN POUR::AMALFI BLEU DE EDP MAISON MILAN": "same",
+  "ALHAMBRA DELILAH EDP FEMME MAISON POUR::ALHAMBRA EDP FEMME MAISON POUR REYNA": "different",
+  "12 12 DE EAU EDP L LACOSTE ROSE::EAU EDP F LACOSTE ROSE": "same",
+  "ANTIQUE EDP EMARATI LATTAFA NICHE P::ANTIQUE EDP EMERATI LATTAFA NICHE": "same",
+  "1886 ANTIQUITES D EDP LATTAFA M P PRIDE::1910 ANTIQUITES D EDP LATTAFA PRIDE": "different",
+  "COLLECTION EDP NOBLE ORIENTICA P ROYAL U::COLLETION EDP NOBLE ORIENTICA ROYAL": "same",
+  "212 CAB CAROLINA EDP HERRERA ROSE VIP::212 CAROLINA EDP F HERRERA P VIP": "different",
+  "212 BLACK CAROLINA EDP HERRERA MEN NY RODEO VIP::212 BLACK CH EDITION EDP LIMITED NY P RODEO VIP": "same",
+  "BLUE DOLCE EDT GABBANA LIGHT M P PACKAGE::BLUE DOLCE EDT GABBANA LIGHT MEN": "same",
+  "DE DOLCE EDP FEMME GABBANA PARFUM POUR::DOLCE EDP F FEMME GABBANA P POUR": "same",
+  "D EAU EDT INTENSE ISSEY ISSEY L MAGNOLIA MIYAKE::D EDT INTENSE ISSEY ISSEY LEAU MAGNOLIA MIYAKE P": "same",
+  "ABSOLU ELIXIR GAULTIER JEAN LE MALE P PAUL::EDP ELIXIR GAULTIER JEAN LE MALE PAUL": "different",
+  "EDP LAURENT LE M MYSLF P PARFUM SAINT YVES::LAURENT LE MEN MYSLF PARFUM SAINT YVES": "same",
+  "7 BLEND EDP INITIO MAGNETIC P THE U::7 BLEND EDP INITIO MAGNETIC UNISSEX": "same",
+  "BASIL COLOGNE EDC JO LIME MALONE MANDARIN::BASIL JO LIME MALONE MANDARIN P": "same",
+  "EDP F FLORA GARGEOUS GUCCI JASMINE::EDP FLORA GORGEOUS GUCCI JASMINE": "same",
+  "DOLCE EDP GABBANA HOMME ONE POUR THE::DOLCE EDP GABBANA ONE THE": "same",
+  "CAROLINA EDP F GIRL GOOD::CAROLINA EDP GIRL GLAM GOOD HERRERA VERY": "different",
+  "ARMANI EDP GIORGIO MY PARFUM WAY::ARMANI EDP MY WAY YLANG": "different",
+  // Ronda 11b (2026-10-30): dudosos de la ronda 11, decididos con búsqueda web
+  "DURAN DURAN GREEN NEO PARFUM RIO XERJOFF::DURAN FLUO GREEN NEO PARFUM RIO XERJOFF": "same",
+  "DURAN DURAN NEO PARFUM PINK RIO XERJOFF::DURAN FLUO NEO PARFUM PINK RIO XERJOFF": "same",
+  "DURAN DURAN NEO PARFUM RIO XERJOFF YELLOW::DURAN FLUO NEO PARFUM RIO XERJOFF YELLOW": "same",
+  "EDP EVENCE FOR HIM HOPE JACK::EDP EVENCE FOR HIM PRESTIGE": "different",
+  "ARBRE DE EDP JOSEPH MARC NUIT::ARBRE DE EDP JOSEPH MARC NUIT ROSE": "different",
+  "ARSENAL CANTUEL EDP GILLES GREY HOMME::ARSENAL CANTUEL EDP GILLES HOMME": "different",
+  "AL EDP EMPER FARES FLAME HAJES::AL EDP EMPER FARES HAJES": "different",
+  "AL EDP EMPER FARES FLAME::AL EDP EMPER FARES FLAME HAJES": "same",
+  "ASSALA CANDY EDP POP PRIME::ASSALA CANDY EDP PRIME": "different",
+  "ASSALA EDP MEN MUSK PRIME::ASSALA EDP MUSK PRIME X": "different",
+  "ASSALA CANDY EDP NASMA PRIME::ASSALA CANDY EDP PRIME": "different",
+  "AVENUE BLEND EXTRAIT FRENCH ROYAL::AVENUE BLEND EXTRAIT FRENCH ROYAL SEQUOIA": "different",
+  "AVENUE BLEND EXTRAIT FRENCH ROYAL::AVENUE BLEND EXTRAIT FRENCH ROYAL VINTAGE": "different",
+  "DUSTIN EDP LILAC LOVE OUR STELLA::DUSTIN EDP LOVE OUR STELLA": "different",
+  "ANTONIO BANDERAS EDP ICON MEN THE::ANTONIO BANDERAS EDP ICON PERFUME THE THE": "same",
+  "DANCE EDT F MIDNIGHT SHAKIRA::DANCE EDT GLAM MIDNIGHT SHAKIRA": "different",
+  "BELLE EDP G JEAN LA PAUL::BELLE EDP GAULTIER JEAN LA PAUL ROSE": "different",
+  "9 999 AL AMBER DUBAI EDP GOLD HARAMAIN OUD P::AL AMBER DUBAI EDITION EDP GOLD HARAMAIN HARAMAIN OUD": "same",
+  "AMOUR EDP GRACE LA LONDON OF PETITE ROSE::EDP GRACE LA LONDOM OF PETITE ROSE": "different",
+  "EDP GRACE JOLIE LA LONDON OF PETITE ROSE::EDP GRACE LA LONDOM OF PETITE ROSE": "different",
+  "CORNER EDP PARIS TASKEEN::CORNER EDP PARIS TASKEEN WOWIE": "different",
+  "DONIA EDP ELYSEES FASHION::DONIA EDP EXCLUSIF": "different",
+  "A EDP I R2B2 REYANE TRADITION::AI EDP R2B2 REYANE TRADITION": "different",
+  "ARINA EDP EMPER MELINA::EDP EMPER MELINA": "different",
+  "ASRAR EDP HONEY MAISON ROSE::ASRAR EDP MAISON ROSE": "different",
+  "ARMAF BON BON DELIGHTS EDP::ARMAF BON BON EDP": "same",
+  "DAIMAN EDP KRIP MEN::EDP KRIP MEN P": "different",
+  "EDP JABAL KRIP MEN::EDP KRIP MEN P": "different",
+  "EDP KRIP MEN P::EDP KRIP MEN SAMA": "different",
+  "DOLCE EDT GABBANA IMPERATRICE L P::DOLCE EDT GABBANA IMPERATRICE L ROYALE": "different",
+  "BRIDGE CLUB CLUB EDP JOIN K P THE WOMEN XERJOFF::CLUB EDP JOIN THE XERJOFF": "different",
+  "ASRAR DXB EDP JUMEIRAH MAISON::ASRAR DXB EDP MAISON": "different",
+  "EDP HAWAS NAJME RASASI::EDP NAJME RASASI": "same",
+  "AVENUE EDP FRENCH ORYN PINNACE::AVENUE EDP FRENCH PINNACE": "different",
+  "EDP FAME INTENSE PACO RABANNE::EDP INTENSE RABANNE": "different",
+  "AVENUE EDP EXTRAI FRENCH JASMERE::AVENUE EDP FRENCH JASMERE": "same",
+  "AL AMEERAT ARAB ASDAAF EDP LATTAFA VERMELHO::AL AMEERAT ARAB EDP LATTAFA": "same",
+  "BLANC EDP FROZEN GLACIER MONT SANTAL VETIVER::BLANC EDP GLACIER MEN MONT VETIVER": "same",
+  "ARABIYAT EDP ORIENTAL PERFUME PRESTIGE RAMAD UNISSEX::ARABIYAT EDP PRESTIGE RAMAD": "different",
+  "ARABIYAT EDP MYRRH PERFUME PRESTIGE RAMAD UNISSEX::ARABIYAT EDP PRESTIGE RAMAD": "different",
+  "ARABIYAT EDP LOUBAN PERFUME PRESTIGE RAMAD UNISSEX::ARABIYAT EDP PRESTIGE RAMAD": "different",
+  "EDP GOODNESS OUD PURPLE RIIFFS WAVE::EDP GOODNESS OUD RIIFFS": "different",
+  "ARMAF DE EDP NOIR PECHE SCENTASY::ARMAF EDP NOIR SCENTASY": "same",
+  "AROMATIC CALVIN ESSENCE ETERNITY INTENSE KLEIN PARFUM::CALVIN ESSENCE INTENSE KLEIN PARFUM": "different",
+  "AZUL EDP LOVELY NIGHT PUCCINI::EDP LOVELY NIGHT PARIS PUCCINI": "different",
+  "EDP ELIXIR GAULTIER JEAN LE MALE PAUL::ELIXIR GAULTIER JEAN LE MALE P PARFUM PAUL": "same",
+  "ALHAMBRA EDP INFINI JOYOUS MAISON OUD PERFUME UNISSEX::ALHAMBRA EDP INFINI MAISON OUD": "same",
+  "D EDT EXTREME FUSION INTENSE ISSEY ISSEY MEN MIYAKE::D EDT EXTREME FUSION ISSEY ISSEY MIYAKE": "same",
+  "212 CAROLINA EDP HERRERA MEN NYC::212 CAROLINA EDP HERRERA MEN PARFUM": "different"
 };
 for (const [k, v] of Object.entries(PL_DUPLICATE_DECISIONS_SEED)) if (!(k in plDuplicateDecisions)) plDuplicateDecisions[k] = v;
 
@@ -5933,7 +6136,7 @@ const KBEAUTY_BRANDS = [
   ['Abib'], ['Biodance', 'BIO DANCE'], ['Some By Mi', 'SOME BY MI', 'SOMEBYMI', 'SOME BY ME'],
   ["d'Alba", "D'ALBA", 'DALBA', 'D ALBA'], ['Axis-Y', 'AXIS Y', 'AXISY'], ['Centellian24', 'CENTELLIAN 24'],
   ['VT Cosmetics', 'VT COSMETICS'], ['TIRTIR'], ['Missha'], ['Torriden'], ['Mediheal'], ["I'm From", "I'M FROM", 'IM FROM'],
-  ['Arencia'], ['Mary & May', 'MARY & MAY', 'MARY&MAY', 'MARY AND MAY'], ['Meditherapy'],
+  ['Arencia'], ['Mary & May', 'MARY & MAY', 'MARY&MAY', 'MARY AND MAY', 'MARYMAY'], ['Meditherapy'],
   ['Dr. Melaxin', 'DR MELAXIN', 'MELAXIN'], ['Klasme'], ['Tocobo'], ['Laneige'], ['Innisfree'],
   ['Banila Co', 'BANILA CO', 'BANILA'], ['K-Secret', 'K SECRET', 'KSECRET'], ['Aestura'], ['Illiyoon'], ['Beplain'], ['Goodal'],
   ['Skinfood', 'SKIN FOOD'], ['Etude', 'ETUDE HOUSE'], ['Dr.G', 'DR G']
@@ -6751,10 +6954,11 @@ async function plMapLimit(list, n, fn) {
 // Corta a los 60 s: un pedido colgado dejaba el botón trabado para siempre.
 async function plFetchJson(url, headers = {}) {
   let r;
-  try { r = await fetch(url, { headers, signal: AbortSignal.timeout(60000) }); }
-  catch (err) { throw err.name === 'TimeoutError' ? new Error('no respondió en 60 s') : err; }
-  if (!r.ok) throw new Error(`respondió ${r.status}`);
-  return r.json();
+  try {
+    r = await fetch(url, { headers, signal: AbortSignal.timeout(60000) });
+    if (r.ok) return await r.json();
+  } catch (err) { throw err.name === 'TimeoutError' ? new Error('no respondió en 60 s') : err; }
+  throw new Error(`respondió ${r.status}`);
 }
 
 async function plFetchEleganciaRows(progress) {
@@ -6994,38 +7198,164 @@ function plBuildKbeautySiteItems(rows) {
   return { items, discardedBrands };
 }
 
-// Espacia los inicios por tienda, incluso con cuatro fichas en vuelo; reintenta 429/503 con pausa.
-const plKbeautyNextRequest = new Map();
-async function plFetchKbeautyJson(site, url, headers = {}) {
+// Reintenta errores pasajeros (429, 5xx, timeout, red) con pausa creciente. La velocidad sale de pedir
+// varias páginas en paralelo por tienda (plMapLimit), no de espaciar los pedidos.
+async function plFetchKbeautyJson(url, headers = {}) {
   for (let attempt = 0; ; attempt++) {
-    const start = Math.max(Date.now(), plKbeautyNextRequest.get(site) || 0);
-    plKbeautyNextRequest.set(site, start + 600);
-    await new Promise(resolve => setTimeout(resolve, Math.max(0, start - Date.now())));
     try { return await plFetchJson(url, headers); }
     catch (err) {
-      if (attempt >= 2 || !/429|503|502|500|60 s|Failed to fetch/.test(err.message)) throw err;
-      await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
+      if (attempt >= 2 || !/429|50\d|60 s|Failed to fetch/.test(err.message)) throw err;
+      await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
     }
   }
 }
 
-async function plFetchKbeautyWorkerRows(key, progress) {
-  const rows = [];
-  const max = key === 'terranova' ? 80 : key === 'bigs' ? 60 : 300;
-  for (let page = 1; page <= max; page++) {
-    const path = key === 'pontocom' ? '/pontocom?cat=cuidado-e-beleza&' : `/${key}?`;
-    const d = await plFetchKbeautyJson(key, `${WORKER}${path}page=${page}`);
+function plKbeautyWorkerRow(x, brand = '') {
+  return { code: x.code, name: x.name, price: x.price, site: x.brand || brand, inStock: x.stock === undefined ? true : x.stock > 0 && !x.out };
+}
+
+// Bigs informa la cantidad de páginas en la primera: el resto va después.
+async function plFetchBigsKbeautyRows(progress) {
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/bigs?page=${n}`);
     if (!Array.isArray(d.items)) throw new Error('listado inválido');
     progress(d.items.length);
-    rows.push(...d.items.map(x => ({
-      code: x.code, name: x.name, price: x.price, site: x.brand || '',
-      inStock: key === 'terranova' ? true : x.stock > 0 && !x.out,
-    })));
-    const last = key === 'bigs' ? d.pages : key === 'terranova' && d.total ? Math.ceil(d.total / 18) : null;
-    if (last > max) throw new Error(`el catálogo supera el límite de ${max} páginas`);
-    if (!d.items.length || (last && page >= last)) return rows;
+    return d;
+  };
+  const first = await page(1);
+  if (!(first.pages >= 1) || first.pages > 20) throw new Error('cantidad de páginas inválida');
+  // Bigs corta con 429 las ráfagas que llegan desde Cloudflare: páginas de 100 (4 en total) de a 2.
+  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 2), 2, page);
+  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
+}
+
+// Ponto Com no informa el total: tandas de 6 páginas hasta la primera vacía.
+async function plFetchPontocomKbeautyRows(progress) {
+  const rows = [];
+  for (let start = 1; start <= 300; start += 6) {
+    const batch = await plMapLimit([0, 1, 2, 3, 4, 5].map(k => start + k).filter(n => n <= 300), 6, async n => {
+      const d = await plFetchKbeautyJson(`${WORKER}/pontocom?cat=cuidado-e-beleza&page=${n}`);
+      if (!Array.isArray(d.items)) throw new Error('listado inválido');
+      progress(d.items.length);
+      return d.items;
+    });
+    for (const items of batch) {
+      if (!items.length) return rows;
+      rows.push(...items.map(x => plKbeautyWorkerRow(x)));
+    }
   }
   throw new Error('se alcanzó el límite de páginas sin terminar el catálogo');
+}
+
+// ── Terra Nova (shoppingterranova.com.py, card 20) ──
+// El sitio le devuelve una respuesta vacía a Cloudflare (bloquea al Worker): se baja con un marcador, como Macedonia.
+// Recorre todas las marcas del filtro de "Estética facial" (/CategoriaId_4,<pág>,destaque,<id>/…, 18 por página),
+// así cada producto trae su marca y la app informa las marcas no coreanas. Precio "USD x.xx" del listado; el listado
+// no informa stock (las fichas muestreadas dicen InStock). Se serializa con toString(): no usa nada de afuera.
+async function terraNovaBookmarklet() {
+  if (!/(^|\.)shoppingterranova\.com\.py$/.test(location.hostname)) {
+    alert('Abrí shoppingterranova.com.py y tocá el marcador ahí.');
+    return;
+  }
+  const title = document.title;
+  const load = async url => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        // Sin cookies: con la sesión del sitio los pedidos se atienden de a uno (6 páginas: 17 s contra 3,6 s).
+        const r = await fetch(url, { credentials: 'omit' });
+        if (!r.ok) throw new Error(`${r.status}`);
+        return new DOMParser().parseFromString(await r.text(), 'text/html');
+      } catch (err) {
+        if (attempt >= 2) throw new Error(`${url}: ${err.message}`);
+        await new Promise(res => setTimeout(res, 1500 * (attempt + 1)));
+      }
+    }
+  };
+  const text = el => (el ? el.textContent : '').replace(/\s+/g, ' ').trim();
+  const parse = doc => {
+    const listing = doc.querySelector('.collapse-products');
+    if (!listing) throw new Error('no se encontró el listado (¿cambió el sitio?)');
+    const total = text(listing).match(/([\d.]+)\s+productos/);
+    const items = [...listing.querySelectorAll('.prod-item')].map(card => {
+      const usd = text(card.querySelector('.price')).match(/USD\s*([\d,]+\.\d{2})/);
+      return { code: text(card.querySelector('.prod-cod')).replace(/^Cód\.\s*/i, ''), name: text(card.querySelector('h1')),
+        price: usd ? Number(usd[1].replace(/,/g, '')) : 0 };
+    }).filter(x => x.code && x.name);
+    return { total: total ? Number(total[1].replace(/\./g, '')) : 0, items };
+  };
+  const pool = async (list, n, fn) => {
+    const out = []; let i = 0;
+    await Promise.all(Array.from({ length: Math.min(n, list.length) }, async () => {
+      while (i < list.length) { const k = i++; out[k] = await fn(list[k]); }
+    }));
+    return out;
+  };
+  try {
+    const home = await load('/CategoriaId_4/ESTETICA-FACIAL.html');
+    const brands = new Map();
+    for (const a of home.querySelectorAll('a[href^="/CategoriaId_4,,,"]')) {
+      const m = a.getAttribute('href').match(/^\/CategoriaId_4,,,(\d+)\/ESTETICA-FACIAL\/([A-Z0-9-]+)\.html$/);
+      if (m) brands.set(m[1], m[2]);
+    }
+    if (!brands.size) throw new Error('no se encontró el filtro de marcas (¿cambió el sitio?)');
+    const url = (id, slug, page) => `/CategoriaId_4${page === 1 ? `,,,${id}` : `,${page},destaque,${id}`}/ESTETICA-FACIAL/${slug}.html`;
+    let read = 0;
+    const tasks = [...brands].map(([id, slug]) => ({ id, slug, page: 1 }));
+    const pages = await pool(tasks, 8, async t => {
+      const d = parse(await load(url(t.id, t.slug, 1)));
+      read += d.items.length;
+      document.title = `Terra Nova ${read}…`;
+      return { ...t, ...d };
+    });
+    const more = pages.flatMap(p => Array.from({ length: Math.max(0, Math.min(Math.ceil(p.total / 18), 80) - 1) }, (_, k) => ({ id: p.id, slug: p.slug, page: k + 2 })));
+    const rest = await pool(more, 8, async t => {
+      const d = parse(await load(url(t.id, t.slug, t.page)));
+      read += d.items.length;
+      document.title = `Terra Nova ${read}…`;
+      return { ...t, ...d };
+    });
+    const items = [], seen = new Set();
+    for (const p of [...pages, ...rest]) {
+      for (const x of p.items) {
+        if (seen.has(x.code)) continue;
+        seen.add(x.code);
+        items.push({ ...x, brand: p.slug.replace(/-/g, ' ') });
+      }
+    }
+    const date = new Date().toLocaleDateString('en-CA');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({ source: 'terranova', date, items })], { type: 'application/json' }));
+    a.download = `terranova-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    alert(`Terra Nova: ${items.length} productos de ${brands.size} marcas descargados en ${a.download}. Importalo en el generador de listas (Cosmética coreana).`);
+  } catch (err) {
+    alert(`No se pudo bajar el catálogo de Terra Nova: ${err.message}`);
+  } finally {
+    document.title = title;
+  }
+}
+const TERRANOVA_BOOKMARKLET_HELP = 'Este botón es un marcador: arrastralo a la barra de marcadores del navegador '
+  + '(si no la ves: Cmd+Shift+B). Después abrí shoppingterranova.com.py y tocá el marcador: en alrededor de un minuto '
+  + 'descarga terranova-AAAA-MM-DD.json. Ese archivo se carga con "Importar archivo Terra Nova".';
+document.getElementById('pl-terranova-bookmarklet').href =
+  'javascript:' + encodeURIComponent(`(${terraNovaBookmarklet.toString()})()`);
+
+async function importTerraNovaFile(file) {
+  if (!file) return;
+  try {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch { throw new Error('el archivo no es un JSON válido'); }
+    if (!data || data.source !== 'terranova' || !Array.isArray(data.items)) {
+      throw new Error('no es un archivo bajado con el marcador ⬇ Terra Nova');
+    }
+    const rows = data.items.map(x => ({ code: String(x.code), name: String(x.name || ''), price: Number(x.price), site: String(x.brand || ''), inStock: true }));
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : undefined; // la de la descarga, no la de hoy
+    alert(plSetSiteSource('terranova', 'Terra Nova', rows, date, 'kbeauty').msg);
+  } catch (err) {
+    alert(`No se pudo importar el archivo de Terra Nova: ${err.message}. No se agregó nada.`);
+  }
 }
 
 async function plFetchAtacadoKbeautyRows(progress) {
@@ -7034,7 +7364,7 @@ async function plFetchAtacadoKbeautyRows(progress) {
   const rows = [];
   for (let page = 1; ; page++) {
     const url = `${ATACADO_SEARCH}?` + new URLSearchParams({ q: '*', query_by: 'nome_site_es', filter_by: filter, per_page: 250, page });
-    const d = await plFetchKbeautyJson('atacado', url, { 'X-TYPESENSE-API-KEY': ATACADO_KEY });
+    const d = await plFetchKbeautyJson(url, { 'X-TYPESENSE-API-KEY': ATACADO_KEY });
     progress(d.hits.length);
     rows.push(...d.hits.map(h => {
       const x = h.document;
@@ -7046,38 +7376,64 @@ async function plFetchAtacadoKbeautyRows(progress) {
   }
 }
 
+// Shopping China muestra los precios en guaraníes con una tasa propia (~6.710 Gs/USD al 2026-10-30, redondeado a
+// los mil). La tasa se calcula en cada importación con unas fichas (el US$ solo está en la ficha) y el resto se
+// convierte desde el listado, sin abrir una ficha por producto. Por el redondeo a los mil el US$ puede diferir hasta
+// ~8 centavos (TIRTIR usa ,95: US$ 8,95 y 9,00 dan los mismos ₲ 60.000). El listado no informa stock: se toma como
+// disponible. Las marcas del sitio que no son coreanas no se piden.
+const SHOPPINGCHINA_RATE_DEFAULT = 6710;
+const SHOPPINGCHINA_TOLERANCE_USD = 0.08;
+const plShoppingChinaUsd = (pyg, rate) => Math.round(pyg / rate * 100) / 100;
+
 async function plFetchShoppingChinaRows(progress) {
+  // Una sola lista: la categoría Cosméticos filtrada por las marcas coreanas de su filtro (24 por página).
+  const { brands } = await plFetchKbeautyJson(`${WORKER}/shoppingchina?brands=1`);
+  // El filtro escribe "MARY& MAY": se normaliza el & antes de buscar la marca.
+  const ids = (brands || []).filter(b => detectKbeautyBrand(b.name.replace(/\s*&\s*/g, ' & '))).map(b => b.id);
+  if (!ids.length) throw new Error('no se encontraron marcas coreanas en el filtro del sitio');
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/shoppingchina?` + new URLSearchParams({ brandIds: JSON.stringify(ids), page: n }));
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page(1);
+  const pages = Math.ceil((first.total || 0) / 24);
+  if (pages > 60) throw new Error('el catálogo supera las 60 páginas');
+  const rest = await plMapLimit(Array.from({ length: Math.max(0, pages - 1) }, (_, k) => k + 2), 4, page);
   const products = new Map();
-  for (const [brand] of KBEAUTY_BRANDS) {
-    const query = brand === 'Dr. Althea' ? 'Althea' : brand === 'VT Cosmetics' ? 'VT COSMETICS' : brand;
-    for (let page = 1; page <= 20; page++) {
-      const d = await plFetchKbeautyJson('shoppingchina', `${WORKER}/shoppingchina?` + new URLSearchParams({ query, page }));
-      progress(d.items.length);
-      for (const x of d.items) if (detectKbeautyBrand(x.name) && !plIsNotSkincare(x.name)) products.set(x.code, x);
-      if (!d.items.length || page * 24 >= d.total) break;
-      if (page === 20) throw new Error(`la búsqueda ${query} supera las 20 páginas`);
-    }
-  }
-  let failed = 0;
-  const rows = await plMapLimit([...products.values()], 4, async x => {
+  for (const d of [first, ...rest])
+    for (const x of d.items) if (x.pyg > 0 && detectKbeautyBrand(x.name) && !plIsNotSkincare(x.name)) products.set(x.code, x);
+  const list = [...products.values()];
+  if (!list.length) return [];
+
+  // Tasa: fichas de productos repartidos por el listado; la mediana de Gs ÷ US$, verificada contra cada ficha.
+  const sample = Array.from({ length: Math.min(5, list.length) }, (_, k) => list[Math.floor(k * list.length / Math.min(5, list.length))]);
+  const checks = (await plMapLimit(sample, 3, async x => {
     try {
-      const d = await plFetchKbeautyJson('shoppingchina', `${WORKER}/shoppingchina?` + new URLSearchParams({ product: x.path }));
-      if (!d.name || !(d.price > 0) || d.inStock === null) { failed++; return null; }
-      return { code: x.code, name: d.name, price: d.price, site: d.brand, inStock: d.inStock };
-    } catch { failed++; return null; }
-    finally { progress(1); }
-  });
-  const result = rows.filter(Boolean);
-  result.importNote = failed ? `${failed} ficha(s) descartadas por error, precio ausente o stock desconocido.` : '';
-  return result;
+      const d = await plFetchKbeautyJson(`${WORKER}/shoppingchina?` + new URLSearchParams({ product: x.path }));
+      return d.price > 0 ? { pyg: x.pyg, usd: d.price } : null;
+    } catch { return null; }
+  })).filter(Boolean);
+  let rate = SHOPPINGCHINA_RATE_DEFAULT, note = '';
+  if (checks.length) {
+    const ratios = checks.map(c => c.pyg / c.usd).sort((a, b) => a - b);
+    rate = Math.round(ratios[Math.floor(ratios.length / 2)]);
+    const off = checks.filter(c => Math.abs(plShoppingChinaUsd(c.pyg, rate) - c.usd) > SHOPPINGCHINA_TOLERANCE_USD).length;
+    if (off) note = `⚠ ${off} de ${checks.length} fichas no coinciden con la tasa ${rate.toLocaleString('es-AR')} Gs/USD: revisá los precios.`;
+  } else {
+    note = `⚠ No se pudo leer ninguna ficha: se usó la tasa por defecto (${SHOPPINGCHINA_RATE_DEFAULT.toLocaleString('es-AR')} Gs/USD).`;
+  }
+  const rows = list.map(x => ({ code: x.code, name: x.name, price: plShoppingChinaUsd(x.pyg, rate), site: '', inStock: true }));
+  rows.sourceSuffix = ` · ${rate.toLocaleString('es-AR')} Gs/USD`;
+  rows.importNote = [`Precios convertidos a ${rate.toLocaleString('es-AR')} Gs/USD (tasa de la tienda, verificada con ${checks.length} fichas).`, note].filter(Boolean).join('\n');
+  return rows;
 }
 
 const PL_KBEAUTY_SITE_IMPORTS = {
-  terranova: { label: 'Terra Nova', fetchRows: progress => plFetchKbeautyWorkerRows('terranova', progress) },
   atacado: { label: 'Atacado Connect', fetchRows: plFetchAtacadoKbeautyRows },
-  bigs: { label: 'Bigs', fetchRows: progress => plFetchKbeautyWorkerRows('bigs', progress) },
+  bigs: { label: 'Bigs', fetchRows: plFetchBigsKbeautyRows },
   shoppingchina: { label: 'Shopping China', fetchRows: plFetchShoppingChinaRows },
-  pontocom: { label: 'Ponto Com', fetchRows: progress => plFetchKbeautyWorkerRows('pontocom', progress) },
+  pontocom: { label: 'Ponto Com', fetchRows: plFetchPontocomKbeautyRows },
 };
 let plKbeautyImportBusy = false;
 
@@ -7089,7 +7445,8 @@ async function importKbeautySiteCatalog(key, { quiet = false } = {}) {
   let read = 0;
   try {
     const rows = await cfg.fetchRows(n => { read += n; btn.textContent = `${cfg.label}: ${read.toLocaleString('es-AR')} leídos…`; });
-    const { msg } = plSetSiteSource(key, cfg.label, rows, undefined, 'kbeauty');
+    const date = new Date().toLocaleDateString('en-CA') + (rows.sourceSuffix || '');
+    const { msg } = plSetSiteSource(key, cfg.label, rows, date, 'kbeauty');
     const result = msg + (rows.importNote ? '\n' + rows.importNote : '');
     if (!quiet) alert(result);
     return result;
@@ -7112,8 +7469,8 @@ async function importAllKbeautySiteCatalogs() {
   if (plKbeautyImportBusy) return;
   plSetKbeautyImportBusy(true);
   try {
-    const msgs = [];
-    for (const key of Object.keys(PL_KBEAUTY_SITE_IMPORTS)) msgs.push(await importKbeautySiteCatalog(key, { quiet: true }));
+    // Las tiendas son independientes: van todas a la vez y el aviso sale en el orden de los botones.
+    const msgs = await Promise.all(Object.keys(PL_KBEAUTY_SITE_IMPORTS).map(key => importKbeautySiteCatalog(key, { quiet: true })));
     alert(msgs.join('\n\n'));
   } finally { plSetKbeautyImportBusy(false); }
 }
