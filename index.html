@@ -960,6 +960,11 @@
       <input type="text" id="pl-search" placeholder="Buscar por marca o producto…" oninput="onPlSearchInput()"
         style="width:100%;max-width:340px;padding:8px 12px;margin-bottom:14px;
                border:1px solid var(--border);border-radius:6px;font-size:.85rem;" />
+      <select id="pl-type-filter" class="pl-kbeauty-only" onchange="renderPlTable()" title="Filtrar la revisión por tipo de producto"
+        style="padding:8px 10px;margin:0 0 14px 6px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;">
+        <option value="">Todos los tipos</option>
+        <option value="none">⚠ Sin tipo</option>
+      </select>
 
       <div id="pl-publish-result" style="font-size:.8rem;margin-bottom:10px;min-height:1.2em;"></div>
 
@@ -993,6 +998,7 @@
             <tr class="col-headers">
               <th class="bg-input">Marca</th>
               <th class="bg-input">Producto</th>
+              <th class="bg-input pl-kbeauty-only">Tipo</th>
               <th class="bg-input">Origen</th>
               <th class="bg-p1">Costo USD</th>
               <th class="bg-p2">Costo total ARS</th>
@@ -6281,12 +6287,12 @@ const PL_NOT_SKINCARE_RE = new RegExp(' (' + [
   'BATOM', 'LIP TINT', 'TINT', 'TINTA PARA LABIOS', 'TINTA LABIAL', 'GLOSS', 'LIP GLOSS', 'RIMEL', 'MASCARA DE PESTANAS', 'MASCARA PARA CILIOS', 'DELINEADOR',
   'EYELINER', 'LAPIZ', 'LAPIS', 'SOMBRA', 'CORRECTOR', 'CORRETIVO', 'CONCEALER', 'PO COMPACTO', 'POLVO COMPACTO',
   'POLVO SUELTO', 'SETTING POWDER', 'LOOSE POWDER', 'PRESSED POWDER', 'BLUSH', 'RUBOR', 'MAQUILLAJE', 'MAQUIAGEM',
-  'MAKEUP', 'MAKE UP', 'CEJAS', 'SOBRANCELHA', 'EYEBROW', 'PALETA', 'PALETTE', 'GLITTER', 'GLTTER',
+  'MAKEUP', 'MAKE UP', 'PERFECT COVER', 'CEJAS', 'SOBRANCELHA', 'EYEBROW', 'PALETA', 'PALETTE', 'GLITTER', 'GLTTER',
   // cabello
   'SHAMPOO', 'XAMPU', 'CHAMPU', 'CONDICIONADOR', 'ACONDICIONADOR', 'CONDITIONER', 'CAPILAR', 'CABELLO', 'CABELO', 'HAIR',
   // aparatos (AGE-R solo con BOOSTER: "AGE-R Glutathione Glow" es una línea de cremas, no el aparato)
   'DEVICE', 'DISPOSITIVO', 'APARELHO', 'APARATO', 'AGE R BOOSTER', 'BOOSTER PRO', 'CLEANSER HEAD', 'CABEZAL',
-  'REPUESTO', 'CAPA',
+  'REPUESTO', 'CAPA', 'BIVOLT', 'MODELADOR', 'ROLLER', 'GUA SHA', 'ACC CASE', 'SANITIZING WIPE', // rodillos, gua sha y fundas (2026-11-01)
   // accesorios (2026-10-31, "OMG Cosmetic Brush", "OMG Beauty Bag"): afuera por ahora, quizá otra categoría después.
   // Sin BOLSA ni BAG sueltos: "bolsas de ojos" y "eye bag" son skincare.
   'BRUSH', 'PINCEL', 'BROCHA', 'BEAUTY BAG', 'COSMETIC BAG', 'MAKEUP BAG', 'POUCH', 'NECESSAIRE', 'NECESER',
@@ -6314,6 +6320,64 @@ function plIsNotSkincare(name) {
   if (PL_SUN_CARE_RE.test(norm)) norm = norm.replace(/ CUSHION(?= )/g, '');
   if (PL_MAKEUP_REMOVER_RE.test(norm)) norm = norm.replace(/ (MAKE UP|MAKEUP)(?= )/g, '');
   return PL_NOT_SKINCARE_RE.test(norm);
+}
+
+// ── Tipo de producto de cosmética (card 22, 2026-11-01) ──
+// En orden de rutina: es el orden de los chips de la lista publicada y del filtro de la revisión.
+const PL_KBEAUTY_TYPES = [
+  ['limpiador', 'Limpiador'], ['exfoliante', 'Exfoliante'], ['tonico', 'Tónico'], ['pads', 'Pads'],
+  ['esencia', 'Esencia'], ['serum', 'Sérum / ampolla'], ['mascara', 'Máscara'], ['parches', 'Parches'],
+  ['ojos', 'Contorno de ojos'], ['crema', 'Crema / hidratante'], ['solar', 'Protector solar'],
+  ['labios', 'Labios'], ['kit', 'Kit']
+];
+const PL_KBEAUTY_TYPE_LABEL = Object.fromEntries(PL_KBEAUTY_TYPES);
+// 1) Lo que define el producto aunque el nombre arranque con otra cosa ("Creme Facial … SPF 50" es protector,
+//    "Sérum … Eye" es de contorno, "Máscara … Eye Patch" va con ojos).
+const PL_KBEAUTY_TYPE_STRONG = [
+  ['labios', / (LIP|LIPS|LABIAL|LABIOS) /], // antes que solar: "Protetor Labial" es de labios
+  // "F50"/"F30" = FPS en Flash ("Protetor Facial … Air-Fit F50"); SUNCRE/SUNSERUM pegados en Terra Nova y Star.
+  ['solar', / (SPF\d*|FPS\d*|F[1-9]0|SUN|SUN(SCREEN|BLOCK|CREAM|CRE|SERUM|STICK|STIK|GEL|MILK|FLUID)|UV|PROTETOR|PROTECTOR|BLOQUEADOR|FILTRO SOLAR) /],
+  ['kit', / KIT /], // SET/DUO/TRIO van al final: "Set Máscaras Faciais … 10pcs" es un paquete de máscaras
+  ['ojos', / (EYE|EYES|OLHOS|OJOS|OLHEIRAS|OJERAS|CONTORNO) /],
+  ['parches', / (PATCH|PATCHES|ADESIVOS?|PARCHES?|PIMPLE|SPOT COVER|SPOT GUARDIAN) /],
+  ['pads', / (\d*PADS?|ALMOFADAS?|DISCOS?) /]
+];
+// 2) La palabra con la que arranca el nombre, cuando la tienda pone el tipo adelante ("Sérum Facial Celimax…",
+//    "Gel de Limpeza…"). Gana sobre las palabras del medio: "Máscara Facial … Brightening Serum" es una máscara.
+const PL_KBEAUTY_TYPE_LEAD = [
+  ['limpiador', /^ (GEL DE LIMP\w*|LIMPADOR|LIMPIADOR|ESPUMA|SABONETE|JABON|OLEO DE LIMPEZA|ACEITE LIMPIADOR|AGUA MICELAR|DESMAQUILLANTE|DEMAQUILANTE|BALSAMO DE LIMPEZA) /],
+  ['exfoliante', /^ (ESFOLIANTE|EXFOLIANTE|PEELING) /],
+  ['tonico', /^ (TONICO|TONER|BRUMA|MIST) /],
+  ['esencia', /^ (ESSENCIA|ESENCIA|ESSENCE) /],
+  ['serum', /^ (SERUM|SERUN|AMPOLA|AMPOLLA|AMPOULE) /],
+  ['mascara', /^ (MASCARAS?|MASCARILLAS?|MASKS?) /],
+  ['crema', /^ (CREME|CREMA|CREAM|LOCAO|LOCION|LOTION|EMULSAO|EMULSION|LEITE|LECHE|HIDRATANTE|GEL HIDRATANTE) /]
+];
+// 3) Si no, la primera palabra clave que aparezca, en este orden.
+const PL_KBEAUTY_TYPE_WORDS = [
+  ['mascara', / (MASK|MASKS|MASCARAS?|MASCARILLAS?|SHEET|SLEEPING PACK|CLAY PACK|WASH OFF PACK|MODELING PACK|WASH OFF|MUD|CLAY) /],
+  ['limpiador', / (CLEANS\w*|CLEASN\w*|CLEANER|CLEAN|CLAEN|LIMPEZA|LIMPADOR|LIMPIADOR|FOAM|ESPUMA|WASH|MICELL\w*|SABONETE|JABON|DESMAQUILL\w*|DEMAQUIL\w*) /],
+  ['exfoliante', / (EXFOLI\w*|ESFOLI\w*|PEELING|PEEL|SCRUB|GOMMAGE) /],
+  ['tonico', / (TONER|TONIC|TONICO|TONICA|TONICAS|MIST|BRUMA|SPRAY) /],
+  ['esencia', / (ESSENCE|ESSENCIA|ESENCIA) /],
+  ['serum', / (SERUM|SERUN|AMPOULE|AMPOULLE|AMPUOLE|AMPOLA|AMPOLLA|BOOSTER|SHOT|CONCENTRATE|JELLY|CAPSULE|TREATMENT|TRATAMENTO|TRATAMIENTO|OIL|OLEO) /],
+  ['crema', / (CREAM|CREME|CREMA|LOTION|LOCAO|LOCION|EMULSION|EMULSAO|MOISTURIZ\w*|MISTURIZ\w*|HIDRATANTE|BALM|BALSAMO|MILK|MILKY|LEITE|LECHE|GEL) /],
+  ['kit', / (SET|DUO|TRIO|COMBO|ROUTINE|TRIAL) /]
+];
+function plKbeautyTypeOf(name) {
+  const norm = plNormalizeKbeauty(String(name || '').replace(/\+/g, ' + ').replace(/(\d)(ML|G)\b/gi, '$1 $2'));
+  for (const list of [PL_KBEAUTY_TYPE_STRONG, PL_KBEAUTY_TYPE_LEAD, PL_KBEAUTY_TYPE_WORDS]) {
+    const hit = list.find(([, re]) => re.test(norm));
+    if (hit) return hit[0];
+  }
+  return '';
+}
+
+// Correcciones de tipo a mano (nombre en mayúsculas → tipo), como plBrandOverrides.
+let plTypeOverrides = {};
+try { plTypeOverrides = JSON.parse(localStorage.getItem('importo-kbeauty-type-overrides') || '{}'); } catch { plTypeOverrides = {}; }
+function savePlTypeOverrides() {
+  try { localStorage.setItem('importo-kbeauty-type-overrides', JSON.stringify(plTypeOverrides)); } catch {}
 }
 
 function detectKnownBrand(name) {
@@ -8359,6 +8423,12 @@ function generatePriceList() {
       // vez acá (y de nuevo solo si cambia la marca, ver updatePlBrand) evita repetirlo en cada
       // comparación del sort, cada tecla del buscador y cada fila del render.
       displayName: plCleanName(cheapest.name, brand),
+      // Tipo de producto (card 22): la corrección a mano manda; si no, el del más barato o el de otra oferta del grupo.
+      type: isKbeauty
+        ? (Object.prototype.hasOwnProperty.call(plTypeOverrides, plBrandOverrideKey(cheapest.name))
+          ? plTypeOverrides[plBrandOverrideKey(cheapest.name)]
+          : arr.map(a => plKbeautyTypeOf(a.name)).find(Boolean) || '')
+        : '',
       priceUsd: cheapest.price,
       sourceLabel: cheapest.sourceLabel,
       alternates: arr.slice(1).map(a => ({ source: a.sourceLabel, price: a.price })),
@@ -8763,6 +8833,48 @@ function plGainHtml(it) {
   return `<span style="${gain < 0 ? 'color:var(--danger);font-weight:700;' : ''}">${fmt_ars(gain)}${usd}</span>`;
 }
 
+// ── Tipo de producto en la revisión (cosmética, card 22) ──
+function plTypeSelectHtml(it) {
+  if (it.line !== 'kbeauty') return '';
+  return `<select onchange="updatePlType(${it.id}, this.value)" title="Tipo de producto. Si lo cambiás, queda guardado para este producto."
+    style="padding:5px 6px;border:1px solid ${it.type ? 'var(--border)' : 'var(--warn)'};border-radius:5px;font-size:.8rem;background:transparent;max-width:150px;">
+    <option value=""${it.type ? '' : ' selected'}>⚠ Sin tipo</option>
+    ${PL_KBEAUTY_TYPES.map(([id, label]) => `<option value="${id}"${it.type === id ? ' selected' : ''}>${label}</option>`).join('')}
+  </select>`;
+}
+function plMatchesTypeFilter(it) {
+  const f = plLine === 'kbeauty' ? (document.getElementById('pl-type-filter')?.value || '') : '';
+  return !f || (f === 'none' ? !it.type : it.type === f);
+}
+function plUntypedNote(visible) {
+  if (plLine !== 'kbeauty') return '';
+  const n = visible.filter(it => !it.type).length;
+  return n ? ` · ${n} sin tipo ⚠` : '';
+}
+// Las opciones del filtro, con conteos de los productos no excluidos.
+function renderPlTypeFilter() {
+  const sel = document.getElementById('pl-type-filter');
+  if (!sel) return;
+  const counts = {};
+  plItems.filter(it => !it.excluded).forEach(it => { counts[it.type || 'none'] = (counts[it.type || 'none'] || 0) + 1; });
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">Todos los tipos</option><option value="none">⚠ Sin tipo (${counts.none || 0})</option>`
+    + PL_KBEAUTY_TYPES.map(([id, label]) => `<option value="${id}">${label} (${counts[id] || 0})</option>`).join('');
+  sel.value = cur;
+}
+function updatePlType(id, val) {
+  const it = plItems.find(x => x.id === id);
+  if (!it) return;
+  it.type = PL_KBEAUTY_TYPE_LABEL[val] ? val : '';
+  const key = plBrandOverrideKey(it.name);
+  // Si coincide con lo que detecta el nombre no hace falta guardarlo (y así una mejora de las reglas le llega).
+  // "Sin tipo" elegido a mano sobre uno detectado se guarda como '' (a propósito).
+  if (it.type === plKbeautyTypeOf(it.name)) delete plTypeOverrides[key];
+  else plTypeOverrides[key] = it.type;
+  savePlTypeOverrides();
+  renderPlTable();
+}
+
 function plRowHtml(it) {
   const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
   const rowStyle = it.excluded ? 'opacity:.45;' : '';
@@ -8781,6 +8893,7 @@ function plRowHtml(it) {
       <td style="min-width:220px;" title="${esc(it.name)}">
         ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason] ? `<span title="Excluido automático — ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].label}" style="margin-right:4px;">${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].icon}</span>` : ''}${esc(it.displayName)}
       </td>
+      <td class="pl-kbeauty-only">${plTypeSelectHtml(it)}</td>
       <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
       <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
       <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
@@ -8843,6 +8956,7 @@ function showMorePlRows() {
 function renderPlTable() {
   const body = document.getElementById('pl-body');
   if (!body) return;
+  renderPlTypeFilter();
   const sorted = [...plItems].sort((a, b) =>
     (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
 
@@ -8850,16 +8964,17 @@ function renderPlTable() {
   const excluded = sorted.filter(it => it.excluded);
 
   const query = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
-  const matchesQuery = it => !query
+  const matchesQuery = it => plMatchesTypeFilter(it) && (!query
     || (it.brand || '').toLowerCase().includes(query)
-    || it.displayName.toLowerCase().includes(query);
+    || it.displayName.toLowerCase().includes(query)
+    || (it.type && PL_KBEAUTY_TYPE_LABEL[it.type].toLowerCase().includes(query)));
 
   const rowsToShow = (plShowExcluded ? sorted : visible).filter(matchesQuery);
 
   if (query !== plTableLastQuery) { plTableLimit = PL_TABLE_PAGE; plTableLastQuery = query; }
   const remaining = rowsToShow.length - plTableLimit;
   body.innerHTML = rowsToShow.slice(0, plTableLimit).map(plRowHtml).join('') + (remaining > 0
-    ? `<tr><td colspan="9" style="text-align:center;padding:12px;">
+    ? `<tr><td colspan="10" style="text-align:center;padding:12px;">
          <button class="btn btn-outline" onclick="showMorePlRows()">Mostrar ${Math.min(PL_TABLE_PAGE, remaining)} más</button>
          <span style="font-size:.78rem;color:var(--muted);margin-left:8px;">quedan ${remaining.toLocaleString('es-AR')} · usá el buscador para ir directo</span>
        </td></tr>`
@@ -8874,9 +8989,10 @@ function renderPlSummary() {
   const query = (document.getElementById('pl-search')?.value || '').trim().toLowerCase();
   const visible  = plItems.filter(it => !it.excluded);
   const excluded = plItems.filter(it => it.excluded);
-  const matchesQuery = it => !query
+  const matchesQuery = it => plMatchesTypeFilter(it) && (!query
     || (it.brand || '').toLowerCase().includes(query)
-    || it.displayName.toLowerCase().includes(query);
+    || it.displayName.toLowerCase().includes(query)
+    || (it.type && PL_KBEAUTY_TYPE_LABEL[it.type].toLowerCase().includes(query)));
   const rowsToShow = (plShowExcluded ? plItems : visible).filter(matchesQuery);
 
   const autoExcludedParts = Object.entries(plAutoExcluded)
@@ -8888,7 +9004,7 @@ function renderPlSummary() {
     ? `${rowsToShow.length} resultado${rowsToShow.length !== 1 ? 's' : ''} de ${visible.length}`
     : `${visible.length} producto${visible.length !== 1 ? 's' : ''}` +
       (excluded.length ? ` · ${excluded.length} excluido${excluded.length !== 1 ? 's' : ''}` : '') +
-      autoExcludedNote;
+      autoExcludedNote + plUntypedNote(visible);
 
   const toggle = document.getElementById('pl-excluded-toggle');
   if (excluded.length > 0) {
@@ -8964,19 +9080,23 @@ function exportPlExcel() {
     .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
   if (sorted.length === 0) { alert('No hay productos para exportar (revisá el filtro de marcas).'); return; }
 
-  const rowsOut = [['Marca', 'Producto', 'Precio (ARS)']];
+  const isKbeauty = plLine === 'kbeauty';
+  const rowsOut = [isKbeauty ? ['Marca', 'Producto', 'Tipo', 'Precio (ARS)'] : ['Marca', 'Producto', 'Precio (ARS)']];
   sorted.forEach(it => {
     const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
-    rowsOut.push([it.brand || 'Sin categoría', it.displayName, Math.round(price)]);
+    rowsOut.push(isKbeauty
+      ? [it.brand || 'Sin categoría', it.displayName, PL_KBEAUTY_TYPE_LABEL[it.type] || '', Math.round(price)]
+      : [it.brand || 'Sin categoría', it.displayName, Math.round(price)]);
   });
+  const priceCol = isKbeauty ? 3 : 2;
 
   const ws = XLSX.utils.aoa_to_sheet(rowsOut);
-  ws['!cols'] = [{ wch: 26 }, { wch: 55 }, { wch: 16 }];
+  ws['!cols'] = isKbeauty ? [{ wch: 26 }, { wch: 55 }, { wch: 18 }, { wch: 16 }] : [{ wch: 26 }, { wch: 55 }, { wch: 16 }];
   ws['!autofilter'] = { ref: ws['!ref'] }; // flechitas de filtro/orden en Excel — dejan buscar por marca sin tocar nada más
 
   // Precio como número real (se puede ordenar/sumar) pero mostrado como "$ 141.100"
   for (let r = 1; r < rowsOut.length; r++) {
-    const cellRef = XLSX.utils.encode_cell({ r, c: 2 });
+    const cellRef = XLSX.utils.encode_cell({ r, c: priceCol });
     if (ws[cellRef]) ws[cellRef].z = '"$" #,##0';
   }
 
