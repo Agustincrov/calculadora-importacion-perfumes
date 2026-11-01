@@ -901,6 +901,7 @@
         <div class="card-title">Posibles duplicados a revisar</div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-outline" id="pl-fuzzy-copy-btn" onclick="copyPlFuzzyPairs()" title="Copia los pares pendientes, uno por línea y separados por tabulación (nombre, USD y lista de cada lado), para pegarlos en una planilla o pasarlos a revisar">Copiar pares</button>
+          <button class="btn btn-outline pl-kbeauty-only" onclick="downloadPlKbeautyPairs()" title="Descarga los pares pendientes con sus filas (tiendas, nombres originales, precio, tipo y tamaño) para revisarlos con agentes (/duplicados)">Descargar pares</button>
           <button class="btn btn-outline" onclick="document.getElementById('pl-decisions-file').click()" title="Carga un archivo decisiones-….json con pares ya revisados afuera. No pisa las decisiones que ya tomaste y vuelve a generar la lista">Importar decisiones</button>
           <input type="file" id="pl-decisions-file" accept=".json,application/json" style="display:none"
             onchange="importDuplicateDecisionsFile(this.files[0]); this.value=''" />
@@ -6149,8 +6150,14 @@ function plMergeDuplicate(idA, idB) {
   const a = plItems.find(x => x.id === idA);
   const b = plItems.find(x => x.id === idB);
   if (!a || !b) return null; // uno de los dos ya se sacó por otra fusión
+  if (a.sourceLabels && b.sourceLabels && plKbSharesStore(a, b)) return null; // cosmética: nunca dos de la misma tienda
   const [cheap, exp] = a.priceUsd <= b.priceUsd ? [a, b] : [b, a];
-  cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
+  if (cheap.sourceLabels) {
+    cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd, name: exp.name }, ...exp.alternates);
+    cheap.sourceLabels = [...cheap.sourceLabels, ...(exp.sourceLabels || [])];
+  } else {
+    cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
+  }
   cheap.multiSource = true;
   plItems = plItems.filter(x => x.id !== exp.id);
   return { cheap, exp }; // para que quien llame sepa qué filas tocar sin reconstruir toda la tabla
@@ -6361,7 +6368,10 @@ const PL_KBEAUTY_TYPE_WORDS = [
   ['exfoliante', / (EXFOLI\w*|ESFOLI\w*|PEELING|PEEL|SCRUB|GOMMAGE) /],
   ['tonico', / (TONER|TONIC|TONICO|TONICA|TONICAS|MIST|BRUMA|SPRAY) /],
   ['esencia', / (ESSENCE|ESSENCIA|ESENCIA) /],
-  ['serum', / (SERUM|SERUN|AMPOULE|AMPOULLE|AMPUOLE|AMPOLA|AMPOLLA|BOOSTER|SHOT|CONCENTRATE|JELLY|CAPSULE|TREATMENT|TRATAMENTO|TRATAMIENTO|OIL|OLEO) /],
+  ['serum', / (SERUM|SERUN|AMPOULE|AMPOULLE|AMPUOLE|AMPOLA|AMPOLLA) /],
+  // CREAM antes que las palabras de sérum que también describen cremas ("Capsule Cream", "Jelly Cream", card 23).
+  ['crema', / (CREAM|CREME|CREMA) /],
+  ['serum', / (BOOSTER|SHOT|CONCENTRATE|JELLY|CAPSULE|TREATMENT|TRATAMENTO|TRATAMIENTO|OIL|OLEO) /],
   ['crema', / (CREAM|CREME|CREMA|LOTION|LOCAO|LOCION|EMULSION|EMULSAO|MOISTURIZ\w*|MISTURIZ\w*|HIDRATANTE|BALM|BALSAMO|MILK|MILKY|LEITE|LECHE|GEL) /],
   ['kit', / (SET|DUO|TRIO|COMBO|ROUTINE|TRIAL) /]
 ];
@@ -6542,6 +6552,170 @@ function plKbBestDisplayName(names, brand) {
 // Nombre visible según la línea: en cosmética el limpio de esta card, en perfumes plCleanName.
 function plDisplayNameFor(it, name = it.name) {
   return it.line === 'kbeauty' ? plCleanKbeautyName(name, it.brand) : plCleanName(name, it.brand);
+}
+
+// ── Duplicados de cosmética (card 23, 2026-11-01) ──
+// Clave exacta: marca + palabras del nombre (tipo traducido a una forma, sin relleno que nunca distingue un producto,
+// sin marca, tamaño ni códigos de tienda) + tamaño comparable + caja dañada. Lo que comparte la clave se une solo;
+// lo parecido va a "Posibles duplicados a revisar". Dos publicaciones de la misma tienda nunca se unen (regla del
+// usuario: si una tienda publica dos parecidas, alguna diferencia tienen).
+const PL_KB_KEY_SYN = [
+  [/ (CREMES?|CREMAS?|CREAMS?) /g, ' CREAM '], [/ (TONICOS?|TONICAS?|TONERS?|TONIFICANTES?) /g, ' TONER '],
+  [/ (SERUMS?|SERUNS?) /g, ' SERUM '], [/ (AMPOULES?|AMPOULLES?|AMPOULE|AMPOLAS?|AMPOLLAS?|AMPUOLE) /g, ' AMPOULE '],
+  [/ (MASCARAS?|MASCARILLAS?|MASKS?) /g, ' MASK '], [/ (PROTETOR|PROTECTOR|SUNSCREEN|SUN|SOLAR) /g, ' SUN '],
+  [/ (LIMPEZA|LIMPADOR|LIMPADORA|LIMPIADOR|LIMPIADORA|LIMPIEZA|CLEANSER|CLEANSING) /g, ' CLEANSER '],
+  [/ (ESPUMA|FOAM) /g, ' FOAM '], [/ (OLEO|ACEITE|OIL) /g, ' OIL '], [/ (ESSENCIA|ESENCIA|ESSENCE) /g, ' ESSENCE '],
+  [/ (OLHOS|OJOS|EYES?) /g, ' EYE '], [/ (PADS?|ALMOFADAS?|DISCOS?) /g, ' PAD '],
+  [/ (PARCHES?|ADESIVOS?|PATCH|PATCHES) /g, ' PATCH '], [/ (LOCION|LOCAO|LOTION) /g, ' LOTION '],
+  [/ (BALSAMO|BALM) /g, ' BALM '], [/ (VITAMINA|VITAMIN) /g, ' VITAMIN '], [/ ARROZ /g, ' RICE '],
+  [/ (COLAGENO|COLLAGEN) /g, ' COLLAGEN '], [/ (ACIDO|ACID) /g, ' ACID '], [/ (HIALURONICO|HYALURONIC) /g, ' HYALURONIC '],
+  [/ (CARACOL|SNAIL) /g, ' SNAIL '], [/ (LABIAL|LABIOS|LIPS?) /g, ' LIP '], [/ (BRUMA|MIST) /g, ' MIST '],
+  [/ (LEITE|LECHE|MILK) /g, ' MILK '], [/ (AGUA|WATER) /g, ' WATER '], [/ (ESFOLIANTE|EXFOLIANTE) /g, ' EXFOLIANT '],
+  [/ (GOTAS|DROPS) /g, ' DROP '], [/ (SABONETE|JABON|SOAP) /g, ' SOAP ']
+];
+// Solo lo que nunca distingue un producto. Los adjetivos que pueden marcar una versión (Hidratante, Calmante,
+// Reparador, Concentrada, Leve, Clareador, New/Novo, Kit/Set) quedan: si una tienda los escribe y otra no, a revisión.
+// "Leve" a propósito: Ponto Com vende "Creme Facial Leve Round Lab 1025 Dokdo" y "Creme Facial Round Lab 1025 Dokdo".
+const PL_KB_KEY_STOP = new Set(('FACIAL FACIAIS FACIALES FACE ROSTO ROSTRO DE DA DO DOS DAS DEL LA EL PARA PRA EN CON COM '
+  + 'EM Y E THE OF AND & A X FOR WITH IN AREA CONTORNO CONTOUR CUIDADO PELE PIEL TRATAMENTO TRATAMIENTO '
+  + 'UNIDADES UNIDAD UNIDADE UN UND PECAS PIEZAS UNITS PCS EA POTE BISNAGA TUBO FRASCO SERINGA CAIXA CAJA SPF FPS PA').split(' '));
+
+function plKbSizeKey(name) {
+  const { key } = plKbeautySizeOf(name);
+  if (!key) return '';
+  const m = key.match(/^(\d+(?:\.\d+)?)?(?:ml|g|kg)?(?:x(\d+))?$/);
+  if (!m) return key;
+  // Pads: cuenta la cantidad ("150g 70pcs" = "70 Pads"; el peso lo ponen unas tiendas y otras no).
+  if (m[2] && / (PADS?|ALMOFADAS?|DISCOS?|\d+PADS?) /.test(plNormalizeKbeauty(name))) return 'x' + m[2];
+  if (m[1] && m[2]) return `${m[1]}x${m[2]}`;                  // "3 × 10 g" = "10 g · 3 unidades"
+  return m[2] ? 'x' + m[2] : m[1];                             // ml = g (la misma crema figura en ml y en g)
+}
+// Tamaños que pueden ser el mismo: iguales, uno sin tamaño o la misma cantidad con el volumen en un solo lado.
+function plKbSizesCompatible(a, b) {
+  if (!a || !b || a === b) return true;
+  const ca = a.match(/x(\d+)$/), cb = b.match(/x(\d+)$/);
+  return !!(ca && cb && ca[1] === cb[1] && (a.startsWith('x') || b.startsWith('x')));
+}
+
+// Palabras del nombre para comparar (orden original, sin repetir).
+function plKbKeyTokens(name, brand) {
+  let s = plStripAccents(String(name || '')).replace(PL_KB_CONDITION_RE, ' ')
+    .replace(/(\d)[.,](\d)/g, '$1P$2')                    // decimales ("0,15%", "1.5ML") sin partir el número
+    .replace(/\bN[°ºoøO]?\s*\.?\s*(\d)/g, 'NO$1 ')           // N°9, No.9, N9, Nø9 → NO9
+    .replace(/\bX(?=\d)/gi, 'X ').replace(/(\d)\s*X\s*(?=\d)/gi, '$1 X ')       // "X24", "4X34G"
+    .replace(/(\d)\s*(ML|G|GR)\s*\/\s*(?=\d)/ig, '$1$2 ');
+  s = plNormalizeKbeauty(s).replace(/ M CENTELLA /, ' MADAGASCAR CENTELLA ')
+    .replace(/ \d+ X \d+(?:P\d+)? ?(?:ML|G|GR|GRS)? /g, ' ')
+    .replace(/ \d+(?:P\d+)? ?(?:ML|G|GR|GRS|GRAMOS|GRAMAS|KG)(?= )/g, ' ')
+    .replace(new RegExp(` (?:X )?\\d{1,3} ?(?:${PL_KB_COUNT_UNITS})(?= )`, 'g'), ' ')
+    .replace(/ X \d{1,3}(?= )/g, ' ')
+    .replace(/(?: \d{4,7}| \d{3}(?= $))+ $/, ' ');           // código de tienda al final (LG, Bigs)
+  for (const form of plKbBrandStrips(brand)) s = s.split(` ${form} `).join(' ');
+  for (const [re, to] of PL_KB_KEY_SYN) { s = s.replace(re, to); s = s.replace(re, to); }
+  s = s.replace(/[^A-Z0-9+% ]/g, ' ');
+  return [...new Set(s.split(' ').filter(t => t && !PL_KB_KEY_STOP.has(t) && !/^\++$/.test(t)))];
+}
+
+function plKbeautyKeyOf(name, brand) {
+  const tokens = plKbKeyTokens(name, brand);
+  const size = plKbSizeKey(name);
+  const cx = PL_KB_CONDITION_RE.test(name) ? 'CX' : '';
+  return { key: `kb|${brand || ''}|${tokens.slice().sort().join(' ')}|${size}|${cx}`, tokens, size, cx };
+}
+
+// Para la similitud de los pares: sin palabras de tipo ni de SPF (las tiendas las ponen o no) y números normalizados.
+const PL_KB_SIM_TYPE_WORDS = new Set(('SERUM AMPOULE ESSENCE CREAM TONER MIST CLEANSER FOAM OIL BALM MASK PAD PATCH GEL '
+  + 'LOTION MILK WATER EXFOLIANT EXFOLIATING SUN SUNCREAM DEMAQUILANTE DESMAQUILHANTE DESMAQUILLANTE MICELAR BARRA '
+  + 'STICK SHOT CAPSULE BOOSTER').split(' '));
+function plKbSimTokens(tokens) {
+  return [...new Set(tokens
+    .filter(t => !PL_KB_SIM_TYPE_WORDS.has(t) && !/^(SPF|FPS)\d*\+*$/.test(t) && !/^\d+\+$/.test(t) && !/^PA\+*$/.test(t))
+    .map(t => t.replace(/^NO(\d)/, '$1').replace(/[%+]+$/, '')))];
+}
+function plKbLev(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+// Similitud de dos productos: comunes (con typos emparejados: distancia 1–2 o prefijo, nunca en números) sobre el total.
+function plKbSimilarity(ta, tb) {
+  const A = new Set(ta), B = new Set(tb);
+  let onlyA = [...A].filter(t => !B.has(t)), onlyB = [...B].filter(t => !A.has(t));
+  let common = [...A].filter(t => B.has(t)).length;
+  for (const x of [...onlyA]) {
+    if (/\d/.test(x) || x.length < 4) continue;
+    const y = onlyB.find(y => !/\d/.test(y) && y.length >= 4
+      && (plKbLev(x, y, Math.min(x.length, y.length) >= 7 ? 2 : 1) <= (Math.min(x.length, y.length) >= 7 ? 2 : 1) || x.startsWith(y) || y.startsWith(x)));
+    if (y) { common++; onlyA = onlyA.filter(t => t !== x); onlyB = onlyB.filter(t => t !== y); }
+  }
+  const total = common + onlyA.length + onlyB.length;
+  return { sim: total ? common / total : 0, common, onlyA, onlyB };
+}
+
+function plKbDecisionKey(a, b) { return 'kb:' + [a.kbKey, b.kbKey].sort().join('::'); }
+function plKbSharesStore(a, b) { return a.sourceLabels.some(s => b.sourceLabels.includes(s)); }
+
+// Pares a revisar en cosmética (card 23). Se descartan solos (distintos, sin preguntar): misma tienda, otro tamaño,
+// caja dañada en un solo lado, números distintos en los dos lados (Reedle Shot 100/300, No.3/No.5), tipo distinto con
+// nombre lejano y nombres con poco en común. Todo lo demás se pregunta: ningún par se une solo.
+function detectKbeautyDuplicates(items) {
+  const pairs = [];
+  const byBrand = new Map();
+  items.forEach(it => {
+    if (it.excluded || !it.brand) return;
+    if (!it.kbSim) it.kbSim = plKbSimTokens(it.kbTokens);
+    if (!byBrand.has(it.brand)) byBrand.set(it.brand, []);
+    byBrand.get(it.brand).push(it);
+  });
+  for (const arr of byBrand.values()) {
+    for (let x = 0; x < arr.length; x++) for (let y = x + 1; y < arr.length; y++) {
+      const a = arr[x], b = arr[y];
+      if (plKbSharesStore(a, b)) continue;
+      if (a.kbCx !== b.kbCx) continue;
+      if (!plKbSizesCompatible(a.kbSize, b.kbSize)) continue;
+      const decision = plDuplicateDecisions[plKbDecisionKey(a, b)];
+      if (decision === 'different') continue;
+      if (decision === 'same') { pairs.push({ a: a.id, b: b.id, sim: 1, resolved: false, remembered: true }); continue; }
+      const r = plKbSimilarity(a.kbSim, b.kbSim);
+      if (r.common < 2 && r.sim < 0.5) continue;
+      if (r.onlyA.some(t => /\d/.test(t)) && r.onlyB.some(t => /\d/.test(t))) continue;
+      const typeConflict = a.type && b.type && a.type !== b.type;
+      const contained = !r.onlyA.length || !r.onlyB.length;
+      if (typeConflict ? r.sim < 0.6 : (r.sim < 0.3 && !contained)) continue;
+      pairs.push({ a: a.id, b: b.id, sim: r.sim, resolved: false, remembered: false });
+    }
+  }
+  pairs.sort((p, q) => q.sim - p.sim);
+  return pairs;
+}
+
+// Une los pares ya decididos como "el mismo" (también encadenados: A = B y B = C). Si una cadena juntaría dos
+// publicaciones de la misma tienda, esa unión no se hace y se avisa por consola.
+function plKbMergeRemembered(pairs) {
+  const byId = new Map(plItems.map(it => [it.id, it]));
+  const parent = new Map();
+  const find = id => { while (parent.has(id) && parent.get(id) !== id) id = parent.get(id); return id; };
+  const conflicts = [];
+  for (const p of pairs) {
+    const ra = find(p.a), rb = find(p.b);
+    if (ra === rb) continue;
+    const A = byId.get(ra), B = byId.get(rb);
+    if (!A || !B) continue;
+    if (plKbSharesStore(A, B)) { conflicts.push(`${A.name} · ${B.name}`); continue; }
+    const [keep, drop] = A.priceUsd <= B.priceUsd ? [A, B] : [B, A];
+    keep.alternates.push({ source: drop.sourceLabel, price: drop.priceUsd, name: drop.name }, ...drop.alternates);
+    keep.sourceLabels = [...keep.sourceLabels, ...drop.sourceLabels];
+    keep.multiSource = true;
+    parent.set(drop.id, keep.id);
+    parent.set(keep.id, keep.id);
+  }
+  if (parent.size) plItems = plItems.filter(it => !parent.has(it.id) || parent.get(it.id) === it.id);
+  if (conflicts.length) console.warn('Duplicados de cosmética sin unir (juntarían dos de la misma tienda):', conflicts);
 }
 
 function detectKnownBrand(name) {
@@ -8544,19 +8718,29 @@ function generatePriceList() {
     return;
   }
 
-  const groups = new Map();
+  let groups = new Map();
   all.forEach(it => {
-    const key = plItemKey(it);
+    const key = isKbeauty ? plKbeautyKeyOf(it.name, it.brand).key : plItemKey(it);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(it);
   });
+  if (isKbeauty) {
+    // Dos publicaciones de la misma tienda nunca se unen (card 23): si una clave junta dos de una tienda, cada oferta
+    // queda en su fila y los pares con las otras tiendas van a revisión.
+    const split = new Map();
+    for (const [key, arr] of groups) {
+      if (new Set(arr.map(a => a.sourceLabel)).size === arr.length) { split.set(key, arr); continue; }
+      arr.forEach((a, k) => split.set(`${key}|${plNormalizeKbeauty(a.name).trim()}|${k}`, [a]));
+    }
+    groups = split;
+  }
 
   plItems = [];
   let idc = 1;
   const autoExcluded = {};
   const brokenPrices = [];
   plPriceReviews = [];
-  for (const arr of groups.values()) {
+  for (const [groupKey, arr] of groups) {
     const { dropped, pending } = plDropBrokenPrices(arr);
     brokenPrices.push(...dropped);
     if (!arr.length) continue;
@@ -8597,7 +8781,13 @@ function generatePriceList() {
         : '',
       priceUsd: cheapest.price,
       sourceLabel: cheapest.sourceLabel,
-      alternates: arr.slice(1).map(a => ({ source: a.sourceLabel, price: a.price })),
+      alternates: arr.slice(1).map(a => isKbeauty ? { source: a.sourceLabel, price: a.price, name: a.name } : { source: a.sourceLabel, price: a.price }),
+      // Cosmética (card 23): clave de la fila (para las decisiones), tiendas de sus ofertas y lo que usa el detector.
+      ...(isKbeauty ? (() => {
+        const k = plKbeautyKeyOf(cheapest.name, cheapest.brand);
+        return { kbKey: groupKey, kbTokens: k.tokens, kbSize: arr.map(a => plKbSizeKey(a.name)).find(Boolean) || '', kbCx: k.cx,
+          sourceLabels: arr.map(a => a.sourceLabel) };
+      })() : {}),
       multiSource: arr.length > 1,
       excluded: !!reason,
       autoExcludedReason: reason,
@@ -8610,12 +8800,13 @@ function generatePriceList() {
     console.info('Precios rotos ignorados:', brokenPrices.map(b => `${b.name} — USD ${b.price} (${b.sourceLabel})`));
   }
   plAutoExcluded = autoExcluded;
-  // El detector de duplicados difusos compara ml y género de perfumes: en cosmética no se usa todavía (sprint 3).
-  plFuzzyPairs = isKbeauty ? [] : detectFuzzyDuplicates(plItems);
+  // Cosmética tiene su detector (card 23): compara tipo, tamaño comparable y tiendas, no ml y género.
+  plFuzzyPairs = isKbeauty ? detectKbeautyDuplicates(plItems) : detectFuzzyDuplicates(plItems);
 
   // Los pares que ya confirmaste como "el mismo producto" en otra sesión se fusionan solos,
   // sin volver a preguntar.
-  plMergeDuplicates(plFuzzyPairs.filter(p => p.remembered));
+  if (isKbeauty) plKbMergeRemembered(plFuzzyPairs.filter(p => p.remembered));
+  else plMergeDuplicates(plFuzzyPairs.filter(p => p.remembered));
   plFuzzyPairs = plFuzzyPairs.filter(p => !p.remembered);
 
   recomputePlPricing();
@@ -8685,6 +8876,22 @@ function plFuzzyPairHtml(p, idx, byId) {
   const a = byId.get(p.a);
   const b = byId.get(p.b);
   if (!a || !b) return ''; // uno de los dos ya se fusionó por otro par — ver invalidación en resolvePlFuzzyPair
+  // Cosmética: tipo y tamaño detectados, y los nombres de las otras tiendas de cada fila (card 23).
+  const kbInfo = it => it.line !== 'kbeauty' ? '' : `
+        <div style="color:var(--muted);font-size:.76rem;">${esc([PL_KBEAUTY_TYPE_LABEL[it.type] || 'sin tipo', it.size].filter(Boolean).join(' · '))}${
+          it.alternates.length ? ' · también: ' + esc(it.alternates.map(x => `${x.name || ''} (${x.source})`).join(' · ')) : ''}</div>`;
+  if (a.line === 'kbeauty') return `
+    <div id="pl-pair-${idx}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;
+                 padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+      <div style="font-size:.82rem;line-height:1.5;">
+        <div><strong>${esc(a.name)}</strong> — USD ${a.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(a.sourceLabel)})</span></div>${kbInfo(a)}
+        <div style="margin-top:4px;"><strong>${esc(b.name)}</strong> — USD ${b.priceUsd.toFixed(2)} <span style="color:var(--muted);">(${esc(b.sourceLabel)})</span></div>${kbInfo(b)}
+      </div>
+      <div class="btn-group" style="flex-shrink:0;">
+        <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, true)">Es el mismo</button>
+        <button class="btn btn-outline" onclick="resolvePlFuzzyPair(${idx}, false)">Son distintos</button>
+      </div>
+    </div>`;
   return `
     <div id="pl-pair-${idx}" style="display:flex;align-items:center;justify-content:space-between;gap:14px;
                  padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
@@ -8725,6 +8932,28 @@ async function copyPlFuzzyPairs() {
   setTimeout(() => { btn.textContent = 'Copiar pares'; }, 2000);
 }
 
+// Cosmética (card 23): pares pendientes con todo lo que hace falta para decidirlos afuera y volver con un archivo de
+// decisiones (las claves kb:… salen de kbKey de cada fila).
+function downloadPlKbeautyPairs() {
+  const pend = plFuzzyPairs.filter(p => !p.resolved);
+  const byId = new Map(plItems.map(it => [it.id, it]));
+  const used = new Set();
+  pend.forEach(p => { used.add(p.a); used.add(p.b); });
+  const rows = [...used].map(id => byId.get(id)).filter(Boolean).map(it => ({
+    id: it.id, kbKey: it.kbKey, brand: it.brand, type: it.type, size: it.size, sizeKey: it.kbSize,
+    offers: [{ source: it.sourceLabel, name: it.name, price: it.priceUsd },
+      ...it.alternates.map(a => ({ source: a.source, name: a.name || '', price: a.price }))]
+  }));
+  const pairs = pend.filter(p => byId.has(p.a) && byId.has(p.b)).map(p => [p.a, p.b, Math.round(p.sim * 100) / 100]);
+  const date = new Date().toLocaleDateString('en-CA');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ source: 'importo-pares-cosmetica', date, rows, pairs })], { type: 'application/json' }));
+  a.download = `pares-cosmetica-${date}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 // Archivo que arma la revisión de duplicados hecha afuera: {source:'importo-duplicados', date,
 // decisions:{"coreA::coreB": "same"|"different"}} (mismas claves que plDuplicateKey).
 // Las decisiones que ya existen no se pisan, igual que la semilla.
@@ -8761,7 +8990,7 @@ function resolvePlFuzzyPair(idx, sameProduct) {
   const a = plItems.find(x => x.id === pair.a);
   const b = plItems.find(x => x.id === pair.b);
   if (a && b) {
-    plDuplicateDecisions[plDuplicateKey(a.name, b.name)] = sameProduct ? 'same' : 'different';
+    plDuplicateDecisions[a.line === 'kbeauty' ? plKbDecisionKey(a, b) : plDuplicateKey(a.name, b.name)] = sameProduct ? 'same' : 'different';
     saveDuplicateDecisions();
   }
 
@@ -8777,9 +9006,20 @@ function resolvePlFuzzyPair(idx, sameProduct) {
       // Otros pares pendientes que apuntaban al ítem que acaba de desaparecer quedan huérfanos
       // (no se pueden resolver desde la UI) — se dan por resueltos para no dejar la card
       // abierta con un hueco invisible.
+      // En cosmética (card 23) esos pares pasan a la fila unida, salvo los que ahora comparten tienda con ella (distintos).
+      const byId = merged.cheap.sourceLabels ? new Map(plItems.map(it => [it.id, it])) : null;
       plFuzzyPairs.forEach((p2, i2) => {
         if (p2.resolved || i2 === idx) return;
         if (p2.a === merged.exp.id || p2.b === merged.exp.id) {
+          if (byId) {
+            if (p2.a === merged.exp.id) p2.a = merged.cheap.id; else p2.b = merged.cheap.id;
+            const other = byId.get(p2.a === merged.cheap.id ? p2.b : p2.a);
+            if (other && other.id !== merged.cheap.id && !plKbSharesStore(merged.cheap, other)) {
+              const el = document.getElementById(`pl-pair-${i2}`);
+              if (el) el.outerHTML = plFuzzyPairHtml(p2, i2, byId);
+              return;
+            }
+          }
           p2.resolved = true;
           document.getElementById(`pl-pair-${i2}`)?.remove();
         }
@@ -9045,7 +9285,7 @@ function plRowHtml(it) {
   const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
   const rowStyle = it.excluded ? 'opacity:.45;' : '';
   const origen = it.multiSource
-    ? `<span title="Alternativas: ${esc(it.alternates.map(a => a.source + ' USD ' + a.price.toFixed(2)).join(', '))}">
+    ? `<span title="Alternativas: ${esc(it.alternates.map(a => (a.name ? a.name + ' — ' : '') + a.source + ' USD ' + a.price.toFixed(2)).join(', '))}">
          ${esc(it.sourceLabel)} 🔗×${it.alternates.length + 1}
        </span>`
     : esc(it.sourceLabel);
