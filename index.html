@@ -6223,10 +6223,11 @@ function detectStaticBrand(norm) {
 // mayúsculas, sin acentos, . / , _ ( ) - partidos), por palabra completa; gana el más largo. A propósito NO están
 // "VT" ni "ALTHEA" sueltos (calzan en otras cosas): solo "VT COSMETICS" y "DR ALTHEA".
 const KBEAUTY_BRANDS = [
-  ['Medicube'], ['SKIN1004', 'SKIN 1004', 'MADAGASCAR CENTELLA'], ['Anua'], ['Celimax'], ['Dr. Althea', 'DR ALTHEA', 'DRALTHEA'],
+  // MEDICURE y ABID: typos de Mega Eletro (2026-11-01).
+  ['Medicube', 'MEDICURE'], ['SKIN1004', 'SKIN 1004', 'MADAGASCAR CENTELLA'], ['Anua'], ['Celimax'], ['Dr. Althea', 'DR ALTHEA', 'DRALTHEA'],
   ['Beauty of Joseon', 'BEAUTY OF JOSEON'], ['numbuzin'], ['COSRX'], ['Round Lab', 'ROUND LAB', 'ROUNDLAB'],
   ['Mixsoon'], ['Purito', 'PURITO SEOUL'], ['Isntree'], ['Haruharu Wonder', 'HARUHARU', 'HARU HARU'], ['Heimish'],
-  ['Abib'], ['Biodance', 'BIO DANCE'], ['Some By Mi', 'SOME BY MI', 'SOMEBYMI', 'SOME BY ME'],
+  ['Abib', 'ABID'], ['Biodance', 'BIO DANCE'], ['Some By Mi', 'SOME BY MI', 'SOMEBYMI', 'SOME BY ME'],
   ["d'Alba", "D'ALBA", 'DALBA', 'D ALBA'], ['Axis-Y', 'AXIS Y', 'AXISY'], ['Centellian24', 'CENTELLIAN 24'],
   ['VT Cosmetics', 'VT COSMETICS'], ['TIRTIR'], ['Missha'], ['Torriden'], ['Mediheal'], ["I'm From", "I'M FROM", 'IM FROM'],
   ['Arencia'], ['Mary & May', 'MARY & MAY', 'MARY&MAY', 'MARY AND MAY', 'MARYMAY'], ['Meditherapy'],
@@ -6378,6 +6379,169 @@ let plTypeOverrides = {};
 try { plTypeOverrides = JSON.parse(localStorage.getItem('importo-kbeauty-type-overrides') || '{}'); } catch { plTypeOverrides = {}; }
 function savePlTypeOverrides() {
   try { localStorage.setItem('importo-kbeauty-type-overrides', JSON.stringify(plTypeOverrides)); } catch {}
+}
+
+// ── Nombre limpio y tamaño de cosmética (card 22, 2026-11-01) ──
+// Unidades que cuentan piezas: "70 PADS", "10 Unidades", "4 Peças", "5PCS", "12VIAL", "2MLX1SERINGA".
+const PL_KB_COUNT_UNITS = 'PADS?|UNIDADES?|UNIDS?|UND|UNS?|PECAS?|PIEZAS?|PCS?|PZS?|PIECES?|EA|SHEETS?|AMPOLLAS?|AMPOLAS?|VIALS?|VIAL|CAPSULAS?|CAPSULES?|SERINGAS?|PARCHES?|PATCHES?|ADESIVOS?|HOJAS?|FOLHAS?';
+const PL_KB_SIZE_RE = /(\d+(?:[.,]\d+)?)\s*(ML|G|GR|GRS|GRAMOS|KG)\b/i;
+const PL_KB_MULTI_RE = new RegExp(`(\\d+)\\s*X\\s*(\\d+(?:[.,]\\d+)?)\\s*(ML|G|GR)\\b|(\\d+(?:[.,]\\d+)?)\\s*(ML|G|GR)\\s*X\\s*(\\d+)`, 'i');
+const PL_KB_COUNT_RE = new RegExp(`(?:\\bX\\s*)?\\b(\\d{1,3})\\s*(${PL_KB_COUNT_UNITS})\\b`, 'i');
+
+function plKbFmtNum(n) { return String(n).replace('.', ','); }
+function plKbUnit(u) {
+  u = u.toUpperCase();
+  return u === 'ML' ? 'ml' : u === 'KG' ? 'kg' : 'g';
+}
+function plKbCountWord(u, n) {
+  u = plStripAccents(u).toUpperCase();
+  if (/^PADS?$/.test(u)) return 'pads';
+  if (/^(SHEETS?|HOJAS?|FOLHAS?)$/.test(u)) return n === 1 ? 'hoja' : 'hojas';
+  if (/^(AMPOLLAS?|AMPOLAS?|VIALS?|VIAL)$/.test(u)) return n === 1 ? 'ampolla' : 'ampollas';
+  if (/^(CAPSULAS?|CAPSULES?)$/.test(u)) return n === 1 ? 'cápsula' : 'cápsulas';
+  if (/^(PARCHES?|PATCHES?|ADESIVOS?)$/.test(u)) return n === 1 ? 'parche' : 'parches';
+  if (/^SERINGAS?$/.test(u)) return n === 1 ? 'jeringa' : 'jeringas';
+  return n === 1 ? 'unidad' : 'unidades';
+}
+// Tamaño de un producto de cosmética: { text: "30 ml" | "70 pads" | "1,5 ml × 10" | "", key }.
+function plKbeautySizeOf(name) {
+  const s = plStripAccents(String(name || '')).replace(/\bX(?=\d)/gi, 'X ').replace(/(\d)\s*(ML|G|GR)\s*\/\s*(\d)/ig, '$1 $2 $3');
+  let vol = '', key = '';
+  const multi = s.match(PL_KB_MULTI_RE);
+  if (multi) {
+    const [n, v, u] = multi[1] ? [multi[1], multi[2], multi[3]] : [multi[6], multi[4], multi[5]];
+    const val = parseFloat(v.replace(',', '.'));
+    return { text: `${plKbFmtNum(val)} ${plKbUnit(u)} × ${n}`, key: `${val}${plKbUnit(u)}x${n}` };
+  }
+  const m = s.match(PL_KB_SIZE_RE);
+  if (m) { const val = parseFloat(m[1].replace(',', '.')); vol = `${plKbFmtNum(val)} ${plKbUnit(m[2])}`; key = `${val}${plKbUnit(m[2])}`; }
+  const c = s.match(PL_KB_COUNT_RE);
+  if (c && +c[1] > 1) {
+    const n = +c[1];
+    const t = `${n} ${plKbCountWord(c[2], n)}`;
+    return { text: vol ? `${vol} · ${t}` : t, key: `${key}x${n}` };
+  }
+  return { text: vol, key };
+}
+
+// Palabras de tipo en español/portugués que las tiendas ponen adelante ("Sérum Facial", "Creme Facial Hidratante",
+// "Gel de Limpeza Facial", "Almofadas Tônicas", "Kit Cuidado Facial"). Van sin acentos y en mayúsculas.
+const PL_KB_LEAD_WORDS = new Set(('A O AS OS UN UNA PRA PATCH PATCHES SERUM SERUN SERUMS SERUNS FACIAL FACIAIS FACIALES CREME CREMES CREMA CREMAS HIDRATANTE HIDRATANTES GEL '
+  + 'DE DA DO DOS DAS DEL LA EL PARA EM EN CON COM Y E LIMPEZA LIMPADOR LIMPIADOR LIMPIEZA TONICO TONICOS TONICA TONICAS '
+  + 'MASCARA MASCARAS MASCARILLA MASCARILLAS NOTURNA NOCTURNA NOTURNO NOCTURNO PROTETOR PROTECTOR SOLAR BARRA ALMOFADAS '
+  + 'PADS PAD KIT KITS CUIDADO SKINCARE CONTORNO OLHOS OJOS AREA ESFOLIANTE EXFOLIANTE LEITE LECHE AMPOLA AMPOLAS AMPOLLA '
+  + 'AMPOLLAS TRATAMENTO TRATAMIENTO PO POLVO ESPUMA SABONETE OLEO ACEITE ESSENCIA ESENCIA LOCAO LOCION ADESIVO ADESIVOS '
+  + 'PARCHE PARCHES BRUMA SPRAY MINI SET SETS COSMETICOS LABIAL BALSAMO REPARADOR CALMANTE ANTI ACNE LEVE CORPORAL '
+  + 'EMULSAO EMULSION AGUA MICELAR DESMAQUILLANTE DEMAQUILANTE ROSTO ROSTRO PELE PIEL').split(' '));
+// Frases de tipo en ES/PT en el medio o al final que repiten lo que ya dice el tipo ("… para Contorno de Olhos").
+const PL_KB_TAIL_RE = /\s(?:PROTETOR|PROTECTOR)\s+SOLAR(?=\s|$)|(?:\s(?:PARA|DE))?\s+(?:(?:A\s|O\s|EL\s|LA\s)?(?:[AÁ]REA\s+DOS\s+OLHOS|CONTORN?O?\s+(?:DE\s|DOS\s)?(?:OLHOS|OJOS)))(?=\s|$)|\s(?:PARA|DE)\s+(?:(?:O\s|EL\s|LA\s)?CONTORNO\s+(?:DE\s|DOS\s)?(?:OLHOS|OJOS)|AREA\s+DOS\s+OLHOS|OJOS|OLHOS|ROSTO|ROSTRO)(?=\s|$)|\sFACIAL(?=\s|$)/gi;
+// Siglas y escrituras que quedan como están al pasar a Title Case.
+const PL_KB_KEEP_UPPER = new Set(('PDRN NAD NAD+ BHA AHA PHA LHA TXA SPF PA UV UVA UVB NMN PN BB CC AC II III IV EGF GHK CICA2 '
+  + 'TECA HPR TX EX OIL-WASH DNA RNA CBD ATP SOS PH LED PCA MTS AGE-R K-SECRET VT AHC OMG BOJ ALA DMAE ECM HA EGCG').split(' '));
+const PL_KB_CONDITION_RE = /\(?\s*\b(?:CX|CAIXA|CAJA)\.?\s*(?:FEIA|AMASSADA|AMASADA|DANADA|DANIFICADA)\s*\)?/i;
+
+// Escrituras de la marca que se sacan del nombre. Los alias que son nombres de línea (MADAGASCAR CENTELLA de SKIN1004,
+// las líneas de B.O.M y point&) no: de esos se saca solo la palabra de la marca.
+const PL_KB_LINE_ALIASES = new Set(['MADAGASCAR CENTELLA', 'BOM SNAIL MUCIN', 'BOM PEPTIDE POWER', 'BOM HYALURONIC ACID',
+  'BOM THE REAL', 'BOM GOODBYE', 'BOM REAL PARTY', 'BOM REARL PARTY', 'POINT DEEP CLEAN', 'POINT CLEAN FORMULA', 'POINT PORE']);
+const PL_KB_BRAND_WORD = { 'B.O.M': ['BOM', 'B O M', 'BEAUTY OF MAJESTY'], 'point&': ['POINT'] };
+let plKbBrandStripCache = null;
+function plKbBrandStrips(brand) {
+  if (!plKbBrandStripCache) {
+    plKbBrandStripCache = {};
+    for (const entry of KBEAUTY_BRANDS) {
+      const forms = [...(PL_KB_BRAND_WORD[entry[0]] || []), ...entry.filter(a => !PL_KB_LINE_ALIASES.has(a) && !PL_KB_BRAND_WORD[entry[0]])];
+      // Más largas primero ("SOME BY MI" antes que "SOME BY ME"; "ETUDE HOUSE" antes que "ETUDE").
+      plKbBrandStripCache[entry[0]] = [...new Set(forms.map(f => plNormalizeKbeauty(f).trim()))].sort((a, b) => b.length - a.length);
+    }
+  }
+  return plKbBrandStripCache[brand] || [];
+}
+
+// Saca la primera aparición de la marca (y lo que tenga adelante si son solo palabras de tipo). null si no está.
+// Se compara por palabras normalizadas ("Axis-Y" son dos: AXIS Y) y la marca tiene que empezar y terminar en límite
+// de palabra original.
+function plKbStripBrand(words, brand) {
+  const toks = [];
+  words.forEach((w, wi) => plNormalizeKbeauty(w).trim().split(' ').filter(Boolean).forEach((t, k, arr) =>
+    toks.push({ t, wi, first: k === 0, last: k === arr.length - 1 })));
+  for (const form of plKbBrandStrips(brand)) {
+    const fw = form.split(' ');
+    const i = toks.findIndex((_, j) => toks[j].first && j + fw.length <= toks.length
+      && fw.every((f, k) => toks[j + k].t === f) && toks[j + fw.length - 1].last);
+    if (i < 0) continue;
+    const startW = toks[i].wi, endW = toks[i + fw.length - 1].wi;
+    // Lo de adelante se borra si arranca con una palabra de tipo ("Pads Calmantes para Vermelhidão Anua …"), es corto
+    // y después de la marca queda nombre (en "TONICO FACIAL MADAGASCAR CENTELLA POREMIZING SKIN1004" el nombre es lo
+    // de adelante: ahí solo se sacan las palabras de tipo del principio, más abajo).
+    const leadOk = i === 0 || (PL_KB_LEAD_WORDS.has(toks[0].t) && i <= 6 && endW + 1 < words.length);
+    return [...(leadOk ? [] : words.slice(0, startW)), ...words.slice(endW + 1)];
+  }
+  return null;
+}
+
+function plKbTitle(word) {
+  const bare = word.replace(/[^A-Z0-9+\-&.%]/gi, '');
+  if (PL_KB_KEEP_UPPER.has(bare.toUpperCase()) || /\d/.test(word) || /^[A-Z]\.$/i.test(word)) return word.toUpperCase();
+  return word.toLowerCase().replace(/(^|[-/(&])(\p{L})/gu, (_, p, c) => p + c.toUpperCase());
+}
+
+function plCleanKbeautyName(name, brand) {
+  let s = String(name || '').replace(/\s+/g, ' ').trim();
+  let condition = '';
+  if (PL_KB_CONDITION_RE.test(s)) { condition = ' (caja dañada)'; s = s.replace(PL_KB_CONDITION_RE, ' '); }
+  s = s.replace(/\*+/g, ' ').replace(/\bM\.? CENTELLA\b/i, 'MADAGASCAR CENTELLA') // Bigs abrevia la línea de SKIN1004
+    .replace(/\s\d{4,7}$/, '')                      // código interno al final (LG "479991", Bigs "1453")
+    .replace(/\s-\s?$/, '');
+  // Tamaño y unidades (van en it.size), con el "de" / "x" / "-" que los acompaña.
+  s = s.replace(/\bX(?=\d)/gi, 'X ') // "X24 Unidades"
+    .replace(/\b\d+\s*X\s*\d+(?:[.,]\d+)?\s*(?:ML|G|GR)\b/gi, ' ') // "2x20ml", "4X34G" (el tamaño lo da plKbeautySizeOf)
+    .replace(/(\d)\s*(ML|G|GR)\s*\/\s*(?=\d)/ig, '$1$2 ').replace(/(\d)\/(?=\d+(?:[.,]\d+)?\s*(?:ML|G|GR)\b)/ig, '$1 ')
+    .replace(new RegExp(`(?:\\s(?:DE|-|–|,|COM|CON))?\\s*\\(?\\s*(?:\\bX\\s*)?(?:\\b\\d+(?:[.,]\\d+)?\\s*(?:ML|G|GR|GRS|GRAMOS|KG)|\\b\\d{1,3}\\s*(?:${PL_KB_COUNT_UNITS}))\\b\\.?\\s*(?:X\\s*\\d+\\s*(?:${PL_KB_COUNT_UNITS})?\\b)?\\)?`, 'gi'), ' ')
+    .replace(/\s(?:X|-|–|DE)\s*$/i, '')
+    .replace(/\s+/g, ' ').trim();
+  // Marca: lo que está antes se borra si son solo palabras de tipo; la marca misma también. Se compara por palabras
+  // normalizadas ("Axis-Y" son dos: AXIS Y), y la marca tiene que empezar y terminar en límite de palabra original.
+  let words = s.split(' ');
+  // Dos pasadas por si la tienda repite la marca ("MEDICUBE MEDICUBE KOJIC…").
+  for (let pass = 0; pass < 2; pass++) {
+    const next = plKbStripBrand(words, brand);
+    if (!next) break;
+    words = next;
+  }
+  // Sin marca encontrada (o ya sacada): palabras de tipo sueltas al principio.
+  while (words.length > 1 && PL_KB_LEAD_WORDS.has(plNormalizeKbeauty(words[0]).trim())) words.shift();
+  s = words.join(' ')
+    .replace(PL_KB_TAIL_RE, ' ')
+    .replace(/\s(?:POTE|BISNAGA|TUBO|FRASCO|SERINGA|CAIXA|CAJA)(?=\s|$)/gi, ' ') // envase
+    .replace(/^[\s\-–:.,]+|[\s\-–:,]+$/g, '')
+    .replace(/\(\s*\)/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  if (!s) s = String(name || '').trim();
+  // Todo en mayúsculas → Title Case (con siglas y tokens con números como vienen).
+  const letters = s.replace(/[^\p{L}]/gu, '');
+  if (letters && letters === letters.toUpperCase()) s = s.split(' ').map(plKbTitle).join(' ');
+  else s = s.split(' ').map(w => PL_KB_KEEP_UPPER.has(w.replace(/[^A-Z0-9+\-&.%]/gi, '').toUpperCase()) || /^(SPF|FPS)\d|^PA\+/i.test(w) ? w.toUpperCase() : w).join(' ');
+  return s + condition;
+}
+
+// Palabras en español/portugués que delatan un nombre "traducido" por la tienda: entre varias ofertas del mismo
+// producto se muestra el nombre limpio que tenga menos (y, a igualdad, el más largo).
+const PL_KB_LOCAL_WORDS = new Set([...PL_KB_LEAD_WORDS, 'CLAREADOR', 'PURIFICANTE', 'RELAXANTE', 'MANCHAS', 'PELE',
+  'NOTURNO', 'NOITE', 'NOCHE', 'COLAGENO', 'NIACINAMIDA', 'VITAMINA', 'ACIDO', 'ARROZ', 'CAJA', 'DANADA']);
+function plKbBestDisplayName(names, brand) {
+  let best = null, bestScore = null;
+  for (const n of names) {
+    const clean = plCleanKbeautyName(n, brand);
+    const local = plNormalizeKbeauty(clean).trim().split(' ').filter(w => PL_KB_LOCAL_WORDS.has(w)).length;
+    const score = [local, -clean.length];
+    if (!bestScore || score[0] < bestScore[0] || (score[0] === bestScore[0] && score[1] < bestScore[1])) { best = clean; bestScore = score; }
+  }
+  return best || '';
+}
+// Nombre visible según la línea: en cosmética el limpio de esta card, en perfumes plCleanName.
+function plDisplayNameFor(it, name = it.name) {
+  return it.line === 'kbeauty' ? plCleanKbeautyName(name, it.brand) : plCleanName(name, it.brand);
 }
 
 function detectKnownBrand(name) {
@@ -8422,7 +8586,9 @@ function generatePriceList() {
       // Nombre limpio cacheado: plCleanName compila varias RegExp por llamada — calcularlo una
       // vez acá (y de nuevo solo si cambia la marca, ver updatePlBrand) evita repetirlo en cada
       // comparación del sort, cada tecla del buscador y cada fila del render.
-      displayName: plCleanName(cheapest.name, brand),
+      displayName: isKbeauty ? plKbBestDisplayName(arr.map(a => a.name), brand) : plCleanName(cheapest.name, brand),
+      // Tamaño aparte en cosmética (card 22): el del más barato o el de otra oferta del grupo.
+      size: isKbeauty ? (arr.map(a => plKbeautySizeOf(a.name).text).find(Boolean) || '') : '',
       // Tipo de producto (card 22): la corrección a mano manda; si no, el del más barato o el de otra oferta del grupo.
       type: isKbeauty
         ? (Object.prototype.hasOwnProperty.call(plTypeOverrides, plBrandOverrideKey(cheapest.name))
@@ -8501,7 +8667,7 @@ function resolvePlPriceReview(idx, isReal) {
       it.priceUsd = r.price;
       it.sourceLabel = r.sourceLabel;
       it.name = r.name;
-      it.displayName = plCleanName(r.name, it.brand);
+      it.displayName = plDisplayNameFor(it, r.name);
       recomputePlPricing();
       const row = document.getElementById(`pl-row-${it.id}`);
       if (row) row.outerHTML = plRowHtml(it);
@@ -8891,7 +9057,7 @@ function plRowHtml(it) {
           onchange="updatePlBrand(${it.id}, this.value)" />
       </td>
       <td style="min-width:220px;" title="${esc(it.name)}">
-        ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason] ? `<span title="Excluido automático — ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].label}" style="margin-right:4px;">${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].icon}</span>` : ''}${esc(it.displayName)}
+        ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason] ? `<span title="Excluido automático — ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].label}" style="margin-right:4px;">${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].icon}</span>` : ''}${esc(it.displayName)}${it.size ? ` <span style="color:var(--muted);font-size:.8rem;white-space:nowrap;">· ${esc(it.size)}</span>` : ''}
       </td>
       <td class="pl-kbeauty-only">${plTypeSelectHtml(it)}</td>
       <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
@@ -9031,7 +9197,7 @@ function updatePlBrand(id, val) {
   const clean = val.trim();
   if (!clean) {
     it.brand = '';
-    it.displayName = plCleanName(it.name, it.brand);
+    it.displayName = plDisplayNameFor(it);
     delete plBrandOverrides[key];
     savePlBrandOverrides();
     renderPlTable(); // cambia la marca → cambia el orden de la fila, hace falta re-ordenar la tabla
@@ -9045,7 +9211,7 @@ function updatePlBrand(id, val) {
   const isKbeauty = it.line === 'kbeauty';
   const canonical = isKbeauty ? detectKbeautyBrand(` ${clean} `) : detectKnownBrand(` ${clean} `);
   it.brand = canonical || clean;
-  it.displayName = plCleanName(it.name, it.brand);
+  it.displayName = plDisplayNameFor(it);
   if (isKbeauty && canonical && it.autoExcludedReason === 'notKbeauty') {
     it.autoExcludedReason = plIsNotSkincare(it.name) ? 'notSkincare' : null;
     it.excluded = !!it.autoExcludedReason;
@@ -9081,17 +9247,17 @@ function exportPlExcel() {
   if (sorted.length === 0) { alert('No hay productos para exportar (revisá el filtro de marcas).'); return; }
 
   const isKbeauty = plLine === 'kbeauty';
-  const rowsOut = [isKbeauty ? ['Marca', 'Producto', 'Tipo', 'Precio (ARS)'] : ['Marca', 'Producto', 'Precio (ARS)']];
+  const rowsOut = [isKbeauty ? ['Marca', 'Producto', 'Tamaño', 'Tipo', 'Precio (ARS)'] : ['Marca', 'Producto', 'Precio (ARS)']];
   sorted.forEach(it => {
     const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
     rowsOut.push(isKbeauty
-      ? [it.brand || 'Sin categoría', it.displayName, PL_KBEAUTY_TYPE_LABEL[it.type] || '', Math.round(price)]
+      ? [it.brand || 'Sin categoría', it.displayName, it.size || '', PL_KBEAUTY_TYPE_LABEL[it.type] || '', Math.round(price)]
       : [it.brand || 'Sin categoría', it.displayName, Math.round(price)]);
   });
-  const priceCol = isKbeauty ? 3 : 2;
+  const priceCol = isKbeauty ? 4 : 2;
 
   const ws = XLSX.utils.aoa_to_sheet(rowsOut);
-  ws['!cols'] = isKbeauty ? [{ wch: 26 }, { wch: 55 }, { wch: 18 }, { wch: 16 }] : [{ wch: 26 }, { wch: 55 }, { wch: 16 }];
+  ws['!cols'] = isKbeauty ? [{ wch: 26 }, { wch: 55 }, { wch: 16 }, { wch: 18 }, { wch: 16 }] : [{ wch: 26 }, { wch: 55 }, { wch: 16 }];
   ws['!autofilter'] = { ref: ws['!ref'] }; // flechitas de filtro/orden en Excel — dejan buscar por marca sin tocar nada más
 
   // Precio como número real (se puede ordenar/sumar) pero mostrado como "$ 141.100"
