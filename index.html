@@ -829,6 +829,8 @@
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-lg-btn" onclick="importKbeautySiteCatalog('lg')">Traer LG Importados</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-megaeletro-btn" onclick="importKbeautySiteCatalog('megaeletro')">Traer Mega Eletro</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-flash-btn" onclick="importKbeautySiteCatalog('flash')">Traer Flash Importados</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-star-btn" onclick="importKbeautySiteCatalog('star')">Traer Star Company</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-genove-btn" onclick="importKbeautySiteCatalog('genove')">Traer Genove</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
       </div>
 
@@ -6215,7 +6217,7 @@ function detectStaticBrand(norm) {
 // mayúsculas, sin acentos, . / , _ ( ) - partidos), por palabra completa; gana el más largo. A propósito NO están
 // "VT" ni "ALTHEA" sueltos (calzan en otras cosas): solo "VT COSMETICS" y "DR ALTHEA".
 const KBEAUTY_BRANDS = [
-  ['Medicube'], ['SKIN1004', 'SKIN 1004'], ['Anua'], ['Celimax'], ['Dr. Althea', 'DR ALTHEA', 'DRALTHEA'],
+  ['Medicube'], ['SKIN1004', 'SKIN 1004', 'MADAGASCAR CENTELLA'], ['Anua'], ['Celimax'], ['Dr. Althea', 'DR ALTHEA', 'DRALTHEA'],
   ['Beauty of Joseon', 'BEAUTY OF JOSEON'], ['numbuzin'], ['COSRX'], ['Round Lab', 'ROUND LAB', 'ROUNDLAB'],
   ['Mixsoon'], ['Purito', 'PURITO SEOUL'], ['Isntree'], ['Haruharu Wonder', 'HARUHARU', 'HARU HARU'], ['Heimish'],
   ['Abib'], ['Biodance', 'BIO DANCE'], ['Some By Mi', 'SOME BY MI', 'SOMEBYMI', 'SOME BY ME'],
@@ -6237,7 +6239,8 @@ const KBEAUTY_BRANDS = [
   ['point&', 'POINT DEEP CLEAN', 'POINT CLEAN FORMULA', 'POINT PORE'],
   ['Graceday'], ['Orjena'], ['Be the Skin'], ['Nextbeau'], ['Commonlabs', 'COMMON LABS'], ['Catch Me Patch'],
   ['Miguhara'], ['Make Prem', 'MAKEPREM'], ['Kocostar'], ['Papa Recipe'], ['Moms Bath Recipe', "MOM'S BATH RECIPE"],
-  ['Nature Republic'], ['AHC'], ['Rejuran'], ['Dr.Reju-All', 'DR REJU ALL'], ['Bergamo'], ['Elroel']
+  ['Nature Republic'], ['AHC'], ['Rejuran'], ['Dr.Reju-All', 'DR REJU ALL'], ['Bergamo'], ['Elroel'],
+  ['Elravie'] // 2026-11-01, Star Company (Derma Elravie, de Humedix)
 ];
 
 // Igual que plNormalizeForBrandMatch, más el acento agudo suelto como apóstrofo (Terra Nova escribe "D´Alba").
@@ -7693,6 +7696,38 @@ async function plFetchFlashRows(progress) {
   return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
 }
 
+// Star Company (2026-11-01): la misma ruta que perfumes con la categoría 100 "Cosméticos" entera (~620 productos,
+// 7 páginas de 96). Hay coreanos fuera de la subcategoría 617 "Cosméticos coreanos" (Medicube, Celimax). El listado
+// solo muestra lo que tiene stock.
+async function plFetchStarKbeautyRows(progress) {
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/starcompany?cat=100&page=${n}`);
+    if (!Array.isArray(d.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page(1);
+  const last = Math.min(Math.ceil((first.total || first.items.length) / 96), 20);
+  const rest = await plMapLimit(Array.from({ length: Math.max(0, last - 1) }, (_, k) => k + 2), 4, page);
+  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
+}
+
+// Genove (2026-11-01): la misma API que perfumes (CORS, directo), categoría 29 "Skincare" (~130 productos, 2 páginas).
+const GENOVE_SKINCARE = 29;
+async function plFetchGenoveKbeautyRows(progress) {
+  const headers = { 'x-api-key': GENOVE_KEY, Accept: 'application/json' };
+  const url = page => `${GENOVE_API}?` + new URLSearchParams({ categoria_id: GENOVE_SKINCARE, per_page: 100, page });
+  const first = await plFetchKbeautyJson(url(1), headers);
+  if (!Array.isArray(first.data)) throw new Error('listado inválido');
+  progress(first.data.length);
+  const rest = await plMapLimit(Array.from({ length: Math.max(0, Math.min(first.meta?.last_page || 1, 20) - 1) }, (_, k) => k + 2), 4,
+    async p => { const d = await plFetchKbeautyJson(url(p), headers); progress((d.data || []).length); return d; });
+  return [first, ...rest].flatMap(d => d.data || []).map(x => ({
+    code: String(x.codigo || x.id), name: String(x.name || '').replace(/\s+/g, ' ').trim(), price: Number(x.price),
+    site: (x.brand && x.brand.name) || '', inStock: x.stock > 0 && x.active !== false
+  }));
+}
+
 const PL_KBEAUTY_SITE_IMPORTS = {
   atacado: { label: 'Atacado Connect', fetchRows: plFetchAtacadoKbeautyRows },
   bigs: { label: 'Bigs', fetchRows: plFetchBigsKbeautyRows },
@@ -7701,6 +7736,8 @@ const PL_KBEAUTY_SITE_IMPORTS = {
   lg: { label: 'LG Importados', fetchRows: plFetchLgKbeautyRows },
   megaeletro: { label: 'Mega Eletro', fetchRows: plFetchMegaEletroRows },
   flash: { label: 'Flash Importados', fetchRows: plFetchFlashRows },
+  star: { label: 'Star Company', fetchRows: plFetchStarKbeautyRows },
+  genove: { label: 'Genove', fetchRows: plFetchGenoveKbeautyRows },
 };
 let plKbeautyImportBusy = false;
 

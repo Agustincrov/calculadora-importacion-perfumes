@@ -2,7 +2,7 @@
 // Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogos de perfumes de
 // Ponto Com (pontocom.com) y Star Company (starcompany-py.com), scraping del listado paginado, Multipass
 // (multipass.com.py) y LG Importados (lgimportados.com), que tienen JSON pero no mandan CORS, cosmética coreana (Bigs,
-// Shopping China, Ponto Com, LG, Mega Eletro y Flash Importados) y publicación de docs/catalogo.html en GitHub
+// Shopping China, Ponto Com, LG, Mega Eletro, Flash Importados y Star Company) y publicación de docs/catalogo.html en GitHub
 // (/publish-catalog). Macedonia no pasa por acá: su hosting (SiteGround) le responde con un captcha a todo
 // pedido que sale de Cloudflare; el catálogo se baja desde el navegador (ver index.html). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
 // se sacaron el 2026-10-10.
@@ -34,7 +34,8 @@ async function handle(req) {
       return await fetchPontocomPage(q.get('cat') || PONTOCOM_MAIN, parseInt(q.get('page'), 10));
     }
     if (path === '/starcompany') {
-      return await fetchStarCompanyPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
+      const q = new URL(req.url).searchParams;
+      return await fetchStarCompanyPage(parseInt(q.get('page'), 10), q.get('cat') || '121');
     }
     if (path === '/multipass') {
       return await fetchMultipassPage(parseInt(new URL(req.url).searchParams.get('page'), 10));
@@ -155,14 +156,17 @@ function decodeEntities(s) {
     .replace(/&amp;/g, '&'); // último: si no, "&amp;quot;" terminaría como comilla
 }
 
-// ── Star Company — catálogo de perfumes ──────────────────────────
+// ── Star Company — perfumes y cosmética ─────────────────────────
 // PrestaShop con un módulo propio de categoría (categoria-premium/121 = PERFUMES). Sin CORS ni API
 // pública, igual que Ponto Com. El listado solo muestra productos con stock y acepta hasta n=96 por
 // página (~22 páginas). Cada tarjeta: <article class="scp-card"> con .scp-brand, <h2><a href=…/ID-slug.html>
 // nombre</a></h2>, .scp-price "U$ 13,99" y .scp-stock "228 In Stock". Una página por request.
-async function fetchStarCompanyPage(page) {
+// cat: 121 = PERFUMES, 100 = COSMETICOS (cosmética coreana, 2026-11-01; misma tarjeta).
+const STAR_CATS = ['121', '100'];
+async function fetchStarCompanyPage(page, cat) {
   if (!Number.isInteger(page) || page < 1 || page > 100) return jsonResp({ error: 'page inválida' }, 400);
-  const r = await fetch(`https://www.starcompany-py.com/categoria-premium/121?fc=module&order=position&n=96&p=${page}`, {
+  if (!STAR_CATS.includes(cat)) return jsonResp({ error: 'cat inválida' }, 400);
+  const r = await fetch(`https://www.starcompany-py.com/categoria-premium/${cat}?fc=module&order=position&n=96&p=${page}`, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml',
