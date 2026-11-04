@@ -819,23 +819,10 @@
           onclick="event.preventDefault(); alert(TERRANOVA_BOOKMARKLET_HELP)"
           style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;align-self:center;"
           title="Arrastralo a la barra de marcadores. Después abrí shoppingterranova.com.py y tocalo: baja la estética facial en un archivo .json (~1 min).">⬇ Terra Nova</a>
-        <button class="btn btn-outline pl-kbeauty-only" id="pl-kbeauty-cellshop-btn" onclick="document.getElementById('pl-cellshop-file').click()" title="Carga el archivo cellshop-AAAA-MM-DD.json que baja el marcador ⬇ Cellshop. Si ya estaba cargado, lo reemplaza.">Importar archivo Cellshop</button>
-        <input type="file" id="pl-cellshop-file" accept=".json,application/json" style="display:none"
-          onchange="importCellshopFile(this.files[0]); this.value=''" />
-        <a id="pl-cellshop-bookmarklet" class="pl-kbeauty-only" href="#" draggable="true"
-          onclick="event.preventDefault(); alert(CELLSHOP_BOOKMARKLET_HELP)"
-          style="font-size:.78rem;padding:6px 10px;border:1px dashed var(--border);border-radius:6px;color:var(--text);text-decoration:none;cursor:grab;align-self:center;"
-          title="Arrastralo a la barra de marcadores. Después abrí cellshop.com y tocalo: busca las marcas coreanas y baja un archivo .json (~1 min).">⬇ Cellshop</a>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-atacado-btn" onclick="importKbeautySiteCatalog('atacado')">Traer Atacado Connect</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-bigs-btn" onclick="importKbeautySiteCatalog('bigs')">Traer Bigs</button>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-shoppingchina-btn" onclick="importKbeautySiteCatalog('shoppingchina')">Traer Shopping China</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-pontocom-btn" onclick="importKbeautySiteCatalog('pontocom')">Traer Ponto Com</button>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-lg-btn" onclick="importKbeautySiteCatalog('lg')">Traer LG Importados</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-megaeletro-btn" onclick="importKbeautySiteCatalog('megaeletro')">Traer Mega Eletro</button>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-flash-btn" onclick="importKbeautySiteCatalog('flash')">Traer Flash Importados</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-star-btn" onclick="importKbeautySiteCatalog('star')">Traer Star Company</button>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-genove-btn" onclick="importKbeautySiteCatalog('genove')">Traer Genove</button>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-intershop-btn" onclick="importKbeautySiteCatalog('intershop')">Traer Intershop</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
       </div>
 
@@ -1961,6 +1948,10 @@ function savePlSources() {
     .catch(err => alert(`No se pudieron guardar las listas cargadas (${err.message}): al recargar la página vuelven a como estaban.`));
 }
 
+// Card 25 (2026-11-04): en cosmética quedan Terra Nova, Ponto Com, Mega Eletro, Bigs y Star Company (98 % de lo que
+// vende la competencia argentina a +0,2 % de costo). Las demás eran incómodas para comprar o no sumaban productos.
+const PL_KBEAUTY_DROPPED_SITES = ['atacado', 'cellshop', 'shoppingchina', 'lg', 'flash', 'genove', 'intershop'];
+
 async function plLoadSources() {
   if (plIdbAvailable) {
     try {
@@ -1991,6 +1982,9 @@ async function plLoadSources() {
       plIdbAvailable = false;
     }
   }
+  // Tiendas que se sacaron de cosmética (card 25): sus cargas guardadas se borran (en perfumes siguen las que hay).
+  const kept = plSources.filter(s => !(plSourceLine(s) === 'kbeauty' && PL_KBEAUTY_DROPPED_SITES.includes(s.site)));
+  if (kept.length !== plSources.length) { plSources = kept; savePlSources(); }
   plSourcesLoaded = true;
   invalidateCalcCatalog();
 }
@@ -12360,11 +12354,6 @@ async function plFetchIntershopRows(progress) {
   }).filter(x => !INTERSHOP_NOT_PERFUME_RE.test(x.name));
 }
 
-// Cosmética (card 24): la categoría Cosméticos entera (~120 productos, una página); quedan solo las marcas coreanas.
-async function plFetchIntershopKbeautyRows(progress) {
-  return (await plFetchIntershopPages('cosmeticos', progress)).map(x => plKbeautyWorkerRow(x));
-}
-
 // ── Importadores de cosmética coreana ────────────────────────────
 // Separados de perfumes: las exclusiones de skincare se aplican recién al generar.
 function plBuildKbeautySiteItems(rows) {
@@ -12544,190 +12533,6 @@ async function importTerraNovaFile(file) {
   }
 }
 
-// ── Cellshop (cellshop.com, card 20 tanda 2) ──
-// Magento 2 detrás de un desafío de Cloudflare (Turnstile) para todo lo que no es un navegador: va por marcador,
-// como Terra Nova. Su GraphQL responde pero no lista (búsqueda vacía, categorías con error) y la categoría Cosméticos
-// solo filtra por Medicube y SKIN1004, así que se usa el buscador del sitio: una búsqueda por marca coreana
-// (/catalogsearch/result/?q=…, 36 por página, 8 en paralelo, ~60 s). El buscador es difuso ("OMG", "Lindsay" traen
-// de todo): se baja todo y la app se queda con las marcas coreanas al importar. El listado muestra solo lo que tiene
-// stock. Se serializa con toString(); las búsquedas entran como argumento.
-async function cellshopBookmarklet(terms) {
-  if (!/(^|\.)cellshop\.com$/.test(location.hostname)) {
-    alert('Abrí cellshop.com y tocá el marcador ahí.');
-    return;
-  }
-  const title = document.title;
-  const load = async (q, p) => {
-    for (let attempt = 0; ; attempt++) {
-      try {
-        const r = await fetch(`/catalogsearch/result/?q=${encodeURIComponent(q)}&product_list_limit=36&p=${p}`);
-        if (!r.ok) throw new Error(`${r.status}`);
-        const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
-        const total = ((doc.querySelector('.toolbar-amount') || {}).textContent || '').match(/de\s+(\d+)/);
-        const items = [...doc.querySelectorAll('.product-item')].map(card => {
-          const link = card.querySelector('.product-item-link');
-          const price = card.querySelector('[data-price-type="finalPrice"]');
-          const id = card.querySelector('[data-product-id]');
-          return { code: id ? id.getAttribute('data-product-id') : '', name: link ? link.textContent.replace(/\s+/g, ' ').trim() : '',
-            price: price ? Number(price.getAttribute('data-price-amount')) : 0, out: /esgotad|indispon|sem estoque/i.test(card.textContent) };
-        }).filter(x => x.code && x.name);
-        return { total: total ? Number(total[1]) : items.length, items };
-      } catch (err) {
-        if (attempt >= 2) throw new Error(`búsqueda "${q}": ${err.message}`);
-        await new Promise(res => setTimeout(res, 1500 * (attempt + 1)));
-      }
-    }
-  };
-  const pool = async (list, n, fn) => {
-    const out = []; let i = 0;
-    await Promise.all(Array.from({ length: Math.min(n, list.length) }, async () => {
-      while (i < list.length) { const k = i++; out[k] = await fn(list[k]); }
-    }));
-    return out;
-  };
-  try {
-    let read = 0;
-    const count = d => { read += d.items.length; document.title = `Cellshop ${read}…`; return d; };
-    const firsts = await pool(terms, 8, async q => ({ q, ...count(await load(q, 1)) }));
-    // Hasta 15 páginas por búsqueda: las difusas no tienen por qué traer el sitio entero.
-    const more = firsts.flatMap(f => Array.from({ length: Math.max(0, Math.min(Math.ceil(f.total / 36), 15) - 1) }, (_, k) => [f.q, k + 2]));
-    const rest = await pool(more, 8, async ([q, p]) => count(await load(q, p)));
-    const items = [], seen = new Set();
-    for (const d of [...firsts, ...rest]) {
-      for (const x of d.items) {
-        if (seen.has(x.code) || x.out || !(x.price > 0)) continue;
-        seen.add(x.code);
-        items.push({ code: x.code, name: x.name, price: x.price });
-      }
-    }
-    if (!items.length) throw new Error('no se encontró ningún producto (¿cambió el sitio?)');
-    const date = new Date().toLocaleDateString('en-CA');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify({ source: 'cellshop', date, items })], { type: 'application/json' }));
-    a.download = `cellshop-${date}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    alert(`Cellshop: ${items.length} productos (${terms.length} búsquedas) descargados en ${a.download}. Importalo en el generador de listas (Cosmética coreana).`);
-  } catch (err) {
-    alert(`No se pudo bajar el catálogo de Cellshop: ${err.message}`);
-  } finally {
-    document.title = title;
-  }
-}
-// Una búsqueda por marca, con el nombre sin puntuación ("Ma:nyo" → "Manyo", "d'Alba" → "dAlba", "Dr. Althea" →
-// "Dr Althea"; "B.O.M" se busca por el nombre largo).
-const CELLSHOP_TERMS = [...new Set(KBEAUTY_BRANDS.map(b => b[0] === 'B.O.M' ? 'Beauty of Majesty'
-  : b[0].replace(/[:']/g, '').replace(/[.&]/g, ' ').replace(/\s+/g, ' ').trim()))];
-const CELLSHOP_BOOKMARKLET_HELP = 'Este botón es un marcador: arrastralo a la barra de marcadores del navegador '
-  + '(si no la ves: Cmd+Shift+B). Después abrí cellshop.com y tocá el marcador: en alrededor de un minuto '
-  + 'descarga cellshop-AAAA-MM-DD.json. Ese archivo se carga con "Importar archivo Cellshop".';
-document.getElementById('pl-cellshop-bookmarklet').href =
-  'javascript:' + encodeURIComponent(`(${cellshopBookmarklet.toString()})(${JSON.stringify(CELLSHOP_TERMS)})`);
-
-async function importCellshopFile(file) {
-  if (!file) return;
-  try {
-    let data;
-    try { data = JSON.parse(await file.text()); } catch { throw new Error('el archivo no es un JSON válido'); }
-    if (!data || data.source !== 'cellshop' || !Array.isArray(data.items)) {
-      throw new Error('no es un archivo bajado con el marcador ⬇ Cellshop');
-    }
-    // El listado no informa la marca: sale del nombre. Lo que no es coreano no entra (el buscador es difuso).
-    const rows = data.items.map(x => ({ code: String(x.code), name: String(x.name || ''), price: Number(x.price), site: '', inStock: true }));
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : undefined;
-    alert(plSetSiteSource('cellshop', 'Cellshop', rows, date, 'kbeauty').msg);
-  } catch (err) {
-    alert(`No se pudo importar el archivo de Cellshop: ${err.message}. No se agregó nada.`);
-  }
-}
-
-async function plFetchAtacadoKbeautyRows(progress) {
-  const classes = ['Hidratantes', 'Sérum', 'Máscaras', 'Pads e Patchs', 'Limpeza e Demaquilantes', 'Tônicos', 'Protetor Solar', 'Contorno de Olhos'];
-  const filter = `classificacao_br:=[${classes.map(c => '`' + c + '`').join(',')}] && estoque:=true`;
-  const rows = [];
-  for (let page = 1; ; page++) {
-    const url = `${ATACADO_SEARCH}?` + new URLSearchParams({ q: '*', query_by: 'nome_site_es', filter_by: filter, per_page: 250, page });
-    const d = await plFetchKbeautyJson(url, { 'X-TYPESENSE-API-KEY': ATACADO_KEY });
-    progress(d.hits.length);
-    rows.push(...d.hits.map(h => {
-      const x = h.document;
-      return { code: String(x.produto_id || x.id), name: String(x.nome_site_es || x.nome_site_br || '').replace(/\s+/g, ' ').trim(),
-        price: Number(x.preco_promocional > 0 ? x.preco_promocional : x.preco_base), site: x.fabricante_site_es || x.fabricante_site_br, inStock: x.estoque === true };
-    }));
-    if (page * 250 >= d.found) return rows;
-    if (!d.hits.length || page >= 40) throw new Error('catálogo incompleto');
-  }
-}
-
-// Shopping China muestra los precios en guaraníes con una tasa propia (~6.710 Gs/USD al 2026-10-30, redondeado a
-// los mil). La tasa se calcula en cada importación con unas fichas (el US$ solo está en la ficha) y el resto se
-// convierte desde el listado, sin abrir una ficha por producto. Por el redondeo a los mil el US$ puede diferir hasta
-// ~8 centavos (TIRTIR usa ,95: US$ 8,95 y 9,00 dan los mismos ₲ 60.000). El listado no informa stock: se toma como
-// disponible. Las marcas del sitio que no son coreanas no se piden.
-const SHOPPINGCHINA_RATE_DEFAULT = 6710;
-const SHOPPINGCHINA_TOLERANCE_USD = 0.08;
-const plShoppingChinaUsd = (pyg, rate) => Math.round(pyg / rate * 100) / 100;
-
-async function plFetchShoppingChinaRows(progress) {
-  // Una sola lista: la categoría Cosméticos filtrada por las marcas coreanas de su filtro (24 por página).
-  const { brands } = await plFetchKbeautyJson(`${WORKER}/shoppingchina?brands=1`);
-  // El filtro escribe "MARY& MAY": se normaliza el & antes de buscar la marca.
-  const ids = (brands || []).filter(b => detectKbeautyBrand(b.name.replace(/\s*&\s*/g, ' & '))).map(b => b.id);
-  if (!ids.length) throw new Error('no se encontraron marcas coreanas en el filtro del sitio');
-  const page = async n => {
-    const d = await plFetchKbeautyJson(`${WORKER}/shoppingchina?` + new URLSearchParams({ brandIds: JSON.stringify(ids), page: n }));
-    progress(d.items.length);
-    return d;
-  };
-  const first = await page(1);
-  const pages = Math.ceil((first.total || 0) / 24);
-  if (pages > 60) throw new Error('el catálogo supera las 60 páginas');
-  const rest = await plMapLimit(Array.from({ length: Math.max(0, pages - 1) }, (_, k) => k + 2), 4, page);
-  const products = new Map();
-  for (const d of [first, ...rest])
-    for (const x of d.items) if (x.pyg > 0 && detectKbeautyBrand(x.name) && !plIsNotSkincare(x.name)) products.set(x.code, x);
-  const list = [...products.values()];
-  if (!list.length) return [];
-
-  // Tasa: fichas de productos repartidos por el listado; la mediana de Gs ÷ US$, verificada contra cada ficha.
-  const sample = Array.from({ length: Math.min(5, list.length) }, (_, k) => list[Math.floor(k * list.length / Math.min(5, list.length))]);
-  const checks = (await plMapLimit(sample, 3, async x => {
-    try {
-      const d = await plFetchKbeautyJson(`${WORKER}/shoppingchina?` + new URLSearchParams({ product: x.path }));
-      return d.price > 0 ? { pyg: x.pyg, usd: d.price } : null;
-    } catch { return null; }
-  })).filter(Boolean);
-  let rate = SHOPPINGCHINA_RATE_DEFAULT, note = '';
-  if (checks.length) {
-    const ratios = checks.map(c => c.pyg / c.usd).sort((a, b) => a - b);
-    rate = Math.round(ratios[Math.floor(ratios.length / 2)]);
-    const off = checks.filter(c => Math.abs(plShoppingChinaUsd(c.pyg, rate) - c.usd) > SHOPPINGCHINA_TOLERANCE_USD).length;
-    if (off) note = `⚠ ${off} de ${checks.length} fichas no coinciden con la tasa ${rate.toLocaleString('es-AR')} Gs/USD: revisá los precios.`;
-  } else {
-    note = `⚠ No se pudo leer ninguna ficha: se usó la tasa por defecto (${SHOPPINGCHINA_RATE_DEFAULT.toLocaleString('es-AR')} Gs/USD).`;
-  }
-  const rows = list.map(x => ({ code: x.code, name: x.name, price: plShoppingChinaUsd(x.pyg, rate), site: '', inStock: true }));
-  rows.sourceSuffix = ` · ${rate.toLocaleString('es-AR')} Gs/USD`;
-  rows.importNote = [`Precios convertidos a ${rate.toLocaleString('es-AR')} Gs/USD (tasa de la tienda, verificada con ${checks.length} fichas).`, note].filter(Boolean).join('\n');
-  return rows;
-}
-
-// LG Importados (card 20, tanda 2): la misma API que perfumes, categoría COSMETICOS (~32 páginas de 100). Se pide
-// entera y no solo "Skin Care": hay coreanos en Bronzeadores (protectores solares) y Kits.
-async function plFetchLgKbeautyRows(progress) {
-  const page = async n => {
-    const d = await plFetchKbeautyJson(`${WORKER}/lgimportados?cat=COSMETICOS&page=${n}`);
-    if (!Array.isArray(d.items)) throw new Error('listado inválido');
-    progress(d.items.length);
-    return d;
-  };
-  const first = await page(0);
-  if (!(first.pages >= 1) || first.pages > 100) throw new Error('cantidad de páginas inválida');
-  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 1), 8, page);
-  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
-}
-
 // Mega Eletro corta la conexión desde la página 20: se lee la mitad del listado ordenado por nombre A–Z y la otra
 // mitad Z–A (las páginas del medio se repiten: se deduplica por código al armar los ítems). De a uno: con 2 a la vez
 // a veces da 429 y con 4 casi siempre; 38 seguidos de a uno pasaron sin error (2026-10-31). Si igual corta, espera
@@ -12754,20 +12559,6 @@ async function plFetchMegaEletroRows(progress) {
   return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
 }
 
-// Flash Importados: categoría Facial (~25 páginas de 50). Los agotados vienen sin precio y quedan afuera.
-async function plFetchFlashRows(progress) {
-  const page = async n => {
-    const d = await plFetchKbeautyJson(`${WORKER}/flash?page=${n}`);
-    if (!Array.isArray(d.items)) throw new Error('listado inválido');
-    progress(d.items.length);
-    return d;
-  };
-  const first = await page(1);
-  if (!(first.pages >= 1) || first.pages > 60) throw new Error('cantidad de páginas inválida');
-  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 2), 4, page);
-  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
-}
-
 // Star Company (2026-11-01): la misma ruta que perfumes con la categoría 100 "Cosméticos" entera (~620 productos,
 // 7 páginas de 96). Hay coreanos fuera de la subcategoría 617 "Cosméticos coreanos" (Medicube, Celimax). El listado
 // solo muestra lo que tiene stock.
@@ -12784,33 +12575,11 @@ async function plFetchStarKbeautyRows(progress) {
   return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
 }
 
-// Genove (2026-11-01): la misma API que perfumes (CORS, directo), categoría 29 "Skincare" (~130 productos, 2 páginas).
-const GENOVE_SKINCARE = 29;
-async function plFetchGenoveKbeautyRows(progress) {
-  const headers = { 'x-api-key': GENOVE_KEY, Accept: 'application/json' };
-  const url = page => `${GENOVE_API}?` + new URLSearchParams({ categoria_id: GENOVE_SKINCARE, per_page: 100, page });
-  const first = await plFetchKbeautyJson(url(1), headers);
-  if (!Array.isArray(first.data)) throw new Error('listado inválido');
-  progress(first.data.length);
-  const rest = await plMapLimit(Array.from({ length: Math.max(0, Math.min(first.meta?.last_page || 1, 20) - 1) }, (_, k) => k + 2), 4,
-    async p => { const d = await plFetchKbeautyJson(url(p), headers); progress((d.data || []).length); return d; });
-  return [first, ...rest].flatMap(d => d.data || []).map(x => ({
-    code: String(x.codigo || x.id), name: String(x.name || '').replace(/\s+/g, ' ').trim(), price: Number(x.price),
-    site: (x.brand && x.brand.name) || '', inStock: x.stock > 0 && x.active !== false
-  }));
-}
-
 const PL_KBEAUTY_SITE_IMPORTS = {
-  atacado: { label: 'Atacado Connect', fetchRows: plFetchAtacadoKbeautyRows },
   bigs: { label: 'Bigs', fetchRows: plFetchBigsKbeautyRows },
-  shoppingchina: { label: 'Shopping China', fetchRows: plFetchShoppingChinaRows },
   pontocom: { label: 'Ponto Com', fetchRows: plFetchPontocomKbeautyRows },
-  lg: { label: 'LG Importados', fetchRows: plFetchLgKbeautyRows },
   megaeletro: { label: 'Mega Eletro', fetchRows: plFetchMegaEletroRows },
-  flash: { label: 'Flash Importados', fetchRows: plFetchFlashRows },
   star: { label: 'Star Company', fetchRows: plFetchStarKbeautyRows },
-  genove: { label: 'Genove', fetchRows: plFetchGenoveKbeautyRows },
-  intershop: { label: 'Intershop', fetchRows: plFetchIntershopKbeautyRows },
 };
 let plKbeautyImportBusy = false;
 
