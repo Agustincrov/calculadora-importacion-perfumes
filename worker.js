@@ -2,7 +2,7 @@
 // Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogos de perfumes de
 // Ponto Com (pontocom.com) y Star Company (starcompany-py.com), scraping del listado paginado, Multipass
 // (multipass.com.py) y LG Importados (lgimportados.com), que tienen JSON pero no mandan CORS, cosmética coreana (Bigs,
-// Shopping China, Ponto Com, LG, Mega Eletro, Flash Importados y Star Company) y publicación de docs/catalogo.html en GitHub
+// Shopping China, Ponto Com, LG, Mega Eletro, Flash Importados, Star Company e Intershop), perfumes de Intershop y publicación de docs/catalogo.html en GitHub
 // (/publish-catalog). Macedonia no pasa por acá: su hosting (SiteGround) le responde con un captcha a todo
 // pedido que sale de Cloudflare; el catálogo se baja desde el navegador (ver index.html). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
 // se sacaron el 2026-10-10.
@@ -48,6 +48,7 @@ async function handle(req) {
     if (path === '/shoppingchina') return await fetchShoppingChina(new URL(req.url).searchParams);
     if (path === '/megaeletro') return await fetchMegaEletroPage(new URL(req.url).searchParams);
     if (path === '/flash') return await fetchFlashPage(Number(new URL(req.url).searchParams.get('page')));
+    if (path === '/intershop') return await fetchIntershopPage(new URL(req.url).searchParams);
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
     return jsonResp({ error: 'not found' }, 404);
   } catch (e) {
@@ -400,6 +401,38 @@ async function fetchFlashPage(page) {
   }).filter(x => x.code && x.name);
   const pages = Math.max(0, ...[...html.matchAll(/[?&](?:amp;)?page=(\d+)/g)].map(m => Number(m[1])));
   if (!items.length && page === 1) return jsonResp({ error: 'flash: no se encontró el listado' }, 502);
+  return jsonResp({ page, pages, items });
+}
+
+// Intershop Importados (intershop.com.py, Laravel): listado HTML, 120 por página (el sitio acepta cualquier qty, pero
+// una página de 1000 pesa 3,4 MB). La tarjeta trae precio "U$35.00", código (intershop-product-ref) y el nombre cortado
+// ("…Eau de Par..."); el nombre completo sale del JSON-LD ItemList de la misma página, cruzado por la URL del producto.
+const INTERSHOP_CATS = {
+  perfumes: 'beleza-7/perfumes-27',
+  arabes: 'beleza-7/perfumes-27/perfumes-arabes-141',
+  cosmeticos: 'beleza-7/cosmeticos-266',
+};
+async function fetchIntershopPage(q) {
+  const cat = q.get('cat') || 'perfumes', page = Number(q.get('page') || 1);
+  if (!INTERSHOP_CATS[cat]) return jsonResp({ error: 'cat inválida' }, 400);
+  if (!Number.isInteger(page) || page < 1 || page > 30) return jsonResp({ error: 'page inválida' }, 400);
+  const html = await fetchKbeautyPage(`https://intershop.com.py/category/${INTERSHOP_CATS[cat]}?qty=120&sort=name_asc&page=${page}`);
+  const fullNames = {};
+  for (const m of html.matchAll(/"name":\s*"((?:[^"\\]|\\.)*)",\s*"url":\s*"(https:\/\/intershop\.com\.py\/item\/[^"]+)"/g)) {
+    try { fullNames[m[2]] = JSON.parse('"' + m[1] + '"'); } catch { /* Se usa el nombre de la tarjeta. */ }
+  }
+  const items = html.split('intershop-product-card"').slice(1).map(card => {
+    const url = card.match(/href="(https:\/\/intershop\.com\.py\/item\/[^"]+)"/)?.[1] || '';
+    const price = card.match(/intershop-product-price">\s*U\$\s*([\d.,]+)/);
+    return {
+      code: kbeautyHtmlText(card.match(/intershop-product-ref[^>]*>([^<]*)</)?.[1]) || url.match(/-(\d+)$/)?.[1] || '',
+      name: kbeautyHtmlText(fullNames[url] || card.match(/intershop-product-name">([^<]*)</)?.[1]),
+      price: price ? Number(price[1].replace(/,/g, '')) || null : null,
+      stock: card.includes('add-to-cart-btn') ? 1 : 0,
+    };
+  }).filter(x => x.code && x.name);
+  const pages = Math.max(1, ...[...html.matchAll(/[?&](?:amp;)?page=(\d+)/g)].map(m => Number(m[1])));
+  if (!items.length && page === 1) return jsonResp({ error: 'intershop: no se encontró el listado' }, 502);
   return jsonResp({ page, pages, items });
 }
 

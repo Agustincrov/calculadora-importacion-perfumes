@@ -788,7 +788,11 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Mobile Zone
         </button>
-        <button class="btn btn-outline pl-perfume-only" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados y Mobile Zone uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-intershop-btn" onclick="importSiteCatalog('intershop')" title="Trae los perfumes disponibles de intershop.com.py (precio US$ del sitio). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Traer catálogo Intershop
+        </button>
+        <button class="btn btn-outline pl-perfume-only" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados, Mobile Zone e Intershop uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
           Traer todos
         </button>
         <label class="pl-perfume-only" style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
@@ -831,6 +835,7 @@
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-flash-btn" onclick="importKbeautySiteCatalog('flash')">Traer Flash Importados</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-star-btn" onclick="importKbeautySiteCatalog('star')">Traer Star Company</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-genove-btn" onclick="importKbeautySiteCatalog('genove')">Traer Genove</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-intershop-btn" onclick="importKbeautySiteCatalog('intershop')">Traer Intershop</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
       </div>
 
@@ -12314,6 +12319,52 @@ async function plFetchMobileZoneRows(progress) {
   }).filter(x => !MOBILEZONE_NOT_PERFUME_RE.test(x.name));
 }
 
+// Intershop Importados (intershop.com.py, card 24): listado HTML vía Worker (/intershop, sin CORS), 120 por página
+// (~6 páginas). El listado solo muestra lo disponible y no informa la marca: sale del nombre. La subcategoría
+// "Perfumes Árabes" se pide aparte para el siteCat.
+// "Perfume Lattafa Khamrah Masculino 100ml", "Kit de Perfume Lattafa Pure Musk EDP 100ml + Deo",
+// "Perfume Tester Carolina Herrera Good Girl…", "Pefume Arabiyat…", "Parfum Perfume Al Wataniah…", "P.RAYHAAN GIZA H EDP 100ML"
+function plCleanIntershopName(raw) {
+  const n = plStripAccents(String(raw)).toUpperCase().replace(/[’´`]/g, "'").replace(/\s+/g, ' ').trim()
+    .replace(/^PARFUM (?=PERFUME )/, '')
+    .replace(/^(PEFUME|PERFUNE|PERUME|PERFUMR)\b/, 'PERFUME')
+    .replace(/^KIT DE PERFUME\b/, 'KIT PERFUME')
+    .replace(/^PERFUME TESTER\b/, 'TESTER PERFUME')
+    .replace(/^P\.(?=[A-Z])/, 'PERFUME ');
+  return plCleanPontocomName(n).replace(/\bFEMENINO\b/g, 'FEM').replace(/\s+/g, ' ').trim();
+}
+
+async function plFetchIntershopPages(cat, progress) {
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/intershop?cat=${cat}&page=${n}`);
+    if (!Array.isArray(d.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page(1);
+  if (!(first.pages >= 1) || first.pages > 30) throw new Error('cantidad de páginas inválida');
+  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 2), 6, page);
+  return [first, ...rest].flatMap(d => d.items);
+}
+
+// En la categoría Perfumes se cuelan un tónico Medicube y "My Unicorn" (infantil, sin el "Eau" de NON_PERFUME_PATTERNS).
+// Nivea Deo, Victoria's Secret Splash y Memo "Hair" los saca plBuildSiteItems.
+const INTERSHOP_NOT_PERFUME_RE = /^(TONER|MY UNICORN)\b/;
+
+async function plFetchIntershopRows(progress) {
+  const [rows, arabes] = await Promise.all([plFetchIntershopPages('perfumes', progress), plFetchIntershopPages('arabes', () => {})]);
+  const arabe = new Set(arabes.map(x => x.code));
+  return rows.filter(x => x.stock > 0).map(x => {
+    const name = plCleanIntershopName(x.name);
+    return { code: x.code, name, price: x.price, site: plSiteBrandFromName(name), siteCat: arabe.has(x.code) ? 'arabe' : '' };
+  }).filter(x => !INTERSHOP_NOT_PERFUME_RE.test(x.name));
+}
+
+// Cosmética (card 24): la categoría Cosméticos entera (~120 productos, una página); quedan solo las marcas coreanas.
+async function plFetchIntershopKbeautyRows(progress) {
+  return (await plFetchIntershopPages('cosmeticos', progress)).map(x => plKbeautyWorkerRow(x));
+}
+
 // ── Importadores de cosmética coreana ────────────────────────────
 // Separados de perfumes: las exclusiones de skincare se aplican recién al generar.
 function plBuildKbeautySiteItems(rows) {
@@ -12759,6 +12810,7 @@ const PL_KBEAUTY_SITE_IMPORTS = {
   flash: { label: 'Flash Importados', fetchRows: plFetchFlashRows },
   star: { label: 'Star Company', fetchRows: plFetchStarKbeautyRows },
   genove: { label: 'Genove', fetchRows: plFetchGenoveKbeautyRows },
+  intershop: { label: 'Intershop', fetchRows: plFetchIntershopKbeautyRows },
 };
 let plKbeautyImportBusy = false;
 
@@ -12807,7 +12859,8 @@ const PL_SITE_IMPORTS = {
   star:      { label: 'Star Company', btn: 'pl-star-btn', fetchRows: plFetchStarCompanyRows },
   multipass: { label: 'Multipass', btn: 'pl-multipass-btn', fetchRows: plFetchMultipassRows },
   lg:        { label: 'LG Importados', btn: 'pl-lg-btn', fetchRows: plFetchLgRows },
-  mobilezone: { label: 'Mobile Zone', btn: 'pl-mobilezone-btn', fetchRows: plFetchMobileZoneRows }
+  mobilezone: { label: 'Mobile Zone', btn: 'pl-mobilezone-btn', fetchRows: plFetchMobileZoneRows },
+  intershop: { label: 'Intershop', btn: 'pl-intershop-btn', fetchRows: plFetchIntershopRows }
 };
 
 // Arma los ítems de un sitio y reemplaza su carga anterior (marcada con `site`). Devuelve el aviso y si tiene
