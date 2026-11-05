@@ -851,24 +851,35 @@
       <div class="card-title">2. Configuración de precios</div>
 
       <div class="rates-grid" style="margin-bottom:16px;">
+        <div class="rate-item pl-kbeauty-only">
+          <label for="r-kb-comision-pct">Comisión cosmética (% del producto) <span class="col-tip" data-tip="Porcentaje sobre el precio del proveedor en USD × USDT. No se cobra sobre el envío ni el fee. Reemplaza la comisión fija de perfumes."></span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">%</span>
+            <input type="number" id="r-kb-comision-pct" value="12" min="0" step="0.5" />
+          </div>
+        </div>
+        <div class="rate-item pl-kbeauty-only">
+          <label for="r-kb-envio-fijo">Envío cosmética/producto (ARS) <span class="col-tip" data-tip="Envío por unidad de cosmética. El fee compartido se reparte según este envío ÷ envío total, hasta el fee entero. Si alguno de los envíos es 0, se suma el fee entero."></span></label>
+          <div class="rate-input-wrap">
+            <span class="prefix">$</span>
+            <input type="number" id="r-kb-envio-fijo" value="2000" min="0" step="100" />
+          </div>
+        </div>
         <div class="rate-item" style="justify-content:center;">
-          <label>Envío fijo y redondeo <span class="col-tip" data-tip="Usa los mismos valores de 'Envío fijo/producto' y 'Redondeo precio' configurados en la Calculadora, para que el precio publicado coincida con el que arma la Calculadora."></span></label>
+          <label>Envío fijo y redondeo <span class="col-tip" data-tip="Perfumes usa el envío fijo de la Calculadora. Cosmética usa su propio envío por producto. El redondeo de la Calculadora se comparte entre las dos líneas."></span></label>
           <div style="font-size:.82rem;color:var(--muted);padding:8px 0;">
-            Envío fijo: <strong id="pl-envio-fijo-preview">$ 0</strong>/producto ·
+            <span class="pl-perfume-only">Envío fijo: <strong id="pl-envio-fijo-preview">$ 0</strong>/producto ·</span>
             Redondeo: <strong id="pl-round-step-preview">$ 0</strong>
-            <div style="font-size:.72rem;margin-top:2px;">Se editan en la pestaña Calculadora — "Tasas y configuración".</div>
+            <div style="font-size:.72rem;margin-top:2px;"><span class="pl-perfume-only">Se editan en la pestaña Calculadora — "Tasas y configuración".</span><span class="pl-kbeauty-only">El redondeo se edita en la Calculadora. El envío de perfumes no se usa en cosmética.</span></div>
           </div>
         </div>
       </div>
 
       <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">
         Ganancia por categoría
-        <span class="col-tip" data-tip="Ganancia = monto fijo + % del producto (precio del proveedor × USDT). La comisión, el envío fijo y el fee USDT se suman al costo, sin ganancia encima. La ganancia en pesos siempre crece con el costo, sin saltos entre tramos. Se usa en el generador y en el autocompletado de la calculadora. Los productos sin categoría usan la de Diseñador."></span>
+        <span class="col-tip" data-tip="Ganancia = monto fijo + % del producto (precio del proveedor × USDT). La comisión, el envío fijo y el fee USDT se suman al costo, sin ganancia encima. La ganancia en pesos siempre crece con el costo, sin saltos entre tramos. Se usa en el generador y en el autocompletado de la calculadora. Los perfumes sin categoría usan Diseñador. Cosmética usa su propia fórmula, solo en el generador."></span>
       </div>
       <div id="pl-formulas"></div>
-      <div class="pl-kbeauty-only" style="font-size:.78rem;color:#b45309;margin-top:4px;">
-        Precio provisorio: la cosmética usa por ahora la fórmula de Diseñador. La fórmula propia de cosmética va en una card aparte.
-      </div>
 
       <div class="btn-group" style="margin-top:16px;">
         <button class="btn btn-success" onclick="generatePriceList()">
@@ -1033,7 +1044,7 @@ function getRate(id) { return parseFloat(document.getElementById(id).value) || 0
 // la API al cargar, esto es configuración propia del usuario y no debe perderse al recargar.
 // Se declara acá arriba (no junto al resto de la persistencia, más abajo) para poder restaurarla
 // ANTES que cualquier otra cosa la lea — ver la llamada a loadBusinessConfig() unas líneas abajo.
-const BUSINESS_CONFIG_IDS = ['r-comision', 'r-envio', 'r-envio-fijo', 'r-usdt-fee', 'r-round-step'];
+const BUSINESS_CONFIG_IDS = ['r-comision', 'r-envio', 'r-envio-fijo', 'r-usdt-fee', 'r-round-step', 'r-kb-comision-pct', 'r-kb-envio-fijo'];
 function saveBusinessConfig() {
   try {
     const cfg = {};
@@ -1050,7 +1061,7 @@ function loadBusinessConfig() {
     if (!cfg) return;
     BUSINESS_CONFIG_IDS.forEach(id => {
       const el = document.getElementById(id);
-      if (el && cfg[id] != null && cfg[id] !== '') el.value = cfg[id];
+      if (el && cfg[id] != null && (cfg[id] !== '' || id.startsWith('r-kb-'))) el.value = cfg[id];
     });
   } catch(e) {}
 }
@@ -2038,12 +2049,14 @@ function clearAllPlSources() {
 const PL_MARGIN_FORMULA_SETS = [
   { key: 'disenador', label: 'Diseñador' },
   { key: 'arabe',     label: 'Árabe' },
-  { key: 'nicho',     label: 'Nicho' }
+  { key: 'nicho',     label: 'Nicho' },
+  { key: 'kbeauty',   label: 'Cosmética coreana' }
 ];
 const PL_DEFAULT_FORMULAS = {
   disenador: { fixed: 2000,  pct: 35 },
   arabe:     { fixed: 0,     pct: 46 },
-  nicho:     { fixed: 40000, pct: 18.5 }
+  nicho:     { fixed: 40000, pct: 18.5 },
+  kbeauty:   { fixed: 2000,  pct: 42.5 }
 };
 const PL_FORMULAS_STORAGE_KEY = 'importo-margin-formulas-v2';
 let plFormulas = JSON.parse(JSON.stringify(PL_DEFAULT_FORMULAS));
@@ -9737,7 +9750,7 @@ function renderPlFormulas() {
   const el = document.getElementById('pl-formulas');
   if (!el) return;
   el.innerHTML = PL_MARGIN_FORMULA_SETS.map(({ key, label }) => `
-    <div style="margin-bottom:10px;">
+    <div class="${key === 'kbeauty' ? 'pl-kbeauty-only' : 'pl-perfume-only'}" style="margin-bottom:10px;">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <span style="font-size:.82rem;font-weight:700;min-width:80px;">${label}</span>
         <span style="font-size:.8rem;color:var(--muted);">Ganancia = $</span>
@@ -9761,14 +9774,15 @@ function updatePlFormula(key, field, val) {
 }
 
 // Ejemplos con las tasas y la config actuales, para ver cómo queda cada fórmula sin generar.
-const PL_FORMULA_PREVIEW_USD = { disenador: [30, 60, 100, 150, 300], arabe: [10, 20, 30, 40, 60], nicho: [60, 150, 300, 500] };
+const PL_FORMULA_PREVIEW_USD = { disenador: [30, 60, 100, 150, 300], arabe: [10, 20, 30, 40, 60], nicho: [60, 150, 300, 500], kbeauty: [3, 10, 20, 40] };
 function renderPlFormulaPreviews() {
-  const cfg = plGetConfig();
   PL_MARGIN_FORMULA_SETS.forEach(({ key }) => {
+    const line = key === 'kbeauty' ? 'kbeauty' : 'perfumes';
+    const cfg = plGetConfig(line);
     const el = document.getElementById(`pl-formula-preview-${key}`);
     if (!el) return;
     el.textContent = PL_FORMULA_PREVIEW_USD[key].map(usd => {
-      const cost   = plComputeCostTotal(usd, cfg.rates, cfg.envioFijo);
+      const cost   = plComputeCostTotal(usd, cfg.rates, cfg.envioFijo, line);
       const margin = marginForPriceUsd(usd, key);
       const price  = plFinalPrice(cost, margin, cfg.roundStep);
       return `USD ${usd} → ${margin}% · gana ${fmt_ars(price - cost)}`;
@@ -9776,13 +9790,14 @@ function renderPlFormulaPreviews() {
   });
 }
 
-// category = 'nicho' | 'disenador' | 'arabe' | '' (ver plCategoryFor); sin categoría usa diseñador.
+// category = 'kbeauty' para cosmética; en perfumes, plCategoryFor o diseñador si no tiene categoría.
 // La ganancia (fijo + % del producto) se convierte a margen sobre el precio, que es lo que esperan
 // plFinalPrice y las filas de la calculadora.
 function marginForPriceUsd(priceUsd, category = '') {
   const f    = plFormulas[category] || plFormulas.disenador;
-  const cfg  = plGetConfig();
-  const cost = plComputeCostTotal(priceUsd, cfg.rates, cfg.envioFijo);
+  const line = category === 'kbeauty' ? 'kbeauty' : 'perfumes';
+  const cfg  = plGetConfig(line);
+  const cost = plComputeCostTotal(priceUsd, cfg.rates, cfg.envioFijo, line);
   const gain = f.fixed + priceUsd * cfg.rates.usdt * f.pct / 100;
   return cost + gain > 0 ? Math.round(gain / (cost + gain) * 1000) / 10 : 0;
 }
@@ -10055,10 +10070,10 @@ function detectFuzzyDuplicates(items) {
 // Misma cadena que la calculadora (USDT directo). NOTA: la lista de precios no tiene un pedido real.
 // El fee USDT (1 transferencia por embarque) se reparte igual que el envío: la misma proporción
 // envío fijo ÷ envío total (ej. $5.000 de $20.000 → 1/4 del fee por perfume).
-function plComputeCostTotal(priceUsd, rates, envioFijo) {
+function plComputeCostTotal(priceUsd, rates, envioFijo, line = 'perfumes') {
   const { usdt, comUSD, usdtFeeUsd, envioTotal } = rates;
   const costoARS1   = priceUsd * usdt;
-  const comisionARS = comUSD * usdt;
+  const comisionARS = line === 'kbeauty' ? costoARS1 * rates.comPct / 100 : comUSD * usdt;
   const feeShare    = envioTotal > 0 && envioFijo > 0 ? Math.min(1, envioFijo / envioTotal) : 1;
   const feeUsdt     = (usdtFeeUsd || 0) * usdt * feeShare;
   return costoARS1 + comisionARS + envioFijo + feeUsdt;
@@ -10072,13 +10087,14 @@ function plFinalPrice(costTotal, marginPct, roundStep) {
   return Math.ceil(raw / step) * step;
 }
 
-function plGetConfig() {
+function plGetConfig(line = 'perfumes') {
   return {
-    envioFijo: getRate('r-envio-fijo'),
+    envioFijo: getRate(line === 'kbeauty' ? 'r-kb-envio-fijo' : 'r-envio-fijo'),
     roundStep: getRate('r-round-step') || 1,
     rates: {
       usdt:       getRate('r-usdt'),
       comUSD:     getRate('r-comision'),
+      comPct:     getRate('r-kb-comision-pct'),
       usdtFeeUsd: getRate('r-usdt-fee'),
       envioTotal: getRate('r-envio')
     }
@@ -10091,11 +10107,12 @@ function refreshPlPricing() {
 }
 
 function recomputePlPricing() {
-  const cfg = plGetConfig();
+  const configs = { perfumes: plGetConfig(), kbeauty: plGetConfig('kbeauty') };
   plItems.forEach(it => {
-    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.rates, cfg.envioFijo);
-    // Cosmética (card 19): precio provisorio con la fórmula de Diseñador ('' = sin categoría) hasta su card de pricing.
-    it.marginPct   = marginForPriceUsd(it.priceUsd, it.line === 'kbeauty' ? '' : plCategoryFor(it));
+    const line = it.line === 'kbeauty' ? 'kbeauty' : 'perfumes';
+    const cfg = configs[line];
+    it.costTotal   = plComputeCostTotal(it.priceUsd, cfg.rates, cfg.envioFijo, line);
+    it.marginPct   = marginForPriceUsd(it.priceUsd, line === 'kbeauty' ? 'kbeauty' : plCategoryFor(it));
     it.finalPriceArs = plFinalPrice(it.costTotal, it.marginPct, cfg.roundStep);
   });
 }
@@ -12804,7 +12821,7 @@ document.getElementById('r-blue').addEventListener('input', recalculate);
 // Config de negocio: recalcula igual que las tasas de mercado, pero además se persiste
 // (a diferencia de las tasas, que siempre se refrescan de la API al recargar).
 BUSINESS_CONFIG_IDS.forEach(id => {
-  document.getElementById(id).addEventListener('input', () => { saveBusinessConfig(); recalculate(); refreshPlPricing(); });
+  document.getElementById(id)?.addEventListener('input', () => { saveBusinessConfig(); recalculate(); refreshPlPricing(); });
 });
 
 // ─────────────────────────────────────────────
