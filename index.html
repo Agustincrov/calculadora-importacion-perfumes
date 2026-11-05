@@ -13743,6 +13743,15 @@ function plTranslatePt(text) {
 // Nombres de fragancia donde la palabra de la marca es parte inseparable del nombre real
 // (no una repetición redundante del proveedor) — si aparecen, no le tocamos la marca al nombre.
 // Se amplía a mano cuando aparezcan más casos así.
+// Alias de KNOWN_BRANDS que son líneas o perfumes de la marca, no otra forma de escribirla: sirven para detectar la
+// marca, pero plCleanName no los saca del nombre ("XERJOFF TORINO 21" mostraba "21"; "ARMAF CLUB DE NUIT MANDARIN
+// SKY", "Club de Nuit").
+const PL_LINE_ALIASES = new Set([
+  'CASAMORATI', 'TORINO', 'REPLICA', 'BLUE SEDUCTION', 'KING OF SEDUCTION', 'UN JARDIN EN', 'AMORE MIO', 'BELIZE',
+  'SULTAN AL LAIL', 'MANDARIN SKY', 'QAED AL FURSAN', 'YARA ELIXIR', 'DELILAH BLANC', 'BAROQUE ROUGE', 'JEAN LOWE',
+  'LIL ABAD', 'INSURRECTION', 'SWEET FEELING', 'MANDINO', 'CACHOTTERIE', 'LEA & MIA', 'LOVE ME FOLIE', 'QUORUM'
+]);
+
 const PL_PROTECTED_NAMES = [
   'TOMMY GIRL', 'TOMMY NOW', 'TOMMY FOREVER',
 ];
@@ -13768,7 +13777,7 @@ function plCleanName(name, brand) {
   if (isProtected) return base;
 
   const kb = KNOWN_BRANDS.find(e => e[0] === brand);
-  const candidates = [...(kb ? [kb[0], ...kb.slice(1)] : [brand]), ...(PL_PARENT_BRANDS[brand] || [])];
+  const candidates = [...(kb ? [kb[0], ...kb.slice(1).filter(a => !PL_LINE_ALIASES.has(a))] : [brand]), ...(PL_PARENT_BRANDS[brand] || [])];
   let stripped = base;
   for (const cand of candidates) {
     const escaped  = cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
