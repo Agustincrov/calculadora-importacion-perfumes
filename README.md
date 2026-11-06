@@ -42,7 +42,7 @@ Importo fetches all rates automatically and computes every number in real time a
 - Merges the same product across suppliers keeping the cheapest, and suggests fuzzy duplicates for one-click review (decisions are remembered)
 - Prices every product with a per-category profit formula (fixed ARS amount + % of the product cost, one each for designer, Arabic and niche), using the same costing and rounding as the calculator
 - Excludes non-perfume items automatically; per-brand publish filter
-- A separate Korean cosmetics line (skincare only): its own sources, store importers, brand list, review and Excel export, never mixed with the perfumes
+- A separate Korean cosmetics line (skincare only): its own sources, store importers, brand list, review and Excel export, never mixed with the perfumes. It has its own costs (12% product commission and ARS 2,000 shipping per unit) and profit formula (ARS 2,000 + 42.5% of product cost), editable in the generator
 - Exports to Excel, or publishes a searchable client catalog (`docs/catalogo.html`) to GitHub Pages in one click — with category, brand and price filters, a cart and a WhatsApp order button
 
 **Access control**
