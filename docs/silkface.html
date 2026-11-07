@@ -136,12 +136,13 @@ a { color: var(--accent-ink); }
 
 /* Hojas (filtros, marcas) */
 .sheet-wrap { position: fixed; inset: 0; z-index: 45; }
-.sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 86vh; background: var(--surface); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; box-shadow: 0 -12px 40px -20px rgba(10,30,38,.35); }
-.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 86vh; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px); background: var(--surface); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; box-shadow: 0 -12px 40px -20px rgba(10,30,38,.35); }
+.sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
 .sheet-head h2 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 21px; }
-.sheet-body { overflow-y: auto; padding: 14px 16px; display: grid; gap: 18px; overscroll-behavior: contain; }
-.sheet-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; gap: 10px; }
-.sheet-foot .btn { flex: 1; }
+.sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 16px; display: grid; gap: 18px; overscroll-behavior: contain; }
+.sheet-foot { flex: none; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.sheet-foot .btn { flex: 1 1 auto; white-space: nowrap; padding: 0 16px; }
+.sheet-foot .btn-ghost { flex: 0 1 40%; }
 @media (min-width: 1024px) { .sheet { left: auto; right: 24px; bottom: 24px; width: 420px; border-radius: 20px; } }
 
 .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 14px; white-space: nowrap; position: relative; }
@@ -183,11 +184,14 @@ html.kb-open .cartbar { display: none; }
 .announce b { color: #fff; }
 html.has-q .announce, html.has-q .intro, html.has-q .steps-wrap { display: none; }
 
-header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: rgba(247, 251, 252, .94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+/* Pegado con top negativo: la fila del logo se va con el scroll y queda fija la del buscador (sin saltos de alto). */
+header.top { position: sticky; top: calc(env(safe-area-inset-top, 0px) - var(--hdr-off, 0px)); z-index: 20; background: rgba(247, 251, 252, .94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 25; background: var(--bg); }
-.top .wrap { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "logo . act" "q q q"; gap: 10px 12px; align-items: center; padding-block: 10px; }
+.top .wrap { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "logo . info" "q q cart"; gap: 10px 12px; align-items: center; padding-block: 10px; }
 #logo { grid-area: logo; display: inline-flex; }
-.acts { grid-area: act; display: flex; gap: 4px; }
+.acts { display: contents; }
+.info-btn { grid-area: info; }
+#cart-btn { grid-area: cart; }
 .icon-btn { position: relative; width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; display: grid; place-items: center; color: var(--ink); }
 .icon-btn:hover { background: var(--accent-soft); }
 .badge { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
@@ -198,9 +202,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 #q::-webkit-search-cancel-button { display: none; }
 .qclear { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; background: transparent; border-radius: 999px; display: grid; place-items: center; color: var(--ink-2); }
 html:not(.has-q) .qclear { display: none; }
-html.compact #logo, html.compact .acts .info-btn, html.has-q #logo, html.has-q .acts .info-btn { display: none; }
-html.compact .top .wrap, html.has-q .top .wrap { grid-template-areas: "q q act"; }
-@media (min-width: 760px) { .top .wrap, html.compact .top .wrap, html.has-q .top .wrap { grid-template-columns: auto minmax(0, 520px) 1fr auto; grid-template-areas: "logo q . act"; } html.compact #logo, html.has-q #logo { display: inline-flex; } }
+html.has-q #logo, html.has-q .info-btn { display: none; }
+html.has-q .top .wrap { grid-template-areas: "q q cart"; }
+@media (min-width: 760px) { .top .wrap, html.has-q .top .wrap { grid-template-columns: auto minmax(0, 520px) 1fr auto auto; grid-template-areas: "logo q . info cart"; } html.has-q #logo, html.has-q .info-btn { display: inline-flex; } }
 
 .intro { padding-block: 18px 2px; display: grid; gap: 10px; }
 .intro h1 { margin: 0; font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 400; font-size: clamp(30px, 6vw, 44px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; max-width: 18ch; }
@@ -230,12 +234,17 @@ html.compact .top .wrap, html.has-q .top .wrap { grid-template-areas: "q q act";
 .fbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ink); background: var(--surface); font-weight: 600; font-size: 14px; }
 .fbtn .n { min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11.5px; display: grid; place-items: center; }
 #applied { display: contents; }
+/* Celular: "Ordenar por" en su propio renglón, debajo de Filtros y el conteo. */
+.sortsel { order: 3; flex-basis: 100%; display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 14px; color: var(--ink-2); }
+@media (min-width: 760px) { .sortsel { order: 0; flex-basis: auto; } }
+.sortsel select { min-height: 40px; padding: 0 30px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2312313D' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; color: var(--ink); font-size: 16px; font-weight: 600; -webkit-appearance: none; appearance: none; }
+.sortsel select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #fix { margin: 4px 0 0; }
 
 .layout { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); padding-bottom: 96px; }
 @media (min-width: 1100px) { .layout { grid-template-columns: minmax(0, 1fr) 300px; } }
 .brand-sec { margin-top: 18px; }
-.brand-h { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--hdr, 118px)); z-index: 5; margin: 0; padding: 10px 0 8px; background: var(--bg); font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 21px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); }
+.brand-h { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--hdr-vis, 118px)); z-index: 5; margin: 0; padding: 10px 0 8px; background: var(--bg); font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 21px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); }
 .brand-h .n { font-family: var(--f-body); font-size: 13px; color: var(--ink-2); font-weight: 500; }
 .rows { display: grid; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
@@ -251,7 +260,7 @@ html.compact .top .wrap, html.has-q .top .wrap { grid-template-areas: "q q act";
 
 aside.summary { display: none; }
 @media (min-width: 1100px) {
-  aside.summary { display: block; position: sticky; top: calc(var(--hdr, 80px) + 16px); align-self: start; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  aside.summary { display: block; position: sticky; top: calc(var(--hdr-vis, 80px) + 16px); align-self: start; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
   aside.summary h2 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 500; font-size: 21px; }
   .sum-lines { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; font-size: 14px; max-height: 320px; overflow: auto; }
   .sum-lines li { display: flex; justify-content: space-between; gap: 10px; }
@@ -261,7 +270,8 @@ aside.summary { display: none; }
 }
 .fg { display: grid; gap: 8px; }
 .fg-t { margin: 0; font-size: 14px; font-weight: 700; }
-.brand-q { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); }
+/* 16 px: con menos, iOS hace zoom al tocar el campo. */
+.brand-q { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); font-size: 16px; }
 .brand-list { display: grid; max-height: 240px; overflow: auto; }
 .brand-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid var(--line); }
 .brand-opt input { width: 18px; height: 18px; accent-color: var(--accent); }
@@ -280,21 +290,21 @@ footer.foot .btn { width: auto; justify-self: start; }
 <div class="announce"><div class="wrap"><span>Encargos hasta el <b data-sch="close"></b> · llegan entre el <b data-sch="arrive"></b></span></div></div>
 <header class="top"><div class="wrap">
   <a class="logo-slot" href="#" aria-label="Silkface, inicio" style="text-decoration:none" id="logo"></a>
-  <div class="qbox"><span id="qi"></span><input id="q" type="search" placeholder="Buscá marca, producto o lo que querés tratar" aria-label="Buscar productos" autocomplete="off"><button type="button" class="qclear" data-clear-q aria-label="Borrar búsqueda"></button></div>
-  <div class="acts"><button type="button" class="icon-btn info-btn" id="info-btn" aria-label="Cómo encargar"></button><button type="button" class="icon-btn" data-open-cart aria-label="Ver pedido"><span id="cart-ic"></span><span class="badge" id="cart-n" hidden>0</span></button></div>
+  <div class="qbox"><span id="qi"></span><input id="q" type="search" placeholder="Buscá marca o producto" aria-label="Buscar productos" autocomplete="off"><button type="button" class="qclear" data-clear-q aria-label="Borrar búsqueda"></button></div>
+  <div class="acts"><button type="button" class="icon-btn info-btn" id="info-btn" aria-label="Cómo encargar"></button><button type="button" class="icon-btn" id="cart-btn" data-open-cart aria-label="Ver pedido"><span id="cart-ic"></span><span class="badge" id="cart-n" hidden>0</span></button></div>
 </div></header>
 
 <main class="wrap">
   <section class="intro">
     <h1>Skincare coreano, original y por encargo</h1>
-    <p>Elegí por paso de la rutina, marca o lo que querés tratar. Te avisamos el vencimiento antes de despachar.</p>
+    <p>Elegí por paso de la rutina o por marca.</p>
     <ul class="trust"><li id="t1">Originales importados</li><li id="t2">Pagás cuando confirmamos</li><li id="t3">Envío a todo el país</li></ul>
   </section>
   <section class="steps-wrap" aria-labelledby="steps-h">
     <div class="steps-h"><h2 id="steps-h">Tu rutina, paso a paso</h2><span>De la limpieza al protector</span></div>
     <div class="steps" id="nav"></div>
   </section>
-  <div class="bar"><button type="button" class="fbtn" data-open-filters><span id="fi"></span>Filtros <span class="n" id="btn-filters-n" hidden></span></button><span id="applied"></span><span class="count" id="count" aria-live="polite"></span></div>
+  <div class="bar"><button type="button" class="fbtn" data-open-filters><span id="fi"></span>Filtros <span class="n" id="btn-filters-n" hidden></span></button><label class="sortsel">Ordenar por <select id="sort"><option value="">Marca</option><option value="asc">Menor precio</option><option value="desc">Mayor precio</option><option value="step">Tipo de producto</option></select></label><span id="applied"></span><span class="count" id="count" aria-live="polite"></span></div>
   <p class="notice" id="fix" hidden></p>
   <div class="layout">
     <div><div id="list"></div><div class="more" id="more" hidden></div></div>
@@ -313,7 +323,7 @@ footer.foot .btn { width: auto; justify-self: start; }
   <header class="sheet-head"><h2 id="info-t">Cómo encargar</h2><button type="button" class="dw-x" data-x aria-label="Cerrar"></button></header>
   <div class="sheet-body"><ol style="margin:0;padding-left:20px;display:grid;gap:10px">
     <li>Armá tu pedido en la lista hasta el <b data-sch="close"></b>.</li>
-    <li>Lo mandás por WhatsApp y te confirmamos precio, stock y vencimiento.</li>
+    <li>Lo mandás por WhatsApp y te confirmamos precio y stock.</li>
     <li>Pagás por transferencia (precio publicado) o con tarjeta en 1, 2 o 3 cuotas.</li>
     <li>El viernes cerramos el encargo y llega entre el <b data-sch="arrive"></b>.</li>
     <li>Te lo mandamos a una sucursal de Correo Argentino ($ 7.000) o te lo entregamos en mano en Córdoba.</li>
@@ -565,10 +575,9 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
     var c = {}; items.forEach(function (it) { c[it.brand] = (c[it.brand] || 0) + 1; });
     return Object.keys(c).sort(function (a, b) { return a.localeCompare(b, 'es', { sensitivity: 'base' }); }).map(function (b) { return { brand: b, n: c[b] }; });
   }
-  // Bajada: tipo + hasta dos ingredientes (o preocupaciones si no hay ingredientes).
+  // Bajada: hasta dos ingredientes.
   function subline(it) {
     var bits = it.ingr.slice(0, 2).map(function (k) { return INGR[k].label; });
-    if (!bits.length) bits = it.concerns.slice(0, 1).map(function (k) { return CONCERN[k].label; });
     return bits.join(' · ');
   }
 
@@ -710,10 +719,10 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
     return '<section class="fg"' + (id ? ' id="' + id + '"' : '') + '><h3 class="fg-t">' + title + '</h3>' + inner + '</section>';
   }
 
-  // opts: { show: ['concern','ingr','step','price','brand','sort'], brandQuery }
+  // opts: { show: ['brand','ingr','step','price','sort'], brandQuery }
   function html(state, counts, opts) {
     opts = opts || {};
-    var show = opts.show || ['concern', 'ingr', 'price', 'brand', 'sort'], out = '';
+    var show = opts.show || ['brand', 'ingr', 'price'], out = '';
     show.forEach(function (f) {
       if (f === 'sort') {
         out += group('Ordenar', '<div class="chips">' + [['', 'Marca'], ['step', 'Paso de la rutina'], ['asc', 'Menor precio'], ['desc', 'Mayor precio']].map(function (o) {
@@ -725,7 +734,6 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
           return chip('step', s.key, (s.n ? s.n + ' · ' : '') + s.label, counts.step[s.key], state.step === s.key);
         }).join('') + '</div>');
       }
-      if (f === 'concern') out += group('¿Qué querés tratar?', '<div class="chips">' + SF.CONCERNS.map(function (c) { return chip('concern', c.key, c.label, counts.concern[c.key], state.concern === c.key); }).join('') + '</div>');
       if (f === 'ingr') out += group('Ingrediente', '<div class="chips">' + SF.INGREDIENTS.map(function (c) { return chip('ingr', c.key, c.label, counts.ingr[c.key], state.ingr === c.key); }).join('') + '</div>');
       if (f === 'price') out += group('Precio', '<div class="chips">' + SF.PRICE_RANGES.map(function (r) { return chip('price', r.key, r.label, counts.price[r.key], state.price === r.key); }).join('') + '</div>');
       if (f === 'brand') {
@@ -757,7 +765,6 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
   function appliedHtml(state, withStep) {
     var h = '';
     if (withStep && state.step && state.step !== 'all') h += pill('step', '', SF.STEP[state.step].label);
-    if (state.concern) h += pill('concern', '', SF.CONCERN[state.concern].label);
     if (state.ingr) h += pill('ingr', '', SF.INGR[state.ingr].label);
     if (state.price) h += pill('price', '', SF.PRICE_RANGES.filter(function (r) { return r.key === state.price; })[0].label);
     Object.keys(state.brands || {}).forEach(function (b) { h += pill('brand', b, b); });
@@ -769,7 +776,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
     else state[f] = f === 'step' ? 'all' : '';
     return state;
   }
-  function activeCount(state) { return (state.concern ? 1 : 0) + (state.ingr ? 1 : 0) + (state.price ? 1 : 0) + Object.keys(state.brands || {}).length; }
+  function activeCount(state) { return (state.ingr ? 1 : 0) + (state.price ? 1 : 0) + Object.keys(state.brands || {}).length; }
 
   global.SilkFilters = { html: html, apply: apply, appliedHtml: appliedHtml, removeApplied: removeApplied, activeCount: activeCount };
 })(window);
@@ -808,7 +815,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
   function step1() {
     var lines = Cart.lines();
     if (!lines.length) {
-      return { body: calendarHtml() + '<div class="dw-empty"><p><b>Tu pedido está vacío.</b></p><p>Buscá por producto, marca o lo que querés tratar. Si no sabés por dónde empezar, te armamos la rutina.</p>' +
+      return { body: calendarHtml() + '<div class="dw-empty"><p><b>Tu pedido está vacío.</b></p><p>Buscá por producto, marca o paso de la rutina. Si no sabés por dónde empezar, te armamos la rutina.</p>' +
         '<a class="btn btn-wa" target="_blank" rel="noopener" href="' + SF.waUrl('¡Hola Agustín! Quiero que me ayudes a armar una rutina con Silkface.') + '">' + icon('chat') + 'Armame la rutina por WhatsApp</a></div>',
         foot: '' };
     }
@@ -822,7 +829,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
         '<span aria-live="polite">' + l.qty + '</span><button type="button" data-inc="' + esc(l.key) + '" aria-label="Uno más de ' + esc(it.name) + '">' + icon('plus') + '</button></div></div></li>';
     });
     h += '</ul><button type="button" class="dw-clear" data-clear>' + (clearArmed ? 'Tocá de nuevo para vaciar' : 'Vaciar pedido') + '</button>' +
-      '<ul class="dw-trust"><li>' + icon('check') + 'Originales, importados por encargo.</li><li>' + icon('check') + 'Te avisamos el vencimiento antes de despachar.</li><li>' + icon('check') + 'Pagás cuando confirmamos por WhatsApp.</li></ul>';
+      '<ul class="dw-trust"><li>' + icon('check') + 'Originales, importados por encargo.</li><li>' + icon('check') + 'Pagás cuando confirmamos por WhatsApp.</li></ul>';
     return { body: h, foot: '<div class="dw-sum"><span>Productos (' + Cart.count() + ')</span><b>' + fmt(Cart.subtotal()) + '</b></div><button type="button" class="btn btn-main" data-next>Seguir con tus datos ' + icon('chev') + '</button>' };
   }
 
@@ -948,7 +955,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
       document.documentElement.classList.toggle('has-q', !!state.q);
       var vis = groups.slice(0, shown), h = '';
       if (!groups.length) {
-        h = '<div class="empty"><h3>No encontramos “' + esc(state.q || 'eso') + '”</h3><p>Probá con otra palabra: la marca, el tipo de producto (tónico, sérum, protector) o lo que querés tratar.</p>' +
+        h = '<div class="empty"><h3>No encontramos “' + esc(state.q || 'eso') + '”</h3><p>Probá con otra palabra: la marca, o el tipo de producto (tónico, sérum, protector).</p>' +
           (F.activeCount(state) || (state.step && state.step !== 'all') ? '<button type="button" class="btn btn-ghost" data-clear-all>Sacar los filtros</button>' : '') +
           '<a class="btn btn-wa" target="_blank" rel="noopener" href="' + SF.waUrl('¡Hola Agustín! Busco ' + (state.q || 'un producto') + ' en Silkface. ¿Lo podés conseguir?') + '">' + icon('chat') + 'Consultanos por WhatsApp</a></div>';
       } else if ((o.sectioned || (o.sectionFn && o.sectionFn(state))) && !plainMode()) {
@@ -975,6 +982,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
       var cnt = $('#count'); if (cnt) cnt.textContent = groups.length.toLocaleString('es-AR') + (groups.length === 1 ? ' producto' : ' productos');
       var fix = $('#fix'); if (fix) { fix.hidden = !r.fixed; if (r.fixed) fix.innerHTML = 'No hay resultados para “' + esc(r.fixed.from) + '”. Te mostramos <b>' + esc(r.fixed.to) + '</b>.'; }
       var ap = $('#applied'); if (ap) ap.innerHTML = F.appliedHtml(state, o.appliedStep);
+      var so = $('#sort'); if (so) so.value = state.sort || '';
       var fb = $('#btn-filters-n'); if (fb) { var n = F.activeCount(state); fb.textContent = n ? n : ''; fb.hidden = !n; }
       if (o.renderNav) o.renderNav(counts, state);
       if (o.renderRail) o.renderRail(counts, state, brandQ);
@@ -1069,7 +1077,10 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
       if (b.hasAttribute('data-clear-all')) { clearAll(); return; }
       if (b.hasAttribute('data-clear-q')) { var qi = $('#q'); qi.value = ''; state.q = ''; render(true); qi.focus(); }
     });
-    document.addEventListener('change', function (e) { if (e.target.closest('#rail')) handleFilterChange(e); });
+    document.addEventListener('change', function (e) {
+      if (e.target.id === 'sort') { state.sort = e.target.value; render(true); return; }
+      if (e.target.closest('#rail')) handleFilterChange(e);
+    });
     document.addEventListener('input', function (e) { if (e.target.closest('#rail')) handleBrandQ(e); });
 
     // ── Buscador con debounce; has-q se pone apenas hay texto (pliega la cabecera) ──
@@ -1082,24 +1093,8 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
     document.addEventListener('focusin', function (e) { if (e.target === qEl) document.documentElement.classList.add('kb-open'); });
     document.addEventListener('focusout', function (e) { if (e.target === qEl) setTimeout(function () { document.documentElement.classList.remove('kb-open'); }, 60); });
 
-    // ── Header compacto al bajar: mismo manejador que el catálogo de perfumes (commit 8f694a4). Cambiar el alto del
-    // header cambia el alto de la página: pegado al final, el navegador corrige el scroll hacia arriba (en iOS se suma
-    // el rebote) y eso lo volvía a agrandar en un bucle. Por eso: se ignora el scroll que provoca el propio cambio
-    // (300 ms), hace falta moverse 24 px en la misma dirección, se ignora el rebote fuera de los límites y no se
-    // agranda a menos de 80 px del final.
-    var lastY = global.scrollY, acc = 0, hdrLock = 0, rootEl = document.documentElement;
-    global.addEventListener('scroll', function () {
-      var y = global.scrollY, max = rootEl.scrollHeight - global.innerHeight;
-      var dy = y - lastY; lastY = y;
-      if (y < 0 || y > max) return;
-      if (performance.now() < hdrLock) return;
-      acc = (acc > 0) === (dy > 0) ? acc + dy : dy;
-      var want = y <= 140 ? false : acc > 24 ? true : acc < -24 ? false : null;
-      if (want === null || want === rootEl.classList.contains('compact')) return;
-      if (!want && y > 140 && max - y < 80) return;
-      rootEl.classList.toggle('compact', want);
-      hdrLock = performance.now() + 300; acc = 0;
-    }, { passive: true });
+    // El header no cambia de alto al bajar (antes se achicaba con JS y la página saltaba): la fila del logo
+    // se va con el scroll porque el header queda pegado con top negativo (ver --hdr-off en la página).
 
     // ── Fechas del encargo en cualquier [data-sch] ──
     var s = SF.schedule();
@@ -1134,7 +1129,12 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
 
   // Alto del header para que el encabezado de marca quede pegado debajo.
   var hdr = document.querySelector('header.top');
-  new ResizeObserver(function () { document.documentElement.style.setProperty('--hdr', hdr.offsetHeight + 'px'); }).observe(hdr);
+  // --hdr-off: lo que sube el header antes de quedar pegado (la fila del logo); --hdr-vis: lo que queda a la vista.
+  var qbox = hdr.querySelector('.qbox');
+  new ResizeObserver(function () {
+    var off = Math.max(0, qbox.offsetTop - 8), rs = document.documentElement.style;
+    rs.setProperty('--hdr-off', off + 'px'); rs.setProperty('--hdr-vis', (hdr.offsetHeight - off) + 'px');
+  }).observe(hdr);
 
   var NAV = SF.STEPS.filter(function (s) { return s.key; });
   function renderNav(counts, state) {
@@ -1159,7 +1159,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
         '<div class="sum-total"><span>Productos</span><span>' + fmt(SF.Cart.subtotal()) + '</span></div><button type="button" class="btn btn-main" data-open-cart>Ver pedido</button>'
       : '<p class="sum-empty">Todavía no agregaste productos. Encargos hasta el ' + esc(SF.schedule().dia(SF.schedule().thu)) + ' ' + SF.schedule().dm(SF.schedule().thu) + '.</p>');
   }
-  SilkPage.init({ pageSize: 40, sectioned: true, appliedStep: true, renderItem: renderItem, renderNav: renderNav, renderSummary: renderSummary, filterShow: ['concern', 'ingr', 'price', 'brand', 'sort'] });
+  SilkPage.init({ pageSize: 40, sectioned: true, appliedStep: true, renderItem: renderItem, renderNav: renderNav, renderSummary: renderSummary, filterShow: ['brand', 'ingr', 'price'] });
 })();
 </script>
 </body>

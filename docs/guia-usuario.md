@@ -213,9 +213,9 @@ Los precios del catálogo quedan fijos al momento de publicar: si cambian las co
 Desde la pestaña **Cosmética coreana**, **Publicar catálogo** sube la lista Silkface (`silkface.html`). En esa lista tus clientes pueden:
 
 - **Elegir por paso de la rutina:** tarjetas numeradas arriba (1 Limpieza, 2 Exfoliante, 3 Tónico y pads, 4 Esencia, 5 Sérum, 6 Máscara, 7 Contorno de ojos, 8 Crema, 9 Protector solar; parches, labios y kits aparte), con la cantidad de productos.
-- **Buscar** por marca, producto, tipo, ingrediente o lo que quieren tratar ("boj relief", "niacinamida", "protector"), en cualquier orden y sin acentos. Si escriben mal una letra, la página corrige.
-- **Filtrar** por preocupación (hidratación, acné, manchas, poros, piel sensible, antiedad), ingrediente (centella, niacinamida, PDRN, retinol…), precio y marca, y **ordenar** por marca, paso de la rutina o precio. Las opciones sin productos no se muestran. La preocupación y el ingrediente salen de las palabras del nombre: alguno puede quedar sin etiqueta.
-- Ver cada producto con el **tipo**, el ingrediente o la preocupación principal, los **tamaños** como etiquetas, el precio por transferencia y lo que sale en 3 cuotas.
+- **Buscar** por marca, producto, tipo o ingrediente ("boj relief", "niacinamida", "protector"), en cualquier orden y sin acentos. Si escriben mal una letra, la página corrige.
+- **Filtrar** por marca, ingrediente (centella, niacinamida, PDRN, retinol…) y precio, y **ordenar** (selector "Ordenar por" arriba de la lista) por marca, menor o mayor precio o tipo de producto. Las opciones sin productos no se muestran. El ingrediente sale de las palabras del nombre: alguno puede quedar sin etiqueta.
+- Ver cada producto con el **tipo**, hasta dos ingredientes, los **tamaños** como etiquetas, el precio por transferencia y lo que sale en 3 cuotas.
 - **Armar el pedido y mandártelo por WhatsApp**, igual que en perfumes. El carrito es aparte del de perfumes.
 
 Las condiciones son las mismas que en perfumes, sin lo del decant: envío a sucursal de Correo Argentino por $ 7.000 o en mano en Córdoba.
