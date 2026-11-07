@@ -50,6 +50,8 @@ async function handle(req) {
     if (path === '/flash') return await fetchFlashPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/intershop') return await fetchIntershopPage(new URL(req.url).searchParams);
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
+    // La app lo consulta antes de publicar una lista que no sea el catálogo: un Worker viejo no la conoce.
+    if (path === '/publish-targets') return jsonResp({ targets: Object.keys(PUBLISH_TARGETS) });
     return jsonResp({ error: 'not found' }, 404);
   } catch (e) {
     return jsonResp({ error: e.message }, 500);
@@ -447,6 +449,11 @@ async function fetchIntershopPage(q) {
 const GITHUB_OWNER = 'Agustincrov';
 const GITHUB_REPO  = 'calculadora-importacion-perfumes';
 const CATALOG_PATH = 'docs/catalogo.html';
+// Listas que se pueden publicar (card 21): "target" del POST → archivo del repo y página pública en Pages.
+const PUBLISH_TARGETS = {
+  catalogo: { path: CATALOG_PATH, page: 'catalogo.html', label: 'catálogo' },
+  silkface: { path: 'docs/silkface.html', page: 'silkface.html', label: 'Silkface' },
+};
 
 async function handlePublishCatalog(req) {
   const secret = req.headers.get('X-Publish-Secret');
@@ -464,7 +471,10 @@ async function handlePublishCatalog(req) {
     return jsonResp({ error: 'archivo demasiado grande' }, 413);
   }
 
-  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${CATALOG_PATH}`;
+  // Sin "target" = catálogo de perfumes (lo que mandaban las versiones anteriores de la app).
+  const target = PUBLISH_TARGETS[body?.target || 'catalogo'];
+  if (!target) return jsonResp({ error: 'destino desconocido' }, 400);
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${target.path}`;
   const ghHeaders = {
     'Authorization': `Bearer ${GITHUB_TOKEN}`,
     'User-Agent': 'importo-catalog-publisher',
@@ -485,7 +495,7 @@ async function handlePublishCatalog(req) {
     method: 'PUT',
     headers: { ...ghHeaders, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      message: `Actualizar catálogo — ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
+      message: `Actualizar ${target.label} — ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`,
       content: utf8ToBase64(html),
       ...(sha ? { sha } : {}),
     }),
@@ -497,8 +507,8 @@ async function handlePublishCatalog(req) {
   return jsonResp({
     ok: true,
     // GitHub Pages sirve desde /docs como raíz del sitio — NO se antepone "docs/" a la URL pública,
-    // aunque el archivo viva en ese path dentro del repo (por eso no reusamos CATALOG_PATH acá).
-    url: `https://${GITHUB_OWNER.toLowerCase()}.github.io/${GITHUB_REPO}/catalogo.html`,
+    // aunque el archivo viva en ese path dentro del repo (por eso se usa target.page y no target.path).
+    url: `https://${GITHUB_OWNER.toLowerCase()}.github.io/${GITHUB_REPO}/${target.page}`,
   });
 }
 
