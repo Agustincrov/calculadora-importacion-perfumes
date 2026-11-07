@@ -139,7 +139,7 @@ En **Cosmética coreana**:
 - Los nombres se muestran **limpios**: sin la palabra de tipo que agregan las tiendas en portugués o español ("Sérum Facial", "Creme Facial Hidratante"), sin la marca (va en su columna), sin códigos y con el **tamaño aparte** ("30 ml", "70 pads"). Si varias tiendas tienen el mismo producto, se muestra el nombre más completo en inglés. El Excel trae las columnas Tamaño y Tipo.
 - Cada producto tiene un **tipo** (limpiador, tónico, sérum, máscara, crema, protector solar, contorno de ojos, pads, parches, kit…) que la app saca del nombre. En la revisión aparece en la columna **Tipo**: si está mal o dice **⚠ Sin tipo**, elegí el correcto y queda guardado para ese producto. El selector al lado del buscador filtra por tipo (con la cantidad de cada uno) y el Excel trae la columna Tipo.
 - **Duplicados:** el mismo producto en varias tiendas se junta en una fila (precio de la más barata; en **Origen** 🔗×N muestra las otras tiendas con su nombre) solo cuando el nombre es equivalente: mismo tipo (Creme = Cream, Tônico = Toner), tamaño (ml o g), números y palabras. Lo que se parece pero no es igual aparece en **Posibles duplicados a revisar** con el tipo, el tamaño y cómo lo llama cada tienda: elegí **Es el mismo** o **Son distintos** y queda guardado. Si **una misma tienda** publica dos veces el mismo nombre (mismo producto, tamaño y caja), se toma como una publicación repetida: queda la más barata. Con nombres que difieren en algo (un "+", "2.0", Unscented), dos publicaciones de una tienda **nunca se juntan**. **Descargar pares** baja los pendientes en un archivo para revisarlos con agentes; las decisiones vuelven con **Importar decisiones**. Las decisiones de cosmética se rehicieron el 4 de noviembre de 2026 con las 5 tiendas actuales (1.436 pares revisados con agentes; vienen incluidas en la app y no pisan lo que decidas vos). Las que había, tomadas con las tiendas anteriores, se borraron una sola vez. Las de perfumes siguen.
-- El precio de cosmética tiene costos y ganancia propios: precio del proveedor × USDT, comisión del **12 % sobre el producto**, envío de **$2.000 por unidad** y una parte del fee USDT (envío por unidad ÷ envío total, hasta el fee entero; si alguno es 0, se suma el fee entero). La ganancia es **$2.000 + 42,5 % del producto**. Cambiá la comisión, el envío y la fórmula en **2. Configuración de precios**, dentro de Cosmética. El redondeo es el mismo de la Calculadora. Se guardan los cambios y se recalcula la lista; perfumes conserva sus costos y fórmulas. Cosmética sigue sin poder publicarse como catálogo ni pasar a la calculadora: solo **Exportar Excel** (`lista_cosmetica_coreana_AAAA-MM-DD.xlsx`). **Borrar todo** borra solo la pestaña abierta.
+- El precio de cosmética tiene costos y ganancia propios: precio del proveedor × USDT, comisión del **12 % sobre el producto**, envío de **$2.000 por unidad** y una parte del fee USDT (envío por unidad ÷ envío total, hasta el fee entero; si alguno es 0, se suma el fee entero). La ganancia es **$2.000 + 42,5 % del producto**. Cambiá la comisión, el envío y la fórmula en **2. Configuración de precios**, dentro de Cosmética. El redondeo es el mismo de la Calculadora. Se guardan los cambios y se recalcula la lista; perfumes conserva sus costos y fórmulas. Cosmética no pasa a la calculadora. Se publica como una lista aparte, **Silkface** (ver **5. Publicar**), y se exporta con **Exportar Excel** (`lista_cosmetica_coreana_AAAA-MM-DD.xlsx`). **Borrar todo** borra solo la pestaña abierta.
 
 ### 1. Importar listas de proveedor
 
@@ -190,8 +190,8 @@ La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios)
 
 ### 5. Publicar
 
-- **Publicar catálogo:** sube la lista como una página buscable a `agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html`, siempre el mismo link. La primera vez hay que configurar la clave de publicación (abajo del botón).
-- **Descargar página buscable:** descarga ese mismo archivo (`catalogo.html`) en vez de publicarlo.
+- **Publicar catálogo:** sube la lista de la pestaña abierta como una página buscable, siempre al mismo link. Perfumes va a `agustincrov.github.io/calculadora-importacion-perfumes/catalogo.html` (Crovato Fragrances) y Cosmética coreana a `agustincrov.github.io/calculadora-importacion-perfumes/silkface.html` (Silkface). La primera vez hay que configurar la clave de publicación (abajo del botón).
+- **Descargar página buscable:** descarga ese mismo archivo (`catalogo.html` o `silkface.html`) en vez de publicarlo.
 - **Exportar Excel:** descarga la lista con marca, producto y precio.
 
 En el catálogo, tus clientes pueden:
@@ -207,6 +207,20 @@ La página también muestra las condiciones de los encargos: pedidos de sábado 
 Si el mismo perfume y tamaño aparece en dos proveedores con menos de 10 % de diferencia de precio, el catálogo muestra solo el más barato. Si la versión de hombre y la de mujer quedan con el mismo nombre, se les agrega "· Hombre" o "· Mujer".
 
 Los precios del catálogo quedan fijos al momento de publicar: si cambian las cotizaciones, volvé a generar y publicar.
+
+#### Silkface (cosmética coreana)
+
+Desde la pestaña **Cosmética coreana**, **Publicar catálogo** sube la lista Silkface (`silkface.html`). En esa lista tus clientes pueden:
+
+- **Elegir por paso de la rutina:** tarjetas numeradas arriba (1 Limpieza, 2 Exfoliante, 3 Tónico y pads, 4 Esencia, 5 Sérum, 6 Máscara, 7 Contorno de ojos, 8 Crema, 9 Protector solar; parches, labios y kits aparte), con la cantidad de productos.
+- **Buscar** por marca, producto, tipo, ingrediente o lo que quieren tratar ("boj relief", "niacinamida", "protector"), en cualquier orden y sin acentos. Si escriben mal una letra, la página corrige.
+- **Filtrar** por preocupación (hidratación, acné, manchas, poros, piel sensible, antiedad), ingrediente (centella, niacinamida, PDRN, retinol…), precio y marca, y **ordenar** por marca, paso de la rutina o precio. Las opciones sin productos no se muestran. La preocupación y el ingrediente salen de las palabras del nombre: alguno puede quedar sin etiqueta.
+- Ver cada producto con el **tipo**, el ingrediente o la preocupación principal, los **tamaños** como etiquetas, el precio por transferencia y lo que sale en 3 cuotas.
+- **Armar el pedido y mandártelo por WhatsApp**, igual que en perfumes. El carrito es aparte del de perfumes.
+
+Las condiciones son las mismas que en perfumes, sin lo del decant: envío a sucursal de Correo Argentino por $ 7.000 o en mano en Córdoba.
+
+La primera vez, antes de publicar Silkface, hay que pegar el `worker.js` nuevo en Cloudflare. Si no está pegado, la app avisa y no publica nada.
 
 ---
 

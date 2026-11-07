@@ -921,13 +921,13 @@
         <h2>3. Revisión final</h2>
         <div class="btn-group">
           <span id="pl-summary" style="font-size:.8rem;color:var(--muted);align-self:center;"></span>
-          <button class="btn btn-outline pl-perfume-only" id="pl-publish-btn" onclick="publishCatalogAuto()" title="Sube catalogo.html directo a tu GitHub Pages — sin tocar archivos ni git a mano">
+          <button class="btn btn-outline" id="pl-publish-btn" onclick="publishCatalogAuto()" title="Sube la lista directo a GitHub Pages: perfumes a catalogo.html, cosmética a silkface.html">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
             Publicar catálogo
           </button>
-          <button class="btn btn-outline pl-perfume-only" onclick="exportPlSearchablePage()" title="Descarga el archivo en vez de publicarlo — para revisar antes o subirlo a mano">
+          <button class="btn btn-outline" onclick="exportPlSearchablePage()" title="Descarga el archivo en vez de publicarlo — para revisar antes o subirlo a mano">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
@@ -12633,24 +12633,1218 @@ ${SC}
   return html;
 }
 
-// El catálogo publicado es solo de perfumes: desde otra línea pisaría docs/catalogo.html (card 19). Los botones
-// ya están ocultos en esa línea; esto es la segunda barrera.
-function plCanPublishLine() {
-  if (plLine === 'perfumes') return true;
-  alert(`El catálogo de ${PL_LINES[plLine].label} todavía no se publica: Publicar y Descargar página buscable son solo de Perfumes.`);
-  return false;
+// ── SILKFACE:BEGIN — generado por cards/21-lista-cosmetica/fase3/port.py desde el prototipo A (card 21). No editar a mano:
+// cambiar fase2/a-rutina/proto.html o fase2/common/* y volver a correr port.py.
+// Lista publicada de Cosmética coreana (docs/silkface.html). DATA = [{brand, name, price, type, size?, orig}].
+function buildSilkfaceHtml() {
+  const items = plPublishableItems();
+  if (items.length === 0) return null;
+  const data = items.map(it => {
+    const d = {
+      brand: it.brand || 'Sin marca',
+      name: it.displayName || it.name,
+      price: Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs),
+      type: it.type || '',
+      orig: it.name
+    };
+    if (it.size) d.size = it.size;
+    return d;
+  }).filter(d => d.price > 0);
+  if (data.length === 0) return null;
+  const dataJson = JSON.stringify(data).replace(/</g, '\\u003c');
+  const d = new Date();
+  const fecha = [d.getDate(), d.getMonth() + 1].map(n => String(n).padStart(2, '0')).join('/') + '/' + d.getFullYear();
+  const SC = '<' + '/script>';
+  // String.raw: las regex del núcleo llevan \s, \u0300, etc. y no hay que duplicar las barras.
+  return String.raw`<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Silkface · Skincare coreano por encargo</title>
+<meta name="description" content="Skincare coreano original por encargo. Armá tu rutina y mandá el pedido por WhatsApp.">
+<meta property="og:title" content="Silkface · Skincare coreano por encargo">
+<meta property="og:description" content="Limpieza, tónicos, sérums, cremas y protectores coreanos originales. Pedidos hasta el jueves, cierre el viernes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,400..600,100&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* A · Rutina — renglones agrupados por marca; arriba, los pasos de la rutina numerados como entrada principal.
+   Paleta "Agua clara": fondo niebla, texto petróleo, un solo acento cian. */
+:root {
+  --bg: #F7FBFC; --surface: #FFFFFF; --ink: #12313D; --ink-2: #4F6B75; --accent: #0E7C8A; --accent-ink: #0B6F7C;
+  --accent-soft: #DDF1F4; --line: #D3E4E8; --price: #1F7A5C; --radius: 14px;
+  --f-display: 'Fraunces', Georgia, 'Times New Roman', serif; --f-body: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
 }
+</style>
+<style>
+/* Base común de los prototipos de Silkface. Cada opción define los tokens (--bg, --surface, --ink, --ink-2, --accent,
+   --accent-ink, --accent-soft, --line, --price, --f-display, --f-body, --radius) antes de cargar este archivo.
+   Tema claro único, a propósito: es la vitrina de la marca y se ve igual en cualquier teléfono. */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+body.locked { position: fixed; left: 0; right: 0; overflow: hidden; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ic { width: 20px; height: 20px; flex: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Marca */
+.logo { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; }
+.logo-mark { width: 28px; height: 28px; color: var(--accent); }
+.logo-word { font-family: var(--f-display); font-size: 24px; line-height: 1; letter-spacing: -.01em; }
+
+/* Tipos de producto: un pastel por paso (siempre con texto e ícono, el color no es la única señal) */
+.t-limpiador { --tint: #E3F1FA; --tint-ink: #1D5577; }
+.t-exfoliante { --tint: #F1ECFA; --tint-ink: #503D7A; }
+.t-tonico { --tint: #DFF3F1; --tint-ink: #16595A; }
+.t-pads { --tint: #E6F2EC; --tint-ink: #2D5E44; }
+.t-esencia { --tint: #E8F0FB; --tint-ink: #2B4D80; }
+.t-serum { --tint: #FBEDE3; --tint-ink: #7A4220; }
+.t-mascara { --tint: #F6EAF2; --tint-ink: #74365E; }
+.t-parches { --tint: #FBEAEA; --tint-ink: #7D3333; }
+.t-ojos { --tint: #EEEAFB; --tint-ink: #45397E; }
+.t-crema { --tint: #E4F2F6; --tint-ink: #1B5363; }
+.t-solar { --tint: #FBF3D9; --tint-ink: #6B5410; }
+.t-labios { --tint: #FBE9EE; --tint-ink: #7A2E46; }
+.t-kit { --tint: #EEF0F2; --tint-ink: #3B4752; }
+.t- { --tint: #EEF0F2; --tint-ink: #3B4752; }
+.type-tag { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; padding: 2px 9px 2px 7px; border-radius: 999px; background: var(--tint); color: var(--tint-ink); font-size: 12.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.type-tag .ic { width: 15px; height: 15px; }
+
+/* Botones */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; border: 1px solid transparent; font-weight: 600; font-size: 15px; text-decoration: none; text-align: center; }
+.btn-main { background: var(--accent); color: #fff; width: 100%; }
+.btn-main:hover { filter: brightness(.94); }
+.btn-wa { background: #25D366; color: #0F2A1A; width: 100%; }
+.btn-wa:hover { filter: brightness(.95); }
+.btn-wa.is-disabled { background: var(--line); color: var(--ink-2); cursor: not-allowed; }
+.btn-ghost { background: var(--surface); border-color: var(--line); color: var(--ink); }
+.add { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent-ink); font-weight: 600; font-size: 14px; }
+.add:hover { background: var(--accent-soft); }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--accent); border-radius: 999px; background: var(--accent-soft); min-height: 44px; }
+.stepper button { width: 44px; height: 44px; border: 0; background: transparent; color: var(--accent-ink); display: grid; place-items: center; border-radius: 999px; }
+.stepper button:hover { background: rgba(255,255,255,.6); }
+.stepper .ic { width: 18px; height: 18px; }
+.stepper span { min-width: 20px; text-align: center; font-weight: 700; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+
+/* Tamaños como tags */
+.sizes { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.size { position: relative; min-height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font-size: 12.5px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.size::after { content: ''; position: absolute; inset: -7px -3px; }
+.size[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+
+/* Drawer del carrito */
+.drawer-wrap { position: fixed; inset: 0; z-index: 50; }
+.dw-scrim { position: absolute; inset: 0; background: rgba(10, 30, 38, .38); }
+.drawer { position: absolute; top: 0; right: 0; bottom: 0; width: min(440px, 100%); background: var(--surface); display: flex; flex-direction: column; box-shadow: -12px 0 40px -20px rgba(10, 30, 38, .35); }
+.dw-head { display: flex; align-items: center; gap: 8px; padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 12px; border-bottom: 1px solid var(--line); }
+.dw-head > div { flex: 1; min-width: 0; }
+.dw-head h2 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 22px; line-height: 1.15; }
+.dw-eyebrow { margin: 0; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+.dw-x, .dw-back { width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; display: grid; place-items: center; color: var(--ink); }
+.dw-x:hover, .dw-back:hover { background: var(--accent-soft); }
+.dw-body { flex: 1; overflow-y: auto; padding: 16px; display: grid; gap: 16px; align-content: start; overscroll-behavior: contain; }
+.dw-foot { padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.dw-foot:empty { display: none; }
+.dw-cal { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius); background: var(--accent-soft); color: var(--ink); }
+.dw-cal .ic { color: var(--accent-ink); margin-top: 2px; }
+.dw-cal b { display: block; font-size: 14.5px; }
+.dw-cal span { font-size: 13.5px; color: var(--ink-2); }
+.dw-empty { display: grid; gap: 4px; text-align: left; }
+.dw-empty p { margin: 0 0 6px; }
+.dw-lines { list-style: none; margin: 0; padding: 0; display: grid; }
+.dw-line { display: flex; gap: 12px; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.dw-l-main { display: grid; min-width: 0; }
+.dw-l-brand { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+.dw-l-name { font-weight: 600; line-height: 1.3; }
+.dw-l-meta { font-size: 13px; color: var(--ink-2); }
+.dw-l-side { display: grid; justify-items: end; gap: 6px; align-content: start; }
+.dw-l-price { font-weight: 700; color: var(--price); font-variant-numeric: tabular-nums; }
+.dw-clear { justify-self: start; min-height: 44px; border: 0; background: transparent; color: var(--ink-2); text-decoration: underline; padding: 0; }
+.dw-trust { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13.5px; color: var(--ink-2); }
+.dw-trust li { display: flex; gap: 8px; align-items: center; }
+.dw-trust .ic { width: 16px; height: 16px; color: var(--price); }
+.dw-sum { display: flex; justify-content: space-between; align-items: baseline; font-variant-numeric: tabular-nums; }
+.dw-sum b { font-size: 19px; }
+.field { display: grid; gap: 6px; }
+.field label, .opts legend { font-weight: 600; font-size: 14px; }
+.field input, .field select { min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.field input:focus, .field select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.opts { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.opts legend { margin-bottom: 8px; padding: 0; }
+.opt { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.opt input { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }
+.opt-t { flex: 1; }
+.opt-x { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+.dw-totals { display: grid; gap: 6px; padding: 12px 0 0; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.dw-totals div { display: flex; justify-content: space-between; gap: 12px; }
+.dw-total { font-weight: 700; font-size: 18px; }
+.dw-total small { display: block; font-weight: 500; font-size: 13px; color: var(--ink-2); text-align: right; }
+.dw-preview summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--accent-ink); font-weight: 600; }
+.dw-preview pre { margin: 0; white-space: pre-wrap; font-family: inherit; font-size: 13px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.dw-need { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+/* Hojas (filtros, marcas) */
+.sheet-wrap { position: fixed; inset: 0; z-index: 45; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 86vh; background: var(--surface); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; box-shadow: 0 -12px 40px -20px rgba(10,30,38,.35); }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet-head h2 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 21px; }
+.sheet-body { overflow-y: auto; padding: 14px 16px; display: grid; gap: 18px; overscroll-behavior: contain; }
+.sheet-foot { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.sheet-foot .btn { flex: 1; }
+@media (min-width: 1024px) { .sheet { left: auto; right: 24px; bottom: 24px; width: 420px; border-radius: 20px; } }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 14px; white-space: nowrap; position: relative; }
+.chip::after { content: ''; position: absolute; inset: -2px 0; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.chip .n { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] .n { color: var(--accent-ink); }
+.chip:disabled { opacity: .45; cursor: default; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chips-scroll { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-block: 4px; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.applied { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 6px 0 12px; border-radius: 999px; background: var(--ink); color: var(--surface); font-size: 13px; border: 0; }
+.applied .ic { width: 16px; height: 16px; }
+
+.more { display: flex; justify-content: center; padding: 18px 0; }
+.empty { padding: 28px 0; display: grid; gap: 12px; max-width: 46ch; }
+.empty h3 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 22px; }
+.empty p { margin: 0; color: var(--ink-2); }
+.notice { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.notice b { color: var(--ink); }
+
+/* Barra "Ver pedido" (celular) */
+.cartbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
+.cartbar .btn { width: 100%; justify-content: space-between; box-shadow: 0 10px 24px -12px rgba(10,30,38,.5); }
+html.kb-open .cartbar { display: none; }
+@media (min-width: 1024px) { .cartbar { display: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .drawer { animation: dw-in .22s ease-out; }
+  .sheet { animation: sh-in .22s ease-out; }
+  @keyframes dw-in { from { transform: translateX(24px); opacity: .6; } }
+  @keyframes sh-in { from { transform: translateY(24px); opacity: .6; } }
+}
+</style>
+<style>
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.logo-word { font-variation-settings: 'SOFT' 100; font-weight: 500; }
+.announce { background: var(--ink); color: #E6F4F6; font-size: 13px; }
+.announce .wrap { padding-block: 8px; display: flex; gap: 8px; align-items: center; justify-content: center; text-align: center; }
+.announce b { color: #fff; }
+html.has-q .announce, html.has-q .intro, html.has-q .steps-wrap { display: none; }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: rgba(247, 251, 252, .94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 25; background: var(--bg); }
+.top .wrap { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "logo . act" "q q q"; gap: 10px 12px; align-items: center; padding-block: 10px; }
+#logo { grid-area: logo; display: inline-flex; }
+.acts { grid-area: act; display: flex; gap: 4px; }
+.icon-btn { position: relative; width: 44px; height: 44px; border-radius: 999px; border: 0; background: transparent; display: grid; place-items: center; color: var(--ink); }
+.icon-btn:hover { background: var(--accent-soft); }
+.badge { position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+.qbox { grid-area: q; position: relative; }
+.qbox .ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-2); }
+#q { width: 100%; min-height: 48px; padding: 0 44px 0 44px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 16px; }
+#q:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+#q::-webkit-search-cancel-button { display: none; }
+.qclear { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; background: transparent; border-radius: 999px; display: grid; place-items: center; color: var(--ink-2); }
+html:not(.has-q) .qclear { display: none; }
+html.compact #logo, html.compact .acts .info-btn, html.has-q #logo, html.has-q .acts .info-btn { display: none; }
+html.compact .top .wrap, html.has-q .top .wrap { grid-template-areas: "q q act"; }
+@media (min-width: 760px) { .top .wrap, html.compact .top .wrap, html.has-q .top .wrap { grid-template-columns: auto minmax(0, 520px) 1fr auto; grid-template-areas: "logo q . act"; } html.compact #logo, html.has-q #logo { display: inline-flex; } }
+
+.intro { padding-block: 18px 2px; display: grid; gap: 10px; }
+.intro h1 { margin: 0; font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 400; font-size: clamp(30px, 6vw, 44px); line-height: 1.08; letter-spacing: -.015em; text-wrap: balance; max-width: 18ch; }
+.intro p { margin: 0; color: var(--ink-2); max-width: 56ch; }
+.trust { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 13.5px; color: var(--ink); }
+.trust li { display: flex; gap: 6px; align-items: center; }
+.trust .ic { width: 16px; height: 16px; color: var(--price); }
+
+/* Pasos de la rutina: número + ícono + nombre + conteo, desplazables */
+.steps-wrap { padding-block: 14px 4px; }
+.steps-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.steps-h h2 { margin: 0; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); }
+.steps-h span { font-size: 13px; color: var(--ink-2); }
+.steps { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
+.steps::-webkit-scrollbar { display: none; }
+.st { scroll-snap-align: start; flex: none; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; min-width: 118px; min-height: 64px; padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); text-align: left; color: var(--ink); }
+.st .stn { grid-row: span 2; width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; background: var(--tint, var(--accent-soft)); color: var(--tint-ink, var(--accent-ink)); }
+.st .stn .ic { width: 18px; height: 18px; }
+.st b { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.st small { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.st small i { font-style: normal; font-weight: 700; color: var(--tint-ink, var(--accent-ink)); margin-right: 4px; }
+.st[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
+.st:disabled { opacity: .45; }
+
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-block: 12px 4px; }
+.bar .count { margin-left: auto; font-size: 13.5px; color: var(--ink-2); }
+.fbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ink); background: var(--surface); font-weight: 600; font-size: 14px; }
+.fbtn .n { min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11.5px; display: grid; place-items: center; }
+#applied { display: contents; }
+#fix { margin: 4px 0 0; }
+
+.layout { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); padding-bottom: 96px; }
+@media (min-width: 1100px) { .layout { grid-template-columns: minmax(0, 1fr) 300px; } }
+.brand-sec { margin-top: 18px; }
+.brand-h { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--hdr, 118px)); z-index: 5; margin: 0; padding: 10px 0 8px; background: var(--bg); font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 21px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); }
+.brand-h .n { font-family: var(--f-body); font-size: 13px; color: var(--ink-2); font-weight: 500; }
+.rows { display: grid; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.r-brand { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); }
+.rows:not(.plain) .r-brand { display: none; }
+.r-name { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.r-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 6px; }
+.r-sub { font-size: 13px; color: var(--ink-2); }
+.size-one { font-size: 13px; color: var(--ink-2); }
+.r-buy { display: grid; justify-items: end; align-content: start; gap: 6px; text-align: right; }
+.r-price { font-size: 18px; font-weight: 700; color: var(--price); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.r-cuota { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+aside.summary { display: none; }
+@media (min-width: 1100px) {
+  aside.summary { display: block; position: sticky; top: calc(var(--hdr, 80px) + 16px); align-self: start; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  aside.summary h2 { margin: 0 0 10px; font-family: var(--f-display); font-weight: 500; font-size: 21px; }
+  .sum-lines { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; font-size: 14px; max-height: 320px; overflow: auto; }
+  .sum-lines li { display: flex; justify-content: space-between; gap: 10px; }
+  .sum-lines span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sum-total { display: flex; justify-content: space-between; font-weight: 700; font-size: 17px; padding-top: 10px; border-top: 1px solid var(--line); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+  .sum-empty { color: var(--ink-2); font-size: 14px; margin: 0 0 12px; }
+}
+.fg { display: grid; gap: 8px; }
+.fg-t { margin: 0; font-size: 14px; font-weight: 700; }
+.brand-q { min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); }
+.brand-list { display: grid; max-height: 240px; overflow: auto; }
+.brand-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid var(--line); }
+.brand-opt input { width: 18px; height: 18px; accent-color: var(--accent); }
+.brand-opt span:nth-child(2) { flex: 1; }
+.brand-opt .n { color: var(--ink-2); font-size: 13px; }
+
+footer.foot { background: var(--surface); border-top: 1px solid var(--line); }
+footer.foot .wrap { padding-block: 28px 120px; display: grid; gap: 12px; max-width: 720px; }
+footer.foot h2 { margin: 0; font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 400; font-size: 26px; }
+footer.foot p { margin: 0; color: var(--ink-2); }
+footer.foot .btn { width: auto; justify-self: start; }
+</style>
+</head>
+<body>
+<div id="sr-live" class="sr" aria-live="polite"></div>
+<div class="announce"><div class="wrap"><span>Encargos hasta el <b data-sch="close"></b> · llegan entre el <b data-sch="arrive"></b></span></div></div>
+<header class="top"><div class="wrap">
+  <a class="logo-slot" href="#" aria-label="Silkface, inicio" style="text-decoration:none" id="logo"></a>
+  <div class="qbox"><span id="qi"></span><input id="q" type="search" placeholder="Buscá marca, producto o lo que querés tratar" aria-label="Buscar productos" autocomplete="off"><button type="button" class="qclear" data-clear-q aria-label="Borrar búsqueda"></button></div>
+  <div class="acts"><button type="button" class="icon-btn info-btn" id="info-btn" aria-label="Cómo encargar"></button><button type="button" class="icon-btn" data-open-cart aria-label="Ver pedido"><span id="cart-ic"></span><span class="badge" id="cart-n" hidden>0</span></button></div>
+</div></header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>Skincare coreano, original y por encargo</h1>
+    <p>Elegí por paso de la rutina, marca o lo que querés tratar. Te avisamos el vencimiento antes de despachar.</p>
+    <ul class="trust"><li id="t1">Originales importados</li><li id="t2">Pagás cuando confirmamos</li><li id="t3">Envío a todo el país</li></ul>
+  </section>
+  <section class="steps-wrap" aria-labelledby="steps-h">
+    <div class="steps-h"><h2 id="steps-h">Tu rutina, paso a paso</h2><span>De la limpieza al protector</span></div>
+    <div class="steps" id="nav"></div>
+  </section>
+  <div class="bar"><button type="button" class="fbtn" data-open-filters><span id="fi"></span>Filtros <span class="n" id="btn-filters-n" hidden></span></button><span id="applied"></span><span class="count" id="count" aria-live="polite"></span></div>
+  <p class="notice" id="fix" hidden></p>
+  <div class="layout">
+    <div><div id="list"></div><div class="more" id="more" hidden></div></div>
+    <aside class="summary" id="summary" aria-label="Resumen del pedido"></aside>
+  </div>
+</main>
+<footer class="foot"><div class="wrap">
+  <h2>¿No sabés por dónde empezar?</h2>
+  <p>Contanos tu tipo de piel y qué querés mejorar. Soy Agustín: te armo una rutina con lo que hay en la lista y te la mando por WhatsApp.</p>
+  <a class="btn btn-wa" id="foot-wa" target="_blank" rel="noopener">Armame la rutina</a>
+  <p class="notice">Lista del <span id="fdate"></span>. Precios por transferencia; con tarjeta, hasta 3 cuotas con recargo.</p>
+</div></footer>
+<div class="cartbar" id="cartbar" hidden></div>
+
+<div class="sheet-wrap" id="info" hidden><div class="dw-scrim" data-x></div><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="info-t">
+  <header class="sheet-head"><h2 id="info-t">Cómo encargar</h2><button type="button" class="dw-x" data-x aria-label="Cerrar"></button></header>
+  <div class="sheet-body"><ol style="margin:0;padding-left:20px;display:grid;gap:10px">
+    <li>Armá tu pedido en la lista hasta el <b data-sch="close"></b>.</li>
+    <li>Lo mandás por WhatsApp y te confirmamos precio, stock y vencimiento.</li>
+    <li>Pagás por transferencia (precio publicado) o con tarjeta en 1, 2 o 3 cuotas.</li>
+    <li>El viernes cerramos el encargo y llega entre el <b data-sch="arrive"></b>.</li>
+    <li>Te lo mandamos a una sucursal de Correo Argentino ($ 7.000) o te lo entregamos en mano en Córdoba.</li>
+  </ol></div></section></div>
+
+<script>
+var CATALOG_DATE = '${esc(fecha)}';
+var DATA = ${dataJson};
+${SC}
+<script>
+// Núcleo común de los prototipos de Silkface (card 21, fase 2): datos, rutina, preocupaciones, ingredientes,
+// búsqueda, filtros con conteos, carrito, calendario de encargo, mensaje de WhatsApp y diálogos accesibles.
+// Las tres opciones usan este archivo; cambian el CSS y cómo se pinta la lista.
+(function (global) {
+  'use strict';
+
+  var WA_NUMBER = '5493516199682';
+  var CART_KEY = 'silkface-cart';
+  var DATOS_KEY = 'silkface-datos';
+  var ENVIO_SUCURSAL = 7000;
+  var CUOTAS = [{ n: 1, pct: 9 }, { n: 2, pct: 18 }, { n: 3, pct: 27 }];
+  var PROVINCIAS = ['Buenos Aires', 'CABA', 'Catamarca', 'Chaco', 'Chubut', 'Córdoba', 'Corrientes', 'Entre Ríos', 'Formosa', 'Jujuy', 'La Pampa', 'La Rioja', 'Mendoza', 'Misiones', 'Neuquén', 'Río Negro', 'Salta', 'San Juan', 'San Luis', 'Santa Cruz', 'Santa Fe', 'Santiago del Estero', 'Tierra del Fuego', 'Tucumán'];
+
+  function fold(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmt(n) { return '$ ' + Math.round(n).toLocaleString('es-AR'); }
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+  // ── Íconos lineales (24×24, trazo) ──
+  var ICONS = {
+    tube: '<path d="M9 3h6l-1 3h-4z"/><path d="M8.5 6h7l1 13a2 2 0 0 1-2 2h-5a2 2 0 0 1-2-2z"/>',
+    scrub: '<circle cx="12" cy="12" r="7.5"/><circle cx="9.5" cy="10" r=".9"/><circle cx="14" cy="9.5" r=".9"/><circle cx="12" cy="13.5" r=".9"/><circle cx="9" cy="14.5" r=".9"/><circle cx="15" cy="14" r=".9"/>',
+    bottle: '<path d="M10 3h4v3h-4z"/><path d="M9 6h6l1.5 3v10.5a1.5 1.5 0 0 1-1.5 1.5H9a1.5 1.5 0 0 1-1.5-1.5V9z"/><path d="M7.5 12h9"/>',
+    pad: '<ellipse cx="12" cy="9" rx="7" ry="3"/><path d="M5 9v5c0 1.7 3.1 3 7 3s7-1.3 7-3V9"/>',
+    drop: '<path d="M12 3.5c3 4 6 7.2 6 10.5a6 6 0 0 1-12 0c0-3.3 3-6.5 6-10.5z"/>',
+    dropper: '<path d="M13 3l8 8-3 1-6-6z"/><path d="M12 6l-7.5 7.5a2.5 2.5 0 0 0 0 3.5l.5.5a2.5 2.5 0 0 0 3.5 0L16 10"/><path d="M3.5 20.5l2-2"/>',
+    mask: '<path d="M5 6.5C5 5 8 4 12 4s7 1 7 2.5v6C19 17 15.5 20 12 20s-7-3-7-7.5z"/><path d="M8.5 10.5h1.5M14 10.5h1.5M10 15.5c1.2.8 2.8.8 4 0"/>',
+    patch: '<circle cx="8" cy="12" r="4.5"/><circle cx="16" cy="12" r="4.5"/>',
+    eye: '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.5"/>',
+    jar: '<path d="M6 8h12v10.5A2.5 2.5 0 0 1 15.5 21h-7A2.5 2.5 0 0 1 6 18.5z"/><path d="M5 5h14v3H5z"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+    lips: '<path d="M3 12c3-4 5.5-5 7-3.5.8-.8 3.2-.8 4 0 1.5-1.5 4-.5 7 3.5-3 4.5-6 6-9 6s-6-1.5-9-6z"/><path d="M3 12h18"/>',
+    box: '<path d="M3.5 8 12 4l8.5 4v8L12 20l-8.5-4z"/><path d="M3.5 8 12 12l8.5-4M12 12v8"/>',
+    dot: '<circle cx="12" cy="12" r="3"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+    bag: '<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    minus: '<path d="M5 12h14"/>',
+    trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.5"/>',
+    chat: '<path d="M4 18.5V6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H8z"/>',
+    check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+    chev: '<path d="m9 6 6 6-6 6"/>',
+    back: '<path d="m15 6-6 6 6 6"/>',
+    calendar: '<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
+    leaf: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19 13 11"/>'
+  };
+  function icon(name, cls) {
+    return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || ICONS.dot) + '</svg>';
+  }
+  // Marca: una onda de seda (dos curvas) + "Silkface".
+  function logo(cls) {
+    return '<span class="logo' + (cls ? ' ' + cls : '') + '"><svg class="logo-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 13c4-5 8-5 12 0s8 5 12 0"/><path d="M4 20c4-5 8-5 12 0s8 5 12 0" opacity=".55"/></svg><span class="logo-word">Silkface</span></span>';
+  }
+
+  // ── Rutina: el orden de los tipos de producto. El número es el paso; parches, labios y kits van aparte ──
+  var STEPS = [
+    { key: 'limpiador', n: 1, label: 'Limpieza', one: 'Limpiador', icon: 'tube', words: 'limpiador limpieza cleanser cleansing foam espuma oil aceite balm gel jabon desmaquillante' },
+    { key: 'exfoliante', n: 2, label: 'Exfoliante', one: 'Exfoliante', icon: 'scrub', words: 'exfoliante peeling scrub exfoliator' },
+    { key: 'tonico', n: 3, label: 'Tónico', one: 'Tónico', icon: 'bottle', words: 'tonico toner tonic' },
+    { key: 'pads', n: 3, label: 'Pads', one: 'Pads', icon: 'pad', words: 'pads pad discos almohadillas' },
+    { key: 'esencia', n: 4, label: 'Esencia', one: 'Esencia', icon: 'drop', words: 'esencia essence' },
+    { key: 'serum', n: 5, label: 'Sérum y ampolla', one: 'Sérum', icon: 'dropper', words: 'serum ampolla ampoule suero' },
+    { key: 'mascara', n: 6, label: 'Máscara', one: 'Máscara', icon: 'mask', words: 'mascara mascarilla mask sheet' },
+    { key: 'ojos', n: 7, label: 'Contorno de ojos', one: 'Contorno de ojos', icon: 'eye', words: 'ojos eye contorno ojeras' },
+    { key: 'crema', n: 8, label: 'Crema', one: 'Crema', icon: 'jar', words: 'crema cream hidratante moisturizer gel lotion emulsion' },
+    { key: 'solar', n: 9, label: 'Protector solar', one: 'Protector solar', icon: 'sun', words: 'protector solar sunscreen sun spf fps bloqueador' },
+    { key: 'parches', n: 0, label: 'Parches', one: 'Parches', icon: 'patch', words: 'parches patch granitos' },
+    { key: 'labios', n: 0, label: 'Labios', one: 'Labios', icon: 'lips', words: 'labios lip balsamo' },
+    { key: 'kit', n: 0, label: 'Kits', one: 'Kit', icon: 'box', words: 'kit set rutina' },
+    { key: '', n: 0, label: 'Otros', one: '', icon: 'dot', words: '' }
+  ];
+  var STEP = {}; STEPS.forEach(function (s, i) { s.ord = i; STEP[s.key] = s; });
+
+  // ── Preocupaciones e ingredientes por palabras del nombre (heurística, se ve en los datos) ──
+  var CONCERNS = [
+    { key: 'hidratacion', label: 'Hidratación', re: /HYALU|HIALU|HIDRAT|HYDRA|MOIST|AQUA|WATER|CERAMID|DRY|BARRIER|DIVE.?IN|BIRCH/ },
+    { key: 'acne', label: 'Acné y granitos', re: /ACNE|\bAC\b|BHA|SALICY|TEA ?TREE|BLEMISH|PIMPLE|TROUBLE|AZELA|(?<!DARK ?)SPOT|CLEAR|SEBUM|A.?SOLUTION|AC COLLECTION/ },
+    { key: 'manchas', label: 'Manchas y luminosidad', re: /VITA(MIN)? ?C|NIACIN|TXA|TRANEX|BRIGHT|GLOW|WHITEN|CLAREA|DARK ?SPOT|GLUTA|ARBUTIN|RICE|ARROZ|GALAC|TONE ?UP|RADIANCE|DULL|MELA/ },
+    { key: 'poros', label: 'Poros', re: /PORE|PORO|BLACKHEAD|SEBUM|ZERO ?PORE/ },
+    { key: 'sensible', label: 'Piel sensible', re: /CICA|CENTELLA|MADECA|HEARTLEAF|HOUTTUYN|CALM|SOOTH|RELIEF|MUGWORT|ARTEMIS|PANTHEN|REPAIR|SENSITI|REDNESS|CALMA|AZULENE|ALOE/ },
+    { key: 'antiedad', label: 'Antiedad y firmeza', re: /RETIN|BAKUCH|COLLAGEN|COLAGEN|PEPTID|PDRN|LIFT|FIRM|WRINKLE|ARRUG|\bAGE\b|EXOSOM|REEDLE|ADENOS|ELAST|SNAIL|BIFIDA/ }
+  ];
+  var INGREDIENTS = [
+    { key: 'centella', label: 'Centella', re: /CENTELLA|CICA|MADECA/ },
+    { key: 'niacinamida', label: 'Niacinamida', re: /NIACIN/ },
+    { key: 'hialuronico', label: 'Ácido hialurónico', re: /HYALU|HIALU/ },
+    { key: 'pdrn', label: 'PDRN', re: /PDRN/ },
+    { key: 'caracol', label: 'Mucina de caracol', re: /SNAIL|CARACOL|MUCIN/ },
+    { key: 'retinol', label: 'Retinol y bakuchiol', re: /RETIN|BAKUCH/ },
+    { key: 'vitc', label: 'Vitamina C', re: /VITA(MIN)? ?C\b|ASCORB/ },
+    { key: 'ceramidas', label: 'Ceramidas', re: /CERAMID/ },
+    { key: 'heartleaf', label: 'Heartleaf', re: /HEARTLEAF|HOUTTUYN/ },
+    { key: 'colageno', label: 'Colágeno', re: /COLLAGEN|COLAGEN/ },
+    { key: 'acidos', label: 'BHA, AHA y PHA', re: /\bBHA|\bAHA|\bPHA|SALICY|GLYCOL|LHA/ },
+    { key: 'arroz', label: 'Arroz', re: /RICE|ARROZ/ },
+    { key: 'propoleo', label: 'Propóleo y miel', re: /PROPOLIS|HONEY|MIEL/ },
+    { key: 'peptidos', label: 'Péptidos', re: /PEPTID/ },
+    { key: 'galactomyces', label: 'Galactomyces', re: /GALAC/ }
+  ];
+  var CONCERN = {}; CONCERNS.forEach(function (c) { CONCERN[c.key] = c; });
+  var INGR = {}; INGREDIENTS.forEach(function (c) { INGR[c.key] = c; });
+
+  var BRAND_ALIASES = {
+    'beauty of joseon': 'boj joseon', 'skin1004': 'skin 1004 skin1004 madagascar', 'cosrx': 'cosrx cos rx', 'round lab': 'roundlab',
+    'dr. althea': 'althea dr althea', 'some by mi': 'somebymi', 'vt cosmetics': 'vt reedle', 'numbuzin': 'numbuzin numbus', 'torriden': 'torriden dive in',
+    'mixsoon': 'mixsoon mix soon', 'medicube': 'medicube medi cube', "i'm from": 'imfrom im from', 'ma:nyo': 'manyo ma nyo', 'b.o.m': 'bom', 'tirtir': 'tir tir'
+  };
+
+  function sizeSort(s) { var m = String(s || '').match(/[\d.,]+/); return m ? parseFloat(m[0].replace(',', '.')) : 0; }
+
+  var ALL = (global.DATA || []).map(function (d, i) {
+    var up = fold(d.name + ' ' + d.orig).toUpperCase();
+    var step = STEP[d.type] || STEP[''];
+    var concerns = CONCERNS.filter(function (c) { return c.re.test(up); }).map(function (c) { return c.key; });
+    var ingr = INGREDIENTS.filter(function (c) { return c.re.test(up); }).map(function (c) { return c.key; });
+    if (d.type === 'solar' && concerns.indexOf('manchas') < 0) concerns.push('manchas');
+    if (d.type === 'parches' && concerns.indexOf('acne') < 0) concerns.push('acne');
+    var bl = fold(d.brand);
+    var idx = ' ' + [bl, bl.replace(/[^a-z0-9]/g, ''), BRAND_ALIASES[bl] || '', fold(d.name), fold(d.size || '').replace(/\s/g, ''), fold(d.size || ''), fold(step.label), step.words,
+      concerns.map(function (k) { return fold(CONCERN[k].label); }).join(' '), ingr.map(function (k) { return fold(INGR[k].label) + ' ' + k; }).join(' '), fold(d.orig)].join(' ').replace(/[^a-z0-9+%]+/g, ' ') + ' ';
+    return {
+      i: i, brand: d.brand, name: d.name, size: d.size || '', price: d.price, type: d.type, orig: d.orig, step: step,
+      concerns: concerns, ingr: ingr, idx: idx, nameIdx: ' ' + fold(d.name).replace(/[^a-z0-9+%]+/g, ' '),
+      key: d.brand + '||' + d.name + '||' + (d.size || ''), gkey: d.brand + '||' + fold(d.name)
+    };
+  });
+  var BY_KEY = {}; ALL.forEach(function (it) { if (!BY_KEY[it.key] || it.price < BY_KEY[it.key].price) BY_KEY[it.key] = it; });
+  var ITEMS = ALL.filter(function (it) { return BY_KEY[it.key] === it; });
+  // Orden por defecto: marca y después el paso de la rutina, y el nombre.
+  ITEMS.sort(function (a, b) {
+    return a.brand.localeCompare(b.brand, 'es', { sensitivity: 'base' }) || a.step.ord - b.step.ord || a.name.localeCompare(b.name, 'es') || sizeSort(a.size) - sizeSort(b.size);
+  });
+  ITEMS.forEach(function (it, n) { it.ord = n; });
+  var GROUP_OF = {}; ITEMS.forEach(function (it) { GROUP_OF[it.gkey] = GROUP_OF[it.gkey] || it.ord; it.gid = GROUP_OF[it.gkey]; });
+
+  // ── Búsqueda: palabras en cualquier orden, por comienzo de palabra, sin acentos; corrige una letra ──
+  var VOCAB = null;
+  function vocab() {
+    if (VOCAB) return VOCAB;
+    var set = {}; ITEMS.forEach(function (it) { it.idx.split(' ').forEach(function (w) { if (w.length > 2) set[w] = 1; }); });
+    return (VOCAB = Object.keys(set));
+  }
+  function lev(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    var prev = [], cur, i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i]; var best = i;
+      for (j = 1; j <= b.length; j++) { cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); if (cur[j] < best) best = cur[j]; }
+      if (best > max) return max + 1; prev = cur;
+    }
+    return prev[b.length];
+  }
+  function tokenize(q) { return fold(q).replace(/(\d)\s+(ml|g|gr)\b/g, '$1$2').replace(/[^a-z0-9+%]+/g, ' ').trim().split(' ').filter(Boolean); }
+  function matchAll(it, toks) { for (var k = 0; k < toks.length; k++) if (it.idx.indexOf(' ' + toks[k]) < 0) return false; return true; }
+  function nearWords(tok) {
+    if (tok.length < 4) return [];
+    var max = tok.length >= 7 ? 2 : 1, out = [];
+    vocab().forEach(function (w) { var d = lev(tok, w.slice(0, tok.length + 1), max), d2 = lev(tok, w, max); d = Math.min(d, d2); if (d <= max && w !== tok) out.push({ w: w, d: d }); });
+    return out.sort(function (a, b) { return a.d - b.d; }).slice(0, 6).map(function (x) { return x.w; });
+  }
+
+  // state: { q, step, concern, ingr, brands:{}, price, sort }
+  var PRICE_RANGES = [
+    { key: 'p1', label: 'Hasta $ 30.000', max: 30000 }, { key: 'p2', label: '$ 30.000 a 50.000', max: 50000 },
+    { key: 'p3', label: '$ 50.000 a 80.000', max: 80000 }, { key: 'p4', label: 'Más de $ 80.000', max: Infinity }
+  ];
+  function priceKey(p) { for (var i = 0; i < PRICE_RANGES.length; i++) if (p <= PRICE_RANGES[i].max) return PRICE_RANGES[i].key; return 'p4'; }
+  var FACETS = {
+    step: function (it) { return [it.type]; },
+    concern: function (it) { return it.concerns; },
+    ingr: function (it) { return it.ingr; },
+    brand: function (it) { return [it.brand]; },
+    price: function (it) { return [priceKey(it.price)]; }
+  };
+  function passFilters(it, st, skip) {
+    if (skip !== 'step' && st.step != null && st.step !== 'all' && it.type !== st.step) return false;
+    if (skip !== 'concern' && st.concern && it.concerns.indexOf(st.concern) < 0) return false;
+    if (skip !== 'ingr' && st.ingr && it.ingr.indexOf(st.ingr) < 0) return false;
+    if (skip !== 'price' && st.price && priceKey(it.price) !== st.price) return false;
+    if (skip !== 'brand' && st.brands && Object.keys(st.brands).length && !st.brands[it.brand]) return false;
+    return true;
+  }
+  function textMatches(toks) { return toks.length ? ITEMS.filter(function (it) { return matchAll(it, toks); }) : ITEMS; }
+  function query(state) {
+    var toks = tokenize(state.q || ''), fixed = null;
+    var base = textMatches(toks);
+    if (toks.length && !base.length) {
+      outer: for (var i = 0; i < toks.length; i++) {
+        var near = nearWords(toks[i]);
+        for (var j = 0; j < near.length; j++) {
+          var tt = toks.slice(); tt[i] = near[j];
+          var r = textMatches(tt); if (r.length) { base = r; fixed = { from: toks[i], to: near[j] }; toks = tt; break outer; }
+        }
+      }
+    }
+    var out = base.filter(function (it) { return passFilters(it, state); });
+    if (state.sort === 'asc') out = out.slice().sort(function (a, b) { return a.price - b.price || a.ord - b.ord; });
+    else if (state.sort === 'desc') out = out.slice().sort(function (a, b) { return b.price - a.price || a.ord - b.ord; });
+    else if (state.sort === 'step') out = out.slice().sort(function (a, b) { return a.step.ord - b.step.ord || a.ord - b.ord; });
+    else if (toks.length) {
+      out = out.slice().sort(function (a, b) {
+        var sa = a.nameIdx.indexOf(' ' + toks[0]) === 0 ? 0 : 1, sb = b.nameIdx.indexOf(' ' + toks[0]) === 0 ? 0 : 1;
+        return sa - sb || a.ord - b.ord;
+      });
+    }
+    return { items: out, fixed: fixed, textBase: base };
+  }
+  // Conteos por faceta: cada faceta cuenta con los demás filtros aplicados (no el propio). Cuenta productos (grupos).
+  function facets(state, textBase) {
+    var out = {};
+    Object.keys(FACETS).forEach(function (f) {
+      var c = {}, all = {};
+      textBase.forEach(function (it) {
+        if (!passFilters(it, state, f === 'step' ? 'step' : f === 'brand' ? 'brand' : f)) return;
+        all[it.gid] = 1;
+        FACETS[f](it).forEach(function (k) { (c[k] || (c[k] = {}))[it.gid] = 1; });
+      });
+      Object.keys(c).forEach(function (k) { c[k] = Object.keys(c[k]).length; });
+      c._all = Object.keys(all).length;
+      out[f] = c;
+    });
+    return out;
+  }
+  // Agrupa tamaños del mismo producto (misma marca y nombre) en un renglón; mantiene el orden del primero.
+  function group(items) {
+    var map = {}, order = [];
+    items.forEach(function (it) {
+      var g = map[it.gid]; if (!g) { g = map[it.gid] = { gid: it.gid, first: it, sizes: [] }; order.push(g); }
+      g.sizes.push(it);
+    });
+    order.forEach(function (g) { g.sizes.sort(function (a, b) { return sizeSort(a.size) - sizeSort(b.size) || a.price - b.price; }); });
+    return order;
+  }
+  function brandList(items) {
+    var c = {}; items.forEach(function (it) { c[it.brand] = (c[it.brand] || 0) + 1; });
+    return Object.keys(c).sort(function (a, b) { return a.localeCompare(b, 'es', { sensitivity: 'base' }); }).map(function (b) { return { brand: b, n: c[b] }; });
+  }
+  // Bajada: tipo + hasta dos ingredientes (o preocupaciones si no hay ingredientes).
+  function subline(it) {
+    var bits = it.ingr.slice(0, 2).map(function (k) { return INGR[k].label; });
+    if (!bits.length) bits = it.concerns.slice(0, 1).map(function (k) { return CONCERN[k].label; });
+    return bits.join(' · ');
+  }
+
+  // ── Carrito (localStorage propio, no el de perfumes) ──
+  var Cart = (function () {
+    var cart = {}, listeners = [];
+    try {
+      var saved = JSON.parse(store(CART_KEY) || '{}');
+      Object.keys(saved).forEach(function (k) { var it = BY_KEY[k]; if (it && saved[k].qty > 0) cart[k] = { brand: it.brand, name: it.name, size: it.size, price: it.price, qty: saved[k].qty }; });
+    } catch (e) { cart = {}; }
+    function changed(key, action) { store(CART_KEY, JSON.stringify(cart)); listeners.forEach(function (fn) { fn(key, action); }); }
+    return {
+      onChange: function (fn) { listeners.push(fn); },
+      qty: function (k) { return cart[k] ? cart[k].qty : 0; },
+      lines: function () { return Object.keys(cart).map(function (k) { return { key: k, item: BY_KEY[k], qty: cart[k].qty }; }); },
+      count: function () { return Object.keys(cart).reduce(function (s, k) { return s + cart[k].qty; }, 0); },
+      subtotal: function () { return Object.keys(cart).reduce(function (s, k) { return s + cart[k].price * cart[k].qty; }, 0); },
+      add: function (k) { var it = BY_KEY[k]; if (!it) return; if (!cart[k]) cart[k] = { brand: it.brand, name: it.name, size: it.size, price: it.price, qty: 0 }; cart[k].qty++; changed(k, 'add'); },
+      dec: function (k) { if (!cart[k]) return; cart[k].qty--; if (cart[k].qty <= 0) delete cart[k]; changed(k, 'dec'); },
+      remove: function (k) { delete cart[k]; changed(k, 'remove'); },
+      clear: function () { cart = {}; changed(null, 'clear'); },
+      seedDemo: function () {
+        cart = {};
+        [['Beauty of Joseon', /relief sun/i], ['Anua', /heartleaf 77/i], ['Medicube', /zero pore/i]].forEach(function (p) {
+          var it = ITEMS.filter(function (x) { return x.brand === p[0] && p[1].test(x.name); })[0];
+          if (it) cart[it.key] = { brand: it.brand, name: it.name, size: it.size, price: it.price, qty: 1 };
+        });
+        changed(null, 'seed');
+      }
+    };
+  })();
+
+  // ── Calendario de encargo: de sábado a jueves, cierre el viernes, llega 7 a 10 días hábiles después ──
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function addBusinessDays(d, n) { var x = new Date(d); while (n > 0) { x.setDate(x.getDate() + 1); if (x.getDay() !== 0 && x.getDay() !== 6) n--; } return x; }
+  var DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  function dm(d) { return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  function schedule() {
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    var thu = addDays(t, (4 - t.getDay() + 7) % 7), fri = addDays(thu, 1);
+    return { today: t, thu: thu, fri: fri, from: addBusinessDays(fri, 7), to: addBusinessDays(fri, 10), lastDay: t.getTime() === thu.getTime(), dm: dm, dia: function (d) { return DIAS[d.getDay()]; } };
+  }
+
+  // ── Pedido: entrega, pago, totales y mensaje ──
+  var DELIVERY = {
+    sucursal: { label: 'Envío a sucursal de Correo Argentino', short: 'Sucursal Correo Argentino', cost: ENVIO_SUCURSAL },
+    cordoba: { label: 'Entrega en mano en Córdoba', short: 'En mano, Córdoba', cost: 0 }
+  };
+  function totals(o) {
+    var sub = Cart.subtotal(), env = DELIVERY[o && o.delivery] ? DELIVERY[o.delivery].cost : 0, base = sub + env;
+    var c = CUOTAS.filter(function (x) { return 'tarjeta' + x.n === (o && o.payment); })[0];
+    var total = c ? Math.round(base * (1 + c.pct / 100)) : base;
+    return { subtotal: sub, envio: env, base: base, total: total, cuotas: c ? c.n : 0, cuota: c ? Math.round(total / c.n) : 0,
+      card: CUOTAS.map(function (x) { var t = Math.round(base * (1 + x.pct / 100)); return { n: x.n, pct: x.pct, total: t, cuota: Math.round(t / x.n) }; }) };
+  }
+  function cuota3(price) { return Math.round(price * 1.27 / 3); }
+  function message(o) {
+    o = o || {};
+    var t = totals(o), sch = schedule();
+    var lines = Cart.lines().map(function (l) {
+      var it = l.item;
+      return '• ' + l.qty + 'x ' + it.name + (it.size ? ' ' + it.size : '') + ' — ' + it.brand + ' — ' + fmt(it.price * l.qty) + ' [' + it.orig + ']';
+    });
+    var pay = o.payment && o.payment !== 'transferencia' ? 'tarjeta en ' + t.cuotas + (t.cuotas === 1 ? ' cuota' : ' cuotas') + ' (link de pago)' : 'transferencia';
+    return '¡Hola Agustín!' + (o.name ? ' Soy ' + o.name + (o.province ? ', de ' + o.province : '') + '.' : '') + '\nQuiero encargar de Silkface:\n\n' + lines.join('\n') +
+      '\n\nProductos: ' + fmt(t.subtotal) +
+      (o.delivery ? '\nEntrega: ' + DELIVERY[o.delivery].label + (t.envio ? ' — ' + fmt(t.envio) : '') : '') +
+      '\nPago: ' + pay + '\nTotal: ' + fmt(t.total) + (t.cuotas > 1 ? ' (' + t.cuotas + ' cuotas de ' + fmt(t.cuota) + ')' : '') +
+      '\n\nPedido armado en la lista Silkface del ' + (global.CATALOG_DATE || '') + ' · cierre del viernes ' + sch.dm(sch.fri) + '.';
+  }
+  function waUrl(text) { return 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(text); }
+  function loadDatos() { try { return JSON.parse(store(DATOS_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function saveDatos(o) { store(DATOS_KEY, JSON.stringify(o)); }
+
+  // ── Diálogos: foco atrapado y devuelto, Esc, fondo bloqueado (también en iOS) ──
+  var FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea,[tabindex]:not([tabindex="-1"])';
+  var open = [], lockY = 0, byPointer = false;
+  document.addEventListener('pointerdown', function () { byPointer = true; }, true);
+  document.addEventListener('keydown', function () { byPointer = false; }, true);
+  function focusEl(el) { if (el) el.focus({ preventScroll: true, focusVisible: !byPointer }); }
+  function lockBody(on) {
+    var b = document.body;
+    if (on && !b.classList.contains('locked')) { lockY = global.scrollY; b.style.top = -lockY + 'px'; b.classList.add('locked'); }
+    else if (!on && b.classList.contains('locked')) { b.classList.remove('locked'); b.style.top = ''; global.scrollTo(0, lockY); }
+  }
+  function openModal(el, opener, opts) {
+    opts = opts || {};
+    el.hidden = false; open.push({ el: el, opener: opener, lock: opts.lock !== false });
+    if (opts.lock !== false) lockBody(true);
+    requestAnimationFrame(function () { el.classList.add('is-open'); focusEl(el.querySelector('[data-autofocus]') || el.querySelector(FOCUSABLE)); });
+  }
+  function closeModal(el) {
+    var i = -1; open.forEach(function (o, n) { if (o.el === el) i = n; }); if (i < 0) return;
+    var o = open.splice(i, 1)[0];
+    el.classList.remove('is-open'); el.hidden = true;
+    if (!open.some(function (x) { return x.lock; })) lockBody(false);
+    focusEl(o.opener);
+  }
+  document.addEventListener('keydown', function (e) {
+    var top = open[open.length - 1]; if (!top) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(top.el); return; }
+    if (e.key === 'Tab') {
+      var f = Array.prototype.filter.call(top.el.querySelectorAll(FOCUSABLE), function (x) { return x.offsetParent !== null; });
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+  function announce(msg) {
+    var live = document.getElementById('sr-live'); if (!live) return;
+    live.textContent = ''; setTimeout(function () { live.textContent = msg; }, 30);
+  }
+
+  global.SF = {
+    fold: fold, esc: esc, fmt: fmt, icon: icon, logo: logo, store: store,
+    STEPS: STEPS, STEP: STEP, CONCERNS: CONCERNS, CONCERN: CONCERN, INGREDIENTS: INGREDIENTS, INGR: INGR, PRICE_RANGES: PRICE_RANGES, PROVINCIAS: PROVINCIAS,
+    ITEMS: ITEMS, BY_KEY: BY_KEY, query: query, facets: facets, group: group, brandList: brandList, subline: subline, cuota3: cuota3,
+    Cart: Cart, schedule: schedule, totals: totals, DELIVERY: DELIVERY, ENVIO_SUCURSAL: ENVIO_SUCURSAL, message: message, waUrl: waUrl, loadDatos: loadDatos, saveDatos: saveDatos,
+    openModal: openModal, closeModal: closeModal, focusEl: focusEl, announce: announce, date: global.CATALOG_DATE || ''
+  };
+})(window);
+${SC}
+<script>
+// Filtros de Silkface (común): pinta grupos de filtros con conteos en una hoja (celular) o en un rail (desktop).
+// SilkFilters.html(state, counts, opts) devuelve el HTML; los botones llevan data-f / data-v y la página los maneja.
+(function (global) {
+  'use strict';
+  var SF = global.SF, esc = SF.esc;
+
+  // Una opción sin resultados posibles no se muestra (salvo que esté elegida, para poder sacarla).
+  function chip(f, v, label, n, on) {
+    if (!n && !on) return '';
+    return '<button type="button" class="chip" data-f="' + f + '" data-v="' + esc(v) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+      esc(label) + ' <span class="n">' + (n || 0) + '</span></button>';
+  }
+  // Un grupo sin ninguna opción visible tampoco se muestra.
+  function group(title, inner, id) {
+    if (/<div class="chips"><\/div>/.test(inner)) return '';
+    return '<section class="fg"' + (id ? ' id="' + id + '"' : '') + '><h3 class="fg-t">' + title + '</h3>' + inner + '</section>';
+  }
+
+  // opts: { show: ['concern','ingr','step','price','brand','sort'], brandQuery }
+  function html(state, counts, opts) {
+    opts = opts || {};
+    var show = opts.show || ['concern', 'ingr', 'price', 'brand', 'sort'], out = '';
+    show.forEach(function (f) {
+      if (f === 'sort') {
+        out += group('Ordenar', '<div class="chips">' + [['', 'Marca'], ['step', 'Paso de la rutina'], ['asc', 'Menor precio'], ['desc', 'Mayor precio']].map(function (o) {
+          return '<button type="button" class="chip" data-f="sort" data-v="' + o[0] + '" aria-pressed="' + ((state.sort || '') === o[0]) + '">' + o[1] + '</button>';
+        }).join('') + '</div>');
+      }
+      if (f === 'step') {
+        out += group('Paso de la rutina', '<div class="chips">' + SF.STEPS.filter(function (s) { return counts.step[s.key] || state.step === s.key; }).map(function (s) {
+          return chip('step', s.key, (s.n ? s.n + ' · ' : '') + s.label, counts.step[s.key], state.step === s.key);
+        }).join('') + '</div>');
+      }
+      if (f === 'concern') out += group('¿Qué querés tratar?', '<div class="chips">' + SF.CONCERNS.map(function (c) { return chip('concern', c.key, c.label, counts.concern[c.key], state.concern === c.key); }).join('') + '</div>');
+      if (f === 'ingr') out += group('Ingrediente', '<div class="chips">' + SF.INGREDIENTS.map(function (c) { return chip('ingr', c.key, c.label, counts.ingr[c.key], state.ingr === c.key); }).join('') + '</div>');
+      if (f === 'price') out += group('Precio', '<div class="chips">' + SF.PRICE_RANGES.map(function (r) { return chip('price', r.key, r.label, counts.price[r.key], state.price === r.key); }).join('') + '</div>');
+      if (f === 'brand') {
+        var q = SF.fold(opts.brandQuery || '');
+        var brands = Object.keys(counts.brand).filter(function (b) { return b !== '_all'; }).concat(Object.keys(state.brands || {}))
+          .filter(function (b, i, a) { return a.indexOf(b) === i; })
+          .sort(function (a, b) { return a.localeCompare(b, 'es', { sensitivity: 'base' }); });
+        var list = brands.filter(function (b) { return (counts.brand[b] || (state.brands && state.brands[b])) && (!q || SF.fold(b).indexOf(q) >= 0); }).map(function (b) {
+          var on = !!(state.brands && state.brands[b]);
+          return '<label class="brand-opt"><input type="checkbox" data-f="brand" data-v="' + esc(b) + '"' + (on ? ' checked' : '') + '><span>' + esc(b) + '</span><span class="n">' + (counts.brand[b] || 0) + '</span></label>';
+        }).join('');
+        out += group('Marca', '<input type="search" class="brand-q" id="' + (opts.idp || 'f') + '-brand-q" placeholder="Buscar marca" aria-label="Buscar marca" value="' + esc(opts.brandQuery || '') + '">' +
+          '<div class="brand-list">' + (list || '<p class="notice">Ninguna marca coincide.</p>') + '</div>');
+      }
+    });
+    return out;
+  }
+
+  // Aplica un toque de filtro al estado (los de opción única se apagan al tocarlos de nuevo).
+  function apply(state, f, v, checked) {
+    if (f === 'brand') { state.brands = Object.assign({}, state.brands); if (checked) state.brands[v] = 1; else delete state.brands[v]; return state; }
+    if (f === 'sort') { state.sort = v; return state; }
+    state[f] = state[f] === v ? (f === 'step' ? 'all' : '') : v;
+    if (f === 'price' && state.price && !state.sort) state.sort = 'asc';
+    return state;
+  }
+
+  // Chips de filtros aplicados, quitables.
+  function appliedHtml(state, withStep) {
+    var h = '';
+    if (withStep && state.step && state.step !== 'all') h += pill('step', '', SF.STEP[state.step].label);
+    if (state.concern) h += pill('concern', '', SF.CONCERN[state.concern].label);
+    if (state.ingr) h += pill('ingr', '', SF.INGR[state.ingr].label);
+    if (state.price) h += pill('price', '', SF.PRICE_RANGES.filter(function (r) { return r.key === state.price; })[0].label);
+    Object.keys(state.brands || {}).forEach(function (b) { h += pill('brand', b, b); });
+    return h;
+  }
+  function pill(f, v, label) { return '<button type="button" class="applied" data-rm="' + f + '" data-v="' + esc(v) + '" aria-label="Quitar filtro ' + esc(label) + '">' + esc(label) + SF.icon('close') + '</button>'; }
+  function removeApplied(state, f, v) {
+    if (f === 'brand') { state.brands = Object.assign({}, state.brands); delete state.brands[v]; }
+    else state[f] = f === 'step' ? 'all' : '';
+    return state;
+  }
+  function activeCount(state) { return (state.concern ? 1 : 0) + (state.ingr ? 1 : 0) + (state.price ? 1 : 0) + Object.keys(state.brands || {}).length; }
+
+  global.SilkFilters = { html: html, apply: apply, appliedHtml: appliedHtml, removeApplied: removeApplied, activeCount: activeCount };
+})(window);
+${SC}
+<script>
+// Carrito de Silkface (común a las tres opciones): drawer de alto completo en dos pasos, Pedido → Tus datos.
+// Cada opción le da su estilo con las mismas clases (.drawer, .dw-*). Necesita core.js.
+(function (global) {
+  'use strict';
+  var SF = global.SF, Cart = SF.Cart, esc = SF.esc, fmt = SF.fmt, icon = SF.icon;
+  var root, opener, stepN = 1, clearArmed = 0;
+  var datos = SF.loadDatos();
+  if (!datos.payment) datos.payment = 'transferencia';
+
+  function build() {
+    root = document.createElement('div');
+    root.className = 'drawer-wrap'; root.hidden = true;
+    root.innerHTML = '<div class="dw-scrim" data-close></div>' +
+      '<section class="drawer" role="dialog" aria-modal="true" aria-labelledby="dw-title">' +
+      '<header class="dw-head"><button type="button" class="dw-back" data-back aria-label="Volver al pedido" hidden>' + icon('back') + '</button>' +
+      '<div><p class="dw-eyebrow" id="dw-step">Paso 1 de 2</p><h2 id="dw-title">Tu pedido</h2></div>' +
+      '<button type="button" class="dw-x" data-close aria-label="Cerrar el pedido">' + icon('close') + '</button></header>' +
+      '<div class="dw-body" id="dw-body"></div><footer class="dw-foot" id="dw-foot"></footer></section>';
+    document.body.appendChild(root);
+    root.addEventListener('click', onClick);
+    root.addEventListener('input', onInput);
+    root.addEventListener('change', onInput);
+  }
+
+  function calendarHtml() {
+    var s = SF.schedule();
+    return '<div class="dw-cal">' + icon('calendar') + '<div><b>' + (s.lastDay ? 'Hoy es el último día' : 'Encargos hasta el ' + s.dia(s.thu) + ' ' + s.dm(s.thu)) + '</b>' +
+      '<span>Cierra el viernes ' + s.dm(s.fri) + ' · llega entre el ' + s.dm(s.from) + ' y el ' + s.dm(s.to) + '</span></div></div>';
+  }
+
+  function step1() {
+    var lines = Cart.lines();
+    if (!lines.length) {
+      return { body: calendarHtml() + '<div class="dw-empty"><p><b>Tu pedido está vacío.</b></p><p>Buscá por producto, marca o lo que querés tratar. Si no sabés por dónde empezar, te armamos la rutina.</p>' +
+        '<a class="btn btn-wa" target="_blank" rel="noopener" href="' + SF.waUrl('¡Hola Agustín! Quiero que me ayudes a armar una rutina con Silkface.') + '">' + icon('chat') + 'Armame la rutina por WhatsApp</a></div>',
+        foot: '' };
+    }
+    var h = calendarHtml() + '<ul class="dw-lines">';
+    lines.forEach(function (l) {
+      var it = l.item;
+      h += '<li class="dw-line"><div class="dw-l-main"><span class="dw-l-brand">' + esc(it.brand) + '</span><span class="dw-l-name">' + esc(it.name) + '</span>' +
+        '<span class="dw-l-meta">' + esc([it.step.one, it.size].filter(Boolean).join(' · ')) + '</span></div>' +
+        '<div class="dw-l-side"><span class="dw-l-price">' + fmt(it.price * l.qty) + '</span>' +
+        '<div class="stepper"><button type="button" data-dec="' + esc(l.key) + '" aria-label="' + (l.qty === 1 ? 'Quitar ' : 'Uno menos de ') + esc(it.name) + '">' + icon(l.qty === 1 ? 'trash' : 'minus') + '</button>' +
+        '<span aria-live="polite">' + l.qty + '</span><button type="button" data-inc="' + esc(l.key) + '" aria-label="Uno más de ' + esc(it.name) + '">' + icon('plus') + '</button></div></div></li>';
+    });
+    h += '</ul><button type="button" class="dw-clear" data-clear>' + (clearArmed ? 'Tocá de nuevo para vaciar' : 'Vaciar pedido') + '</button>' +
+      '<ul class="dw-trust"><li>' + icon('check') + 'Originales, importados por encargo.</li><li>' + icon('check') + 'Te avisamos el vencimiento antes de despachar.</li><li>' + icon('check') + 'Pagás cuando confirmamos por WhatsApp.</li></ul>';
+    return { body: h, foot: '<div class="dw-sum"><span>Productos (' + Cart.count() + ')</span><b>' + fmt(Cart.subtotal()) + '</b></div><button type="button" class="btn btn-main" data-next>Seguir con tus datos ' + icon('chev') + '</button>' };
+  }
+
+  function radio(name, val, label, extra) {
+    return '<label class="opt"><input type="radio" name="' + name + '" value="' + val + '"' + (datos[name] === val ? ' checked' : '') + '><span class="opt-t">' + label + '</span>' + (extra ? '<span class="opt-x">' + extra + '</span>' : '') + '</label>';
+  }
+  function step2() {
+    var t = SF.totals(datos);
+    var deliv = datos.province === 'Córdoba'
+      ? radio('delivery', 'cordoba', 'Entrega en mano en Córdoba', 'Gratis') + radio('delivery', 'sucursal', 'Sucursal de Correo Argentino', fmt(SF.ENVIO_SUCURSAL))
+      : radio('delivery', 'sucursal', 'Sucursal de Correo Argentino', fmt(SF.ENVIO_SUCURSAL));
+    var pays = radio('payment', 'transferencia', 'Transferencia', 'Precio publicado') + t.card.map(function (c) {
+      return radio('payment', 'tarjeta' + c.n, 'Tarjeta en ' + c.n + (c.n === 1 ? ' cuota' : ' cuotas'), (c.n > 1 ? c.n + ' × ' + fmt(c.cuota) : fmt(c.total)) + ' · +' + c.pct + ' %');
+    }).join('');
+    var ok = datos.name && datos.province && datos.delivery;
+    var body = '<div class="field"><label for="dw-name">Tu nombre</label><input id="dw-name" name="name" autocomplete="name" value="' + esc(datos.name || '') + '" placeholder="Nombre y apellido"></div>' +
+      '<div class="field"><label for="dw-prov">Provincia</label><select id="dw-prov" name="province"><option value="">Elegí tu provincia</option>' +
+      SF.PROVINCIAS.map(function (p) { return '<option' + (datos.province === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select></div>' +
+      '<fieldset class="opts"><legend>Entrega</legend>' + deliv + '</fieldset>' +
+      '<fieldset class="opts"><legend>Pago</legend>' + pays + '</fieldset>' +
+      '<div class="dw-totals"><div><span>Productos</span><span>' + fmt(t.subtotal) + '</span></div>' +
+      (datos.delivery ? '<div><span>Entrega</span><span>' + (t.envio ? fmt(t.envio) : 'Gratis') + '</span></div>' : '') +
+      (t.cuotas ? '<div><span>Recargo tarjeta</span><span>' + fmt(t.total - t.base) + '</span></div>' : '') +
+      '<div class="dw-total"><span>Total</span><span>' + fmt(t.total) + (t.cuotas > 1 ? '<small>' + t.cuotas + ' cuotas de ' + fmt(t.cuota) + '</small>' : '') + '</span></div></div>' +
+      '<details class="dw-preview"><summary>Ver el mensaje que se envía</summary><pre>' + esc(SF.message(datos)) + '</pre></details>';
+    var foot = (ok ? '' : '<p class="dw-need">Completá nombre, provincia y entrega para enviar.</p>') +
+      '<a class="btn btn-wa' + (ok ? '' : ' is-disabled') + '" ' + (ok ? 'target="_blank" rel="noopener" href="' + SF.waUrl(SF.message(datos)) + '"' : 'aria-disabled="true" role="link"') + ' data-send>' + icon('chat') + 'Enviar pedido por WhatsApp</a>';
+    return { body: body, foot: foot };
+  }
+
+  function render(keepFocus) {
+    var v = stepN === 1 ? step1() : step2();
+    var active = document.activeElement, activeId = active && active.id;
+    root.querySelector('#dw-body').innerHTML = v.body;
+    root.querySelector('#dw-foot').innerHTML = v.foot;
+    root.querySelector('#dw-step').textContent = 'Paso ' + stepN + ' de 2';
+    root.querySelector('#dw-title').textContent = stepN === 1 ? 'Tu pedido' : 'Tus datos';
+    root.querySelector('[data-back]').hidden = stepN === 1;
+    if (keepFocus && activeId) { var el = document.getElementById(activeId); if (el) el.focus(); }
+    else if (active && root.contains(active) && (active.dataset.inc || active.dataset.dec)) {
+      var k = active.dataset.inc || active.dataset.dec, sel = active.dataset.inc ? 'data-inc' : 'data-dec';
+      var same = Array.prototype.filter.call(root.querySelectorAll('[' + sel + ']'), function (x) { return x.getAttribute(sel) === k; })[0] ||
+        Array.prototype.filter.call(root.querySelectorAll('[data-inc]'), function (x) { return x.dataset.inc === k; })[0];
+      SF.focusEl(same || root.querySelector('.dw-x'));
+    }
+    else if (active && !document.body.contains(active)) SF.focusEl(root.querySelector('.dw-x'));
+  }
+
+  function onClick(e) {
+    var b = e.target.closest('button,a,[data-close]'); if (!b) return;
+    if (b.hasAttribute('data-close')) { close(); return; }
+    if (b.hasAttribute('data-back')) { stepN = 1; render(); SF.focusEl(root.querySelector('.dw-x')); return; }
+    if (b.hasAttribute('data-next')) { stepN = 2; render(); SF.focusEl(root.querySelector('#dw-name')); return; }
+    if (b.dataset.inc) { Cart.add(b.dataset.inc); return; }
+    if (b.dataset.dec) { Cart.dec(b.dataset.dec); return; }
+    if (b.hasAttribute('data-clear')) {
+      if (clearArmed) { clearArmed = 0; Cart.clear(); SF.announce('Pedido vacío'); }
+      else { clearArmed = 1; render(); setTimeout(function () { if (clearArmed) { clearArmed = 0; if (!root.hidden && stepN === 1) render(); } }, 3000); }
+      return;
+    }
+    if (b.hasAttribute('data-send') && b.classList.contains('is-disabled')) { e.preventDefault(); SF.focusEl(root.querySelector(!datos.name ? '#dw-name' : !datos.province ? '#dw-prov' : 'input[name=delivery]')); }
+  }
+  function onInput(e) {
+    var t = e.target; if (!t.name) return;
+    datos[t.name] = t.value;
+    if (t.name === 'province') datos.delivery = t.value === 'Córdoba' ? (datos.delivery || 'cordoba') : (datos.delivery === 'cordoba' ? '' : datos.delivery);
+    SF.saveDatos(datos);
+    if (e.type === 'change' || t.type === 'radio') render(true);
+    else { // al escribir el nombre solo se actualiza la vista previa y el botón
+      var v = step2(); root.querySelector('#dw-foot').innerHTML = v.foot;
+      var pre = root.querySelector('.dw-preview pre'); if (pre) pre.textContent = SF.message(datos);
+    }
+  }
+  function openCart(from, step) {
+    if (!root) build();
+    opener = from || document.activeElement; stepN = step || 1; clearArmed = 0;
+    render(); SF.openModal(root, opener);
+  }
+  function close() { SF.closeModal(root); }
+  Cart.onChange(function () { if (root && !root.hidden) render(); });
+
+  global.SilkOpenCart = function (step) { openCart(null, step); };
+  global.SilkCart = { open: openCart, close: close };
+})(window);
+${SC}
+<script>
+// Comportamiento común de la página (las tres opciones): estado, buscador, filtros, tandas, tamaños, carrito.
+// Cada opción pasa cómo se pinta un producto (renderItem) y, si quiere, la navegación (renderNav) y el rail (renderRail).
+(function (global) {
+  'use strict';
+  var SF = global.SF, Cart = SF.Cart, F = global.SilkFilters, esc = SF.esc, fmt = SF.fmt, icon = SF.icon;
+  var $ = function (s) { return document.querySelector(s); };
+
+  function addControl(it) {
+    var q = Cart.qty(it.key);
+    if (!q) return '<button type="button" class="add" data-add="' + esc(it.key) + '" aria-label="Agregar ' + esc(it.name) + (it.size ? ' ' + esc(it.size) : '') + '">' + icon('plus') + '<span>Agregar</span></button>';
+    return '<div class="stepper"><button type="button" data-dec="' + esc(it.key) + '" aria-label="' + (q === 1 ? 'Quitar ' : 'Uno menos de ') + esc(it.name) + '">' + icon(q === 1 ? 'trash' : 'minus') + '</button>' +
+      '<span>' + q + '</span><button type="button" data-inc="' + esc(it.key) + '" aria-label="Uno más de ' + esc(it.name) + '">' + icon('plus') + '</button></div>';
+  }
+  function typeTag(it) { return '<span class="type-tag t-' + it.type + '">' + icon(it.step.icon) + esc(it.step.one || 'Skincare') + '</span>'; }
+  function sizesHtml(g, sel) {
+    if (g.sizes.length < 2) return sel.size ? '<span class="size-one num">' + esc(sel.size) + '</span>' : '';
+    return '<span class="sizes" role="group" aria-label="Tamaño">' + g.sizes.map(function (s) {
+      return '<button type="button" class="size" data-size="' + esc(s.key) + '" data-gid="' + g.gid + '" aria-pressed="' + (s === sel) + '">' + esc(s.size || 'Único') + '</button>';
+    }).join('') + '</span>';
+  }
+
+  function init(o) {
+    var state = { q: '', step: 'all', concern: '', ingr: '', price: '', brands: {}, sort: '' };
+    var shown = o.pageSize || 40, sel = {}, groups = [], gmap = {}, lastCounts = null, brandQ = '';
+    var listEl = $('#list');
+
+    function selOf(g) { var k = sel[g.gid]; return g.sizes.filter(function (s) { return s.key === k; })[0] || g.sizes[0]; }
+    function rowHtml(g) { var it = selOf(g); return o.renderItem(g, it, { add: addControl(it), tag: typeTag(it), sizes: sizesHtml(g, it), plain: plainMode() }); }
+    function plainMode() { return !!(state.q || state.sort); }
+
+    function render(resetPage) {
+      if (resetPage) shown = o.pageSize || 40;
+      var r = SF.query(state);
+      var counts = SF.facets(state, r.textBase);
+      lastCounts = counts;
+      groups = SF.group(r.items); gmap = {}; groups.forEach(function (g) { gmap[g.gid] = g; });
+      document.documentElement.classList.toggle('has-q', !!state.q);
+      var vis = groups.slice(0, shown), h = '';
+      if (!groups.length) {
+        h = '<div class="empty"><h3>No encontramos “' + esc(state.q || 'eso') + '”</h3><p>Probá con otra palabra: la marca, el tipo de producto (tónico, sérum, protector) o lo que querés tratar.</p>' +
+          (F.activeCount(state) || (state.step && state.step !== 'all') ? '<button type="button" class="btn btn-ghost" data-clear-all>Sacar los filtros</button>' : '') +
+          '<a class="btn btn-wa" target="_blank" rel="noopener" href="' + SF.waUrl('¡Hola Agustín! Busco ' + (state.q || 'un producto') + ' en Silkface. ¿Lo podés conseguir?') + '">' + icon('chat') + 'Consultanos por WhatsApp</a></div>';
+      } else if ((o.sectioned || (o.sectionFn && o.sectionFn(state))) && !plainMode()) {
+        // Secciones: por marca (default) o la que pida la opción (p. ej. por paso de la rutina).
+        var secOf = (o.sectionFn && o.sectionFn(state)) || function (it) { return { key: it.brand, label: esc(it.brand) }; };
+        var cur = null, ncount = {};
+        groups.forEach(function (x) { var k = secOf(x.first).key; ncount[k] = (ncount[k] || 0) + 1; });
+        vis.forEach(function (g) {
+          var sec = secOf(g.first);
+          if (sec.key !== cur) {
+            if (cur !== null) h += '</div></section>';
+            cur = sec.key;
+            h += '<section class="brand-sec"><h2 class="brand-h">' + sec.label + ' <span class="n">' + ncount[cur] + '</span></h2><div class="' + (o.listClass || 'rows') + '">';
+          }
+          h += rowHtml(g);
+        });
+        h += '</div></section>';
+      } else {
+        h = '<div class="' + (o.listClass || 'rows') + ' plain">' + vis.map(rowHtml).join('') + '</div>';
+      }
+      listEl.innerHTML = h;
+      var more = $('#more');
+      if (more) { more.hidden = groups.length <= shown; more.innerHTML = '<button type="button" class="btn btn-ghost" data-more>Mostrar ' + Math.min(o.pageSize || 40, groups.length - shown) + ' más</button>'; }
+      var cnt = $('#count'); if (cnt) cnt.textContent = groups.length.toLocaleString('es-AR') + (groups.length === 1 ? ' producto' : ' productos');
+      var fix = $('#fix'); if (fix) { fix.hidden = !r.fixed; if (r.fixed) fix.innerHTML = 'No hay resultados para “' + esc(r.fixed.from) + '”. Te mostramos <b>' + esc(r.fixed.to) + '</b>.'; }
+      var ap = $('#applied'); if (ap) ap.innerHTML = F.appliedHtml(state, o.appliedStep);
+      var fb = $('#btn-filters-n'); if (fb) { var n = F.activeCount(state); fb.textContent = n ? n : ''; fb.hidden = !n; }
+      if (o.renderNav) o.renderNav(counts, state);
+      if (o.renderRail) o.renderRail(counts, state, brandQ);
+      if (sheetOpen()) renderSheet();
+    }
+
+    function refreshRow(key) {
+      var it = SF.BY_KEY[key]; if (!it) return;
+      var g = gmap[it.gid]; if (!g) return;
+      var el = listEl.querySelector('[data-row="' + g.gid + '"]'); if (!el) return;
+      var had = document.activeElement && el.contains(document.activeElement) ? document.activeElement : null;
+      var tmp = document.createElement('div'); tmp.innerHTML = rowHtml(g);
+      var nu = tmp.firstElementChild; el.replaceWith(nu);
+      if (had) { // devolver el foco al control equivalente
+        var t = nu.querySelector('[data-inc="' + CSS.escape(key) + '"]') || nu.querySelector('[data-dec="' + CSS.escape(key) + '"]') || nu.querySelector('[data-add="' + CSS.escape(key) + '"]');
+        SF.focusEl(t);
+      }
+    }
+    function updateBadge() {
+      var n = Cart.count(), b = $('#cart-n');
+      if (b) { b.textContent = n; b.hidden = !n; }
+      var cb = $('#cartbar');
+      if (cb) { cb.hidden = !n; cb.innerHTML = '<button type="button" class="btn btn-main" data-open-cart><span>Ver pedido · ' + n + '</span><span class="num">' + fmt(Cart.subtotal()) + '</span></button>'; }
+      if (o.renderSummary) o.renderSummary();
+    }
+    Cart.onChange(function (key, action) {
+      if (key) refreshRow(key); else render(false);
+      updateBadge();
+      if (action === 'add') { var it = SF.BY_KEY[key]; if (it && Cart.qty(key) === 1) SF.announce(it.name + ' agregado al pedido'); }
+    });
+
+    // ── Hoja de filtros ──
+    var sheet;
+    function sheetOpen() { return sheet && !sheet.hidden; }
+    function renderSheet() {
+      sheet.querySelector('.sheet-body').innerHTML = F.html(state, lastCounts, { show: o.filterShow, brandQuery: brandQ, idp: 'sh' });
+      var t = SF.query(state).items.length;
+      sheet.querySelector('[data-close-sheet]').textContent = 'Ver ' + SF.group(SF.query(state).items).length.toLocaleString('es-AR') + ' productos';
+      void t;
+    }
+    function openSheet(opener) {
+      if (!sheet) {
+        sheet = document.createElement('div'); sheet.className = 'sheet-wrap'; sheet.hidden = true;
+        sheet.innerHTML = '<div class="dw-scrim" data-close-sheet-x></div><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><header class="sheet-head"><h2 id="sh-t">Filtros</h2>' +
+          '<button type="button" class="dw-x" data-close-sheet-x aria-label="Cerrar filtros">' + icon('close') + '</button></header><div class="sheet-body"></div>' +
+          '<footer class="sheet-foot"><button type="button" class="btn btn-ghost" data-clear-all>Limpiar</button><button type="button" class="btn btn-main" data-close-sheet>Ver productos</button></footer></section>';
+        document.body.appendChild(sheet);
+        sheet.addEventListener('click', function (e) {
+          if (e.target.closest('[data-close-sheet],[data-close-sheet-x]')) { SF.closeModal(sheet); return; }
+          handleFilterClick(e);
+        });
+        sheet.addEventListener('change', handleFilterChange);
+        sheet.addEventListener('input', handleBrandQ);
+      }
+      renderSheet(); SF.openModal(sheet, opener);
+    }
+    function handleFilterClick(e) {
+      var b = e.target.closest('button[data-f]');
+      if (b) { F.apply(state, b.dataset.f, b.dataset.v); render(true); return true; }
+      if (e.target.closest('[data-clear-all]')) { clearAll(); return true; }
+      return false;
+    }
+    function handleFilterChange(e) {
+      var t = e.target; if (t.dataset.f === 'brand') { F.apply(state, 'brand', t.dataset.v, t.checked); var id = t.dataset.v; render(true); var again = document.querySelector('input[data-f="brand"][data-v="' + CSS.escape(id) + '"]'); if (again) again.focus(); }
+    }
+    function handleBrandQ(e) {
+      if (!e.target.classList.contains('brand-q')) return;
+      brandQ = e.target.value; var id = e.target.id, pos = e.target.selectionStart;
+      if (sheetOpen()) renderSheet(); if (o.renderRail) o.renderRail(lastCounts, state, brandQ);
+      var again = document.getElementById(id); if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (er) {} }
+    }
+    function clearAll() { state.concern = ''; state.ingr = ''; state.price = ''; state.brands = {}; state.step = 'all'; if (o.onClear) o.onClear(state); render(true); }
+
+    // ── Delegación de clics en toda la página ──
+    document.addEventListener('click', function (e) {
+      if (e.target.closest('.sheet-wrap,.drawer-wrap')) return;
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.add) { Cart.add(b.dataset.add); return; }
+      if (b.dataset.inc) { Cart.add(b.dataset.inc); return; }
+      if (b.dataset.dec) { Cart.dec(b.dataset.dec); return; }
+      if (b.dataset.size) { sel[b.dataset.gid] = b.dataset.size; var g = gmap[b.dataset.gid]; if (g) { refreshRow(b.dataset.size); var nb = listEl.querySelector('[data-size="' + CSS.escape(b.dataset.size) + '"]'); SF.focusEl(nb); } return; }
+      if (b.hasAttribute('data-more')) { var first = groups[shown]; shown += o.pageSize || 40; render(false); var el = first && listEl.querySelector('[data-row="' + first.gid + '"] button'); SF.focusEl(el); return; }
+      if (b.hasAttribute('data-open-filters')) { openSheet(b); return; }
+      if (b.hasAttribute('data-open-cart')) { global.SilkCart.open(b); return; }
+      if (b.dataset.rm) { F.removeApplied(state, b.dataset.rm, b.dataset.v); render(true); return; }
+      if (b.dataset.nav) { // navegación propia de la opción (pasos de la rutina, preocupaciones)
+        var f = b.dataset.nav, v = b.dataset.v;
+        if (f === 'step') state.step = v; else F.apply(state, f, v);
+        render(true); if (o.afterNav) o.afterNav(f, v); return;
+      }
+      if (b.closest('#rail')) { handleFilterClick(e); return; }
+      if (b.hasAttribute('data-clear-all')) { clearAll(); return; }
+      if (b.hasAttribute('data-clear-q')) { var qi = $('#q'); qi.value = ''; state.q = ''; render(true); qi.focus(); }
+    });
+    document.addEventListener('change', function (e) { if (e.target.closest('#rail')) handleFilterChange(e); });
+    document.addEventListener('input', function (e) { if (e.target.closest('#rail')) handleBrandQ(e); });
+
+    // ── Buscador con debounce; has-q se pone apenas hay texto (pliega la cabecera) ──
+    var qEl = $('#q'), tmr;
+    qEl.addEventListener('input', function () {
+      document.documentElement.classList.toggle('has-q', !!qEl.value.trim());
+      clearTimeout(tmr); tmr = setTimeout(function () { state.q = qEl.value.trim(); render(true); if (state.q) global.scrollTo(0, 0); }, 120);
+    });
+    qEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { qEl.blur(); } });
+    document.addEventListener('focusin', function (e) { if (e.target === qEl) document.documentElement.classList.add('kb-open'); });
+    document.addEventListener('focusout', function (e) { if (e.target === qEl) setTimeout(function () { document.documentElement.classList.remove('kb-open'); }, 60); });
+
+    // ── Header compacto al bajar: mismo manejador que el catálogo de perfumes (commit 8f694a4). Cambiar el alto del
+    // header cambia el alto de la página: pegado al final, el navegador corrige el scroll hacia arriba (en iOS se suma
+    // el rebote) y eso lo volvía a agrandar en un bucle. Por eso: se ignora el scroll que provoca el propio cambio
+    // (300 ms), hace falta moverse 24 px en la misma dirección, se ignora el rebote fuera de los límites y no se
+    // agranda a menos de 80 px del final.
+    var lastY = global.scrollY, acc = 0, hdrLock = 0, rootEl = document.documentElement;
+    global.addEventListener('scroll', function () {
+      var y = global.scrollY, max = rootEl.scrollHeight - global.innerHeight;
+      var dy = y - lastY; lastY = y;
+      if (y < 0 || y > max) return;
+      if (performance.now() < hdrLock) return;
+      acc = (acc > 0) === (dy > 0) ? acc + dy : dy;
+      var want = y <= 140 ? false : acc > 24 ? true : acc < -24 ? false : null;
+      if (want === null || want === rootEl.classList.contains('compact')) return;
+      if (!want && y > 140 && max - y < 80) return;
+      rootEl.classList.toggle('compact', want);
+      hdrLock = performance.now() + 300; acc = 0;
+    }, { passive: true });
+
+    // ── Fechas del encargo en cualquier [data-sch] ──
+    var s = SF.schedule();
+    var SCH = { close: (s.lastDay ? 'hoy, ' : '') + s.dia(s.thu) + ' ' + s.dm(s.thu), fri: 'viernes ' + s.dm(s.fri), arrive: s.dm(s.from) + ' y el ' + s.dm(s.to), from: s.dm(s.from), to: s.dm(s.to) };
+    Array.prototype.forEach.call(document.querySelectorAll('[data-sch]'), function (el) { el.textContent = SCH[el.dataset.sch]; });
+
+    global.SilkSearch = function (q) { qEl.value = q; qEl.focus(); qEl.dispatchEvent(new Event('input')); };
+    render(true); updateBadge();
+    return { state: state, render: render, openSheet: openSheet };
+  }
+
+  global.SilkPage = { init: init, addControl: addControl, typeTag: typeTag };
+})(window);
+${SC}
+<script>
+(function () {
+  var SF = window.SF, esc = SF.esc, fmt = SF.fmt, icon = SF.icon;
+  document.getElementById('logo').innerHTML = SF.logo();
+  document.getElementById('qi').outerHTML = icon('search');
+  document.querySelector('.qclear').innerHTML = icon('close');
+  document.getElementById('info-btn').innerHTML = icon('info');
+  document.getElementById('cart-ic').outerHTML = icon('bag');
+  document.getElementById('fi').outerHTML = icon('filter');
+  ['t1', 't2', 't3'].forEach(function (id) { var el = document.getElementById(id); el.innerHTML = icon('check') + el.textContent; });
+  document.querySelectorAll('[data-x]').forEach(function (b) { if (b.tagName === 'BUTTON') b.innerHTML = icon('close'); });
+  var fw = document.getElementById('foot-wa'); fw.href = SF.waUrl('¡Hola Agustín! Quiero que me ayudes a armar una rutina con Silkface. Mi piel es…'); fw.insertAdjacentHTML('afterbegin', icon('chat'));
+  document.getElementById('fdate').textContent = SF.date;
+
+  var info = document.getElementById('info');
+  document.getElementById('info-btn').addEventListener('click', function (e) { SF.openModal(info, e.currentTarget); });
+  info.addEventListener('click', function (e) { if (e.target.closest('[data-x]')) SF.closeModal(info); });
+
+  // Alto del header para que el encabezado de marca quede pegado debajo.
+  var hdr = document.querySelector('header.top');
+  new ResizeObserver(function () { document.documentElement.style.setProperty('--hdr', hdr.offsetHeight + 'px'); }).observe(hdr);
+
+  var NAV = SF.STEPS.filter(function (s) { return s.key; });
+  function renderNav(counts, state) {
+    var h = '<button type="button" class="st" data-nav="step" data-v="all" aria-pressed="' + (state.step === 'all') + '"><span class="stn">' + icon('leaf') + '</span><b>Todo</b><small>' + counts.step._all + '</small></button>';
+    h += NAV.map(function (s) {
+      var n = counts.step[s.key] || 0, on = state.step === s.key;
+      if (!n && !on) return ''; // un paso sin productos con los filtros actuales no se muestra
+      return '<button type="button" class="st t-' + s.key + '" data-nav="step" data-v="' + s.key + '" aria-pressed="' + on + '">' +
+        '<span class="stn">' + icon(s.icon) + '</span><b>' + esc(s.label) + '</b><small>' + (s.n ? '<i>Paso ' + s.n + '</i>' : '') + n + '</small></button>';
+    }).join('');
+    document.getElementById('nav').innerHTML = h;
+  }
+  function renderItem(g, it, c) {
+    return '<article class="row" data-row="' + g.gid + '"><div style="min-width:0"><span class="r-brand">' + esc(it.brand) + '</span><h3 class="r-name">' + esc(it.name) + '</h3>' +
+      '<div class="r-meta">' + c.tag + (SF.subline(it) ? '<span class="r-sub">' + esc(SF.subline(it)) + '</span>' : '') + c.sizes + '</div></div>' +
+      '<div class="r-buy"><span class="r-price">' + fmt(it.price) + '</span><span class="r-cuota">o 3 × ' + fmt(SF.cuota3(it.price)) + '</span>' + c.add + '</div></article>';
+  }
+  function renderSummary() {
+    var lines = SF.Cart.lines(), el = document.getElementById('summary');
+    el.innerHTML = '<h2>Tu pedido</h2>' + (lines.length
+      ? '<ul class="sum-lines">' + lines.map(function (l) { return '<li><span>' + l.qty + '× ' + esc(l.item.name) + '</span><span class="num">' + fmt(l.item.price * l.qty) + '</span></li>'; }).join('') + '</ul>' +
+        '<div class="sum-total"><span>Productos</span><span>' + fmt(SF.Cart.subtotal()) + '</span></div><button type="button" class="btn btn-main" data-open-cart>Ver pedido</button>'
+      : '<p class="sum-empty">Todavía no agregaste productos. Encargos hasta el ' + esc(SF.schedule().dia(SF.schedule().thu)) + ' ' + SF.schedule().dm(SF.schedule().thu) + '.</p>');
+  }
+  SilkPage.init({ pageSize: 40, sectioned: true, appliedStep: true, renderItem: renderItem, renderNav: renderNav, renderSummary: renderSummary, filterShow: ['concern', 'ingr', 'price', 'brand', 'sort'] });
+})();
+${SC}
+</body>
+</html>
+`;
+}
+// ── SILKFACE:END
+
+// Cada línea publica su propia lista (card 21): Perfumes → docs/catalogo.html (Crovato Fragrances),
+// Cosmética coreana → docs/silkface.html (Silkface). El Worker solo acepta esos dos destinos.
+const PL_PUBLISH_TARGETS = {
+  perfumes: { target: 'catalogo', file: 'catalogo.html', label: 'catálogo de perfumes', build: () => buildCatalogHtml() },
+  kbeauty: { target: 'silkface', file: 'silkface.html', label: 'lista Silkface', build: () => buildSilkfaceHtml() }
+};
+function plPublishTarget() { return PL_PUBLISH_TARGETS[plLine] || null; }
 
 function exportPlSearchablePage() {
-  if (!plCanPublishLine()) return;
-  const html = buildCatalogHtml();
+  const t = plPublishTarget();
+  if (!t) return;
+  const html = t.build();
   if (!html) { alert('No hay productos para exportar.'); return; }
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'catalogo.html'; // nombre fijo a propósito: reemplaza el mismo archivo en el repo cada vez
+  a.download = t.file; // nombre fijo a propósito: reemplaza el mismo archivo en el repo cada vez
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -12684,8 +13878,9 @@ function renderPublishSecretStatus() {
 }
 
 async function publishCatalogAuto() {
-  if (!plCanPublishLine()) return;
-  const html = buildCatalogHtml();
+  const t = plPublishTarget();
+  if (!t) return;
+  const html = t.build();
   if (!html) { alert('No hay productos para exportar.'); return; }
 
   const secret = getPublishSecret();
@@ -12703,10 +13898,22 @@ async function publishCatalogAuto() {
   statusEl.style.color = '';
 
   try {
+    // Un Worker viejo ignora "target" y escribiría docs/catalogo.html: antes de publicar otra lista se
+    // comprueba que el Worker desplegado conozca el destino (ruta /publish-targets, card 21).
+    if (t.target !== 'catalogo') {
+      let targets = [];
+      try {
+        const r = await fetch(`${WORKER}/publish-targets`);
+        if (r.ok) targets = (await r.json()).targets || [];
+      } catch (e) { /* sin respuesta = Worker viejo o caído */ }
+      if (!targets.includes(t.target)) {
+        throw new Error(`el Worker desplegado no conoce la ${t.label}. Pegá worker.js en el dashboard de Cloudflare y volvé a probar (no se publicó nada).`);
+      }
+    }
     const resp = await fetch(`${WORKER}/publish-catalog`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Publish-Secret': secret },
-      body: JSON.stringify({ html }),
+      body: JSON.stringify({ html, target: t.target }),
     });
     const data = await resp.json();
     if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
