@@ -224,6 +224,7 @@ html.has-q .top .wrap { grid-template-areas: "q q cart"; }
 .st .stn { grid-row: span 2; width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; background: var(--tint, var(--accent-soft)); color: var(--tint-ink, var(--accent-ink)); }
 .st .stn .ic { width: 18px; height: 18px; }
 .st b { font-size: 14px; font-weight: 600; line-height: 1.2; }
+.st b:last-child { grid-row: span 2; } /* sin "Paso N" (Todo, Parches, Kits): centrado */
 .st small { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .st small i { font-style: normal; font-weight: 700; color: var(--tint-ink, var(--accent-ink)); margin-right: 4px; }
 .st[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-soft); }
@@ -235,7 +236,7 @@ html.has-q .top .wrap { grid-template-areas: "q q cart"; }
 .fbtn .n { min-width: 20px; height: 20px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11.5px; display: grid; place-items: center; }
 #applied { display: contents; }
 /* Celular: "Ordenar por" en su propio renglón, debajo de Filtros y el conteo. */
-.sortsel { order: 3; flex-basis: 100%; display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 14px; color: var(--ink-2); }
+.sortsel { -webkit-tap-highlight-color: transparent; order: 3; flex-basis: 100%; display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 14px; color: var(--ink-2); }
 @media (min-width: 760px) { .sortsel { order: 0; flex-basis: auto; } }
 .sortsel select { min-height: 40px; padding: 0 30px 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2312313D' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center; color: var(--ink); font-size: 16px; font-weight: 600; -webkit-appearance: none; appearance: none; }
 .sortsel select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -245,7 +246,6 @@ html.has-q .top .wrap { grid-template-areas: "q q cart"; }
 @media (min-width: 1100px) { .layout { grid-template-columns: minmax(0, 1fr) 300px; } }
 .brand-sec { margin-top: 18px; }
 .brand-h { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--hdr-vis, 118px)); z-index: 5; margin: 0; padding: 10px 0 8px; background: var(--bg); font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 21px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); }
-.brand-h .n { font-family: var(--f-body); font-size: 13px; color: var(--ink-2); font-weight: 500; }
 .rows { display: grid; }
 .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
 .r-brand { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); }
@@ -276,7 +276,6 @@ aside.summary { display: none; }
 .brand-opt { display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid var(--line); }
 .brand-opt input { width: 18px; height: 18px; accent-color: var(--accent); }
 .brand-opt span:nth-child(2) { flex: 1; }
-.brand-opt .n { color: var(--ink-2); font-size: 13px; }
 
 footer.foot { background: var(--surface); border-top: 1px solid var(--line); }
 footer.foot .wrap { padding-block: 28px 120px; display: grid; gap: 12px; max-width: 720px; }
@@ -304,7 +303,7 @@ footer.foot .btn { width: auto; justify-self: start; }
     <div class="steps-h"><h2 id="steps-h">Tu rutina, paso a paso</h2><span>De la limpieza al protector</span></div>
     <div class="steps" id="nav"></div>
   </section>
-  <div class="bar"><button type="button" class="fbtn" data-open-filters><span id="fi"></span>Filtros <span class="n" id="btn-filters-n" hidden></span></button><label class="sortsel">Ordenar por <select id="sort"><option value="">Marca</option><option value="asc">Menor precio</option><option value="desc">Mayor precio</option><option value="step">Tipo de producto</option></select></label><span id="applied"></span><span class="count" id="count" aria-live="polite"></span></div>
+  <div class="bar"><button type="button" class="fbtn" data-open-filters><span id="fi"></span>Filtros <span class="n" id="btn-filters-n" hidden></span></button><div class="sortsel"><label for="sort">Ordenar por</label><select id="sort"><option value="">Marca</option><option value="asc">Menor precio</option><option value="desc">Mayor precio</option><option value="step">Tipo de producto</option></select></div><span id="applied"></span><span class="count" id="count" aria-live="polite"></span></div>
   <p class="notice" id="fix" hidden></p>
   <div class="layout">
     <div><div id="list"></div><div class="more" id="more" hidden></div></div>
@@ -576,6 +575,10 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
     return Object.keys(c).sort(function (a, b) { return a.localeCompare(b, 'es', { sensitivity: 'base' }); }).map(function (b) { return { brand: b, n: c[b] }; });
   }
   // Bajada: hasta dos ingredientes.
+  // "4 unidades" se leía como stock: lo que dice cuántas piezas trae el envase va como "incluye 4 unidades".
+  function sizeLabel(s) {
+    return String(s || '').replace(/(^|· )(\d+) (unidades|pads|parches|hojas|ampollas)$/, function (m, pre, n, u) { return pre + (pre ? 'incluye ' : 'Incluye ') + n + ' ' + u; });
+  }
   function subline(it) {
     var bits = it.ingr.slice(0, 2).map(function (k) { return INGR[k].label; });
     return bits.join(' · ');
@@ -694,7 +697,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
   global.SF = {
     fold: fold, esc: esc, fmt: fmt, icon: icon, logo: logo, store: store,
     STEPS: STEPS, STEP: STEP, CONCERNS: CONCERNS, CONCERN: CONCERN, INGREDIENTS: INGREDIENTS, INGR: INGR, PRICE_RANGES: PRICE_RANGES, PROVINCIAS: PROVINCIAS,
-    ITEMS: ITEMS, BY_KEY: BY_KEY, query: query, facets: facets, group: group, brandList: brandList, subline: subline, cuota3: cuota3,
+    ITEMS: ITEMS, BY_KEY: BY_KEY, query: query, facets: facets, group: group, brandList: brandList, subline: subline, sizeLabel: sizeLabel, cuota3: cuota3,
     Cart: Cart, schedule: schedule, totals: totals, DELIVERY: DELIVERY, ENVIO_SUCURSAL: ENVIO_SUCURSAL, message: message, waUrl: waUrl, loadDatos: loadDatos, saveDatos: saveDatos,
     openModal: openModal, closeModal: closeModal, focusEl: focusEl, announce: announce, date: global.CATALOG_DATE || ''
   };
@@ -711,7 +714,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
   function chip(f, v, label, n, on) {
     if (!n && !on) return '';
     return '<button type="button" class="chip" data-f="' + f + '" data-v="' + esc(v) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
-      esc(label) + ' <span class="n">' + (n || 0) + '</span></button>';
+      esc(label) + '</button>';
   }
   // Un grupo sin ninguna opción visible tampoco se muestra.
   function group(title, inner, id) {
@@ -743,7 +746,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
           .sort(function (a, b) { return a.localeCompare(b, 'es', { sensitivity: 'base' }); });
         var list = brands.filter(function (b) { return (counts.brand[b] || (state.brands && state.brands[b])) && (!q || SF.fold(b).indexOf(q) >= 0); }).map(function (b) {
           var on = !!(state.brands && state.brands[b]);
-          return '<label class="brand-opt"><input type="checkbox" data-f="brand" data-v="' + esc(b) + '"' + (on ? ' checked' : '') + '><span>' + esc(b) + '</span><span class="n">' + (counts.brand[b] || 0) + '</span></label>';
+          return '<label class="brand-opt"><input type="checkbox" data-f="brand" data-v="' + esc(b) + '"' + (on ? ' checked' : '') + '><span>' + esc(b) + '</span></label>';
         }).join('');
         out += group('Marca', '<input type="search" class="brand-q" id="' + (opts.idp || 'f') + '-brand-q" placeholder="Buscar marca" aria-label="Buscar marca" value="' + esc(opts.brandQuery || '') + '">' +
           '<div class="brand-list">' + (list || '<p class="notice">Ninguna marca coincide.</p>') + '</div>');
@@ -823,7 +826,7 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
     lines.forEach(function (l) {
       var it = l.item;
       h += '<li class="dw-line"><div class="dw-l-main"><span class="dw-l-brand">' + esc(it.brand) + '</span><span class="dw-l-name">' + esc(it.name) + '</span>' +
-        '<span class="dw-l-meta">' + esc([it.step.one, it.size].filter(Boolean).join(' · ')) + '</span></div>' +
+        '<span class="dw-l-meta">' + esc([it.step.one, SF.sizeLabel(it.size)].filter(Boolean).join(' · ')) + '</span></div>' +
         '<div class="dw-l-side"><span class="dw-l-price">' + fmt(it.price * l.qty) + '</span>' +
         '<div class="stepper"><button type="button" data-dec="' + esc(l.key) + '" aria-label="' + (l.qty === 1 ? 'Quitar ' : 'Uno menos de ') + esc(it.name) + '">' + icon(l.qty === 1 ? 'trash' : 'minus') + '</button>' +
         '<span aria-live="polite">' + l.qty + '</span><button type="button" data-inc="' + esc(l.key) + '" aria-label="Uno más de ' + esc(it.name) + '">' + icon('plus') + '</button></div></div></li>';
@@ -925,15 +928,15 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
 
   function addControl(it) {
     var q = Cart.qty(it.key);
-    if (!q) return '<button type="button" class="add" data-add="' + esc(it.key) + '" aria-label="Agregar ' + esc(it.name) + (it.size ? ' ' + esc(it.size) : '') + '">' + icon('plus') + '<span>Agregar</span></button>';
+    if (!q) return '<button type="button" class="add" data-add="' + esc(it.key) + '" aria-label="Agregar ' + esc(it.name) + (it.size ? ' ' + esc(SF.sizeLabel(it.size)) : '') + '">' + icon('plus') + '<span>Agregar</span></button>';
     return '<div class="stepper"><button type="button" data-dec="' + esc(it.key) + '" aria-label="' + (q === 1 ? 'Quitar ' : 'Uno menos de ') + esc(it.name) + '">' + icon(q === 1 ? 'trash' : 'minus') + '</button>' +
       '<span>' + q + '</span><button type="button" data-inc="' + esc(it.key) + '" aria-label="Uno más de ' + esc(it.name) + '">' + icon('plus') + '</button></div>';
   }
   function typeTag(it) { return '<span class="type-tag t-' + it.type + '">' + icon(it.step.icon) + esc(it.step.one || 'Skincare') + '</span>'; }
   function sizesHtml(g, sel) {
-    if (g.sizes.length < 2) return sel.size ? '<span class="size-one num">' + esc(sel.size) + '</span>' : '';
+    if (g.sizes.length < 2) return sel.size ? '<span class="size-one num">' + esc(SF.sizeLabel(sel.size)) + '</span>' : '';
     return '<span class="sizes" role="group" aria-label="Tamaño">' + g.sizes.map(function (s) {
-      return '<button type="button" class="size" data-size="' + esc(s.key) + '" data-gid="' + g.gid + '" aria-pressed="' + (s === sel) + '">' + esc(s.size || 'Único') + '</button>';
+      return '<button type="button" class="size" data-size="' + esc(s.key) + '" data-gid="' + g.gid + '" aria-pressed="' + (s === sel) + '">' + esc(SF.sizeLabel(s.size) || 'Único') + '</button>';
     }).join('') + '</span>';
   }
 
@@ -961,14 +964,13 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
       } else if ((o.sectioned || (o.sectionFn && o.sectionFn(state))) && !plainMode()) {
         // Secciones: por marca (default) o la que pida la opción (p. ej. por paso de la rutina).
         var secOf = (o.sectionFn && o.sectionFn(state)) || function (it) { return { key: it.brand, label: esc(it.brand) }; };
-        var cur = null, ncount = {};
-        groups.forEach(function (x) { var k = secOf(x.first).key; ncount[k] = (ncount[k] || 0) + 1; });
+        var cur = null;
         vis.forEach(function (g) {
           var sec = secOf(g.first);
           if (sec.key !== cur) {
             if (cur !== null) h += '</div></section>';
             cur = sec.key;
-            h += '<section class="brand-sec"><h2 class="brand-h">' + sec.label + ' <span class="n">' + ncount[cur] + '</span></h2><div class="' + (o.listClass || 'rows') + '">';
+            h += '<section class="brand-sec"><h2 class="brand-h">' + sec.label + '</h2><div class="' + (o.listClass || 'rows') + '">';
           }
           h += rowHtml(g);
         });
@@ -1138,12 +1140,12 @@ var DATA = [{"brand":"Celimax","name":"Retinal Shot Tightening Booster","price":
 
   var NAV = SF.STEPS.filter(function (s) { return s.key; });
   function renderNav(counts, state) {
-    var h = '<button type="button" class="st" data-nav="step" data-v="all" aria-pressed="' + (state.step === 'all') + '"><span class="stn">' + icon('leaf') + '</span><b>Todo</b><small>' + counts.step._all + '</small></button>';
+    var h = '<button type="button" class="st" data-nav="step" data-v="all" aria-pressed="' + (state.step === 'all') + '"><span class="stn">' + icon('leaf') + '</span><b>Todo</b></button>';
     h += NAV.map(function (s) {
       var n = counts.step[s.key] || 0, on = state.step === s.key;
       if (!n && !on) return ''; // un paso sin productos con los filtros actuales no se muestra
       return '<button type="button" class="st t-' + s.key + '" data-nav="step" data-v="' + s.key + '" aria-pressed="' + on + '">' +
-        '<span class="stn">' + icon(s.icon) + '</span><b>' + esc(s.label) + '</b><small>' + (s.n ? '<i>Paso ' + s.n + '</i>' : '') + n + '</small></button>';
+        '<span class="stn">' + icon(s.icon) + '</span><b>' + esc(s.label) + '</b>' + (s.n ? '<small><i>Paso ' + s.n + '</i></small>' : '') + '</button>';
     }).join('');
     document.getElementById('nav').innerHTML = h;
   }
