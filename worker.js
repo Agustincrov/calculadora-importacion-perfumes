@@ -9,6 +9,9 @@
 //
 // Deploy: paste this into the Cloudflare Worker dashboard at
 // https://dash.cloudflare.com → Workers & Pages → comparapi-proxy → Edit Code
+// Formato de módulos. Secrets: PUBLISH_SECRET y GITHUB_TOKEN.
+// Bindings para fotos: FOTOS (bucket R2 privado silkface-fotos) e IMAGES (Images).
+// Pegar el módulo completo y hacer Deploy; no forma parte del deploy de assets de la app.
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,16 +20,20 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-addEventListener('fetch', event => {
-  event.respondWith(handle(event.request));
-});
+export default {
+  async fetch(req, env, ctx) {
+    return handle(req, env);
+  },
+};
 
-async function handle(req) {
+async function handle(req, env) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: CORS });
   }
   const path = new URL(req.url).pathname;
   try {
+    if (path === '/fotos/preparar' && req.method === 'POST') return await handlePreparePhotos(req, env);
+    if (path.startsWith('/f/') && req.method === 'GET') return await handlePhoto(path.slice(3), env);
     if (path === '/binance-usdt')  return await fetchBinanceUSDT();
     if (path === '/blue-cordoba')  return await fetchBlueCordoba();
     if (path === '/pontocom') {
@@ -49,7 +56,7 @@ async function handle(req) {
     if (path === '/megaeletro') return await fetchMegaEletroPage(new URL(req.url).searchParams);
     if (path === '/flash') return await fetchFlashPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/intershop') return await fetchIntershopPage(new URL(req.url).searchParams);
-    if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req);
+    if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req, env);
     // La app lo consulta antes de publicar una lista que no sea el catálogo: un Worker viejo no la conoce.
     if (path === '/publish-targets') return jsonResp({ targets: Object.keys(PUBLISH_TARGETS) });
     return jsonResp({ error: 'not found' }, 404);
@@ -132,7 +139,15 @@ async function fetchPontocomPage(cat, page) {
     if (!m) continue;
     let p;
     try { p = JSON.parse(decodeEntities(m[1])); } catch { continue; }
+    let img = '';
+    try {
+      if (typeof p.image === 'string' && p.image) {
+        const url = new URL(p.image, 'https://www.pontocom.com/');
+        if (url.protocol === 'https:') img = url.href;
+      }
+    } catch { /* Una URL inválida no impide importar el producto. */ }
     items.push({
+      img,
       code:  String(p.code),
       name:  decodeEntities(String(p.name || '')).replace(/\s+/g, ' ').trim(),
       price: parseArNum(String(p.price || '').replace(/^\s*U\$\s*/, '')), // "1.250,00" → 1250
@@ -185,7 +200,10 @@ async function fetchStarCompanyPage(page, cat) {
   for (const card of html.split('<article class="scp-card">').slice(1)) {
     const link = card.match(/<h2><a href="[^"]*\/(\d+)-[^"]*">([^<]*)<\/a>/);
     if (!link) continue;
+    const src = decodeEntities(card.match(/<a\b[^>]*class="scp-img"[^>]*>([\s\S]*?)<\/a>/)?.[1]?.match(/<img\b[^>]*\bsrc="([^"]*)"/)?.[1] || '');
+    const img = src.startsWith('https://') ? src : '';
     items.push({
+      img,
       code:  link[1],
       name:  text([, link[2]]),
       brand: text(card.match(/class="scp-brand">([^<]*)</)),
@@ -302,6 +320,7 @@ async function fetchBigsPage(page) {
     const card = cards.get(String(p.id_product)) || '';
     const stock = kbeautyHtmlText(kbeautyHtmlBlocks(card, 'in-stock')[0]).match(/(\d+)\s+In Stock/i);
     return {
+      img: typeof p.cover?.bySize?.medium_default?.url === 'string' && p.cover.bySize.medium_default.url.startsWith('https://') ? p.cover.bySize.medium_default.url : '',
       code: String(p.reference || p.id_product), name: kbeautyHtmlText(p.name), price: Number(p.price_amount) || null,
       brand: kbeautyHtmlText(kbeautyHtmlBlocks(card, 'manufacturer')[0]), stock: stock ? Number(stock[1]) : null,
     };
@@ -376,8 +395,16 @@ async function fetchMegaEletroPage(q) {
   for (const m of html.matchAll(/addItemToFavorite\((\{[\s\S]*?\})\)"/g)) {
     let x;
     try { x = JSON.parse(decodeEntities(m[1])); } catch { continue; }
+    let img = '';
+    try {
+      if (typeof x.image === 'string' && x.image) {
+        const url = new URL(x.image, 'https://resource.megaeletronicos.com');
+        if (url.protocol === 'https:') img = url.href;
+      }
+    } catch { /* Una URL inválida no impide importar el producto. */ }
     const promo = Number(x.price_promo);
     items.push({
+      img,
       code: String(x.code || x.id), name: String(x.product_lang?.name_web || x.product_lang?.name || '').replace(/\s+/g, ' ').trim(),
       price: promo > 0 ? promo : Number(x.price) || null, stock: Number(x.stock) || 0, brand: x.brand?.name || '',
     });
@@ -438,6 +465,149 @@ async function fetchIntershopPage(q) {
   return jsonResp({ page, pages, items });
 }
 
+// ── Fotos de Silkface — originales privados, nombres públicos opacos ──
+const PHOTO_HOSTS = new Set([
+  'www.pontocom.com', 'resource.megaeletronicos.com', 'bigs.com.py',
+  'www.starcompany-py.com', 'assets-terranova.egondola.app',
+]);
+const PHOTO_VERSION = 'v2'; // Cambiarla cuando cambie la transformación, así se generan de nuevo.
+const PHOTO_MAX_BYTES = 20 * 1024 * 1024;
+const PHOTO_TIMEOUT_MS = 15000;
+const PHOTO_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36';
+
+function photoJson(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status, headers: { ...CORS, 'Content-Type': 'application/json; charset=utf-8' },
+  });
+}
+
+function photoUrlAllowed(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && PHOTO_HOSTS.has(u.hostname) && !u.username && !u.password && !u.port;
+  } catch { return false; }
+}
+
+function photoLargeUrl(url) {
+  const u = new URL(url);
+  if (u.hostname === 'www.starcompany-py.com') {
+    u.pathname = u.pathname.replace(/-(home_default|medium_default)\//, '-large_default/');
+  } else if (u.hostname === 'bigs.com.py') {
+    u.pathname = u.pathname.replace(/-medium_default\//, '-large_default/');
+  } else if (u.hostname === 'assets-terranova.egondola.app') {
+    u.pathname = u.pathname.replace(/_m\.jpg$/, '_e.jpg');
+  }
+  return u.href === new URL(url).href ? url : u.href;
+}
+
+async function fetchPhotoBytes(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PHOTO_TIMEOUT_MS);
+  try {
+    // No seguir redirecciones: la allowlist también debe limitar el destino efectivo.
+    const r = await fetch(url, {
+      headers: { 'User-Agent': PHOTO_USER_AGENT }, redirect: 'manual', signal: controller.signal,
+    });
+    if (r.status !== 200) {
+      if (r.body) await r.body.cancel();
+      throw new Error(`origen ${r.status}`);
+    }
+    if (!/^image\//i.test(r.headers.get('Content-Type') || '') || !r.body) {
+      if (r.body) await r.body.cancel();
+      throw new Error('origen 200 (no es imagen)');
+    }
+    const reader = r.body.getReader(), chunks = [];
+    let length = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > PHOTO_MAX_BYTES) {
+        await reader.cancel();
+        throw new Error('origen 413 (imagen mayor a 20 MiB)');
+      }
+      chunks.push(value);
+    }
+    if (!length) throw new Error('origen 200 (imagen vacía)');
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+    return bytes;
+  } catch (e) {
+    if (controller.signal.aborted || e.name === 'AbortError' || e.name === 'TimeoutError') throw new Error('origen timeout');
+    if (e.message?.startsWith('origen ')) throw e;
+    throw new Error('origen red');
+  } finally { clearTimeout(timer); }
+}
+
+async function preparePhoto(url, env) {
+  if (!photoUrlAllowed(url)) return { status: 'error', error: 'host no permitido' };
+  let names, writing = false;
+  try {
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${url}|${PHOTO_VERSION}`));
+    const key = Array.from(new Uint8Array(hash), b => b.toString(16).padStart(2, '0')).join('').slice(0, 20);
+    names = [400, 800].map(size => `f/${key}-${size}.webp`);
+    const small = await env.FOTOS.head(names[0]), large = await env.FOTOS.head(names[1]);
+    if (small && large) return { status: 'existe', key };
+
+    let source = photoLargeUrl(url), bytes;
+    try { bytes = await fetchPhotoBytes(source); } catch (e) {
+      if (source === url) throw e;
+      source = url;
+      bytes = await fetchPhotoBytes(source);
+    }
+    for (const [index, size] of [400, 800].entries()) {
+      const innerSize = Math.round(size * 0.88);
+      const output = await env.IMAGES.input(new Response(bytes).body)
+        .transform({ width: innerSize, height: innerSize, fit: 'pad', background: '#FFFFFF' })
+        .transform({ border: { color: '#FFFFFF', width: (size - innerSize) / 2 } })
+        .output({ format: 'image/webp', quality: 82 });
+      const response = output.response();
+      if (!response.ok || !response.body) throw new Error(`Images ${response.status}`);
+      writing = true;
+      await env.FOTOS.put(names[index], response.body, {
+        httpMetadata: { contentType: 'image/webp' }, customMetadata: { source },
+      });
+    }
+    return { status: 'ok', key };
+  } catch (e) {
+    let error = String(e.message || e);
+    if (writing) {
+      try { await env.FOTOS.delete(names); } catch (cleanup) {
+        return { status: 'error', error: `${error}; no se pudo limpiar R2: ${cleanup.message || cleanup}` };
+      }
+    }
+    const quota = String(e.code) === '9422' || /\b9422\b/.test(error);
+    return { status: quota ? 'cupo' : 'error', error };
+  }
+}
+
+async function handlePreparePhotos(req, env) {
+  const secret = req.headers.get('X-Publish-Secret');
+  if (!secret || !env.PUBLISH_SECRET || secret !== env.PUBLISH_SECRET) return photoJson({ error: 'unauthorized' }, 401);
+  let body;
+  try { body = await req.json(); } catch { return photoJson({ error: 'invalid json' }, 400); }
+  if (!Array.isArray(body?.urls) || body.urls.length < 1 || body.urls.length > 5 || !body.urls.every(url => typeof url === 'string')) {
+    return photoJson({ error: 'urls debe contener entre 1 y 5 URLs' }, 400);
+  }
+  if (!env.FOTOS || !env.IMAGES) return photoJson({ error: 'faltan bindings FOTOS/IMAGES' }, 503);
+  const results = Object.create(null);
+  for (const url of body.urls) results[url] = await preparePhoto(url, env);
+  return photoJson({ results });
+}
+
+async function handlePhoto(name, env) {
+  if (!/^[0-9a-f]{20}-(400|800)\.webp$/.test(name)) return photoJson({ error: 'not found' }, 404);
+  const object = env.FOTOS ? await env.FOTOS.get(`f/${name}`) : null;
+  if (!object) return photoJson({ error: 'not found' }, 404);
+  return new Response(object.body, {
+    headers: {
+      'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=31536000, immutable',
+      'Access-Control-Allow-Origin': '*', 'ETag': object.httpEtag,
+    },
+  });
+}
+
 // ── Publicar catalogo.html en GitHub Pages ─────────────────────────
 // Requiere dos "Environment Variables" (tipo Secret) configuradas en el dashboard
 // del Worker (Settings → Variables):
@@ -455,9 +625,9 @@ const PUBLISH_TARGETS = {
   silkface: { path: 'docs/silkface.html', page: 'silkface.html', label: 'Silkface' },
 };
 
-async function handlePublishCatalog(req) {
+async function handlePublishCatalog(req, env) {
   const secret = req.headers.get('X-Publish-Secret');
-  if (!secret || !PUBLISH_SECRET || secret !== PUBLISH_SECRET) {
+  if (!secret || !env.PUBLISH_SECRET || secret !== env.PUBLISH_SECRET) {
     return jsonResp({ error: 'unauthorized' }, 401);
   }
 
@@ -476,7 +646,7 @@ async function handlePublishCatalog(req) {
   if (!target) return jsonResp({ error: 'destino desconocido' }, 400);
   const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${target.path}`;
   const ghHeaders = {
-    'Authorization': `Bearer ${GITHUB_TOKEN}`,
+    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
     'User-Agent': 'importo-catalog-publisher',
     'Accept': 'application/vnd.github+json',
   };

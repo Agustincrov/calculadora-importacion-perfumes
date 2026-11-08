@@ -379,6 +379,16 @@
     #view-pricelist[data-line="kbeauty"] .pl-perfume-only { display: none !important; }
     #view-pricelist:not([data-line="kbeauty"]) .pl-kbeauty-only { display: none !important; }
 
+    .pl-img-thumb { width:44px; height:44px; padding:0; display:grid; place-items:center; background:#fff; border:1px solid var(--border); border-radius:5px; cursor:pointer; font-size:.7rem; color:var(--text); }
+    .pl-img-thumb img { width:44px; height:44px; object-fit:contain; border-radius:5px; }
+    .pl-img-thumb.is-empty { border-style:dashed; }
+    #pl-img-dialog { max-width:min(780px, calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; margin:auto; padding:20px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--text); }
+    #pl-img-dialog::backdrop { background:rgba(0,0,0,.4); }
+    .pl-img-options { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+    .pl-img-option { width:156px; padding:7px; border:2px solid var(--border); border-radius:7px; background:#fff; color:var(--text); cursor:pointer; }
+    .pl-img-option[aria-pressed="true"] { border-color:var(--accent); }
+    .pl-img-option img { display:block; width:140px; height:140px; object-fit:contain; margin-bottom:8px; }
+
   </style>
 </head>
 <body>
@@ -1003,6 +1013,7 @@
               <th class="bg-input">Marca</th>
               <th class="bg-input">Producto</th>
               <th class="bg-input pl-kbeauty-only">Tipo</th>
+              <th class="bg-input pl-kbeauty-only">Foto</th>
               <th class="bg-input">Origen</th>
               <th class="bg-p1">Costo USD</th>
               <th class="bg-p2">Costo total ARS</th>
@@ -1021,6 +1032,15 @@
       </div>
     </div>
 
+    <dialog id="pl-img-dialog" class="pl-kbeauty-only" aria-labelledby="pl-img-title"
+      onclick="if (event.target === this) { const r = this.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) this.close(); }">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+        <h3 id="pl-img-title" style="margin:0;">Elegir foto</h3>
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('pl-img-dialog').close()" aria-label="Cerrar fotos">Cerrar</button>
+      </div>
+      <p id="pl-img-product"></p>
+      <div id="pl-img-options" class="pl-img-options"></div>
+    </dialog>
   </div><!-- /view-pricelist -->
 
 </div><!-- /container -->
@@ -7736,8 +7756,11 @@ function plMergeDuplicate(idA, idB) {
   if (a.sourceLabels && b.sourceLabels && plKbSharesStore(a, b)) return null; // cosmética: nunca dos de la misma tienda
   const [cheap, exp] = a.priceUsd <= b.priceUsd ? [a, b] : [b, a];
   if (cheap.sourceLabels) {
-    cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd, name: exp.name }, ...exp.alternates);
+    cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd, name: exp.name,
+      store: exp.store || '', ...(exp.sourceImg ? { img: exp.sourceImg } : {}) }, ...exp.alternates);
     cheap.sourceLabels = [...cheap.sourceLabels, ...(exp.sourceLabels || [])];
+    cheap.imgs = plKbUnionImages([...(cheap.imgs || []), ...(exp.imgs || [])]);
+    plKbPickImage(cheap);
   } else {
     cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
   }
@@ -7972,6 +7995,46 @@ let plTypeOverrides = {};
 try { plTypeOverrides = JSON.parse(localStorage.getItem('importo-kbeauty-type-overrides') || '{}'); } catch { plTypeOverrides = {}; }
 function savePlTypeOverrides() {
   try { localStorage.setItem('importo-kbeauty-type-overrides', JSON.stringify(plTypeOverrides)); } catch {}
+}
+
+// Fotos internas de cosmética: las URLs de las tiendas todavía no se publican.
+const PL_KB_IMG_PRIORITY = ['megaeletro', 'bigs', 'star', 'pontocom', 'terranova'];
+let plKbImgOverrides = {};
+try {
+  const saved = JSON.parse(localStorage.getItem('importo-kbeauty-img-overrides') || '{}');
+  if (saved && typeof saved === 'object' && !Array.isArray(saved)) plKbImgOverrides = saved;
+} catch {}
+function savePlKbImgOverrides() {
+  try { localStorage.setItem('importo-kbeauty-img-overrides', JSON.stringify(plKbImgOverrides)); } catch {}
+}
+function plKbUnionImages(imgs) {
+  const stores = new Set(), urls = new Set();
+  const rank = store => { const n = PL_KB_IMG_PRIORITY.indexOf(store); return n < 0 ? PL_KB_IMG_PRIORITY.length : n; };
+  return imgs.slice().sort((a, b) => rank(a.store) - rank(b.store)).filter(x => {
+    if (!x.url || stores.has(x.store) || urls.has(x.url)) return false;
+    stores.add(x.store); urls.add(x.url);
+    return true;
+  });
+}
+function plKbCollectImages(offers) {
+  // Primero la oferta más barata con foto de cada tienda; después, la prioridad para mostrarla.
+  const byStore = new Map();
+  for (const offer of offers.slice().sort((a, b) => a.price - b.price)) {
+    const store = offer.store || '';
+    if (offer.img && !byStore.has(store)) byStore.set(store, { store, url: offer.img });
+  }
+  return plKbUnionImages([...byStore.values()]);
+}
+function plKbAutomaticImage(it) {
+  const imgs = it.imgs || [];
+  return PL_KB_IMG_PRIORITY.map(store => imgs.find(x => x.store === store)).find(Boolean) || imgs[0];
+}
+function plKbPickImage(it) {
+  const override = plKbImgOverrides[plBrandOverrideKey(it.name)];
+  const image = override?.none === true ? null
+    : ((it.imgs || []).find(x => x.store === override?.store) || plKbAutomaticImage(it));
+  it.img = image?.url || '';
+  it.imgStore = image?.store || '';
 }
 
 // ── Nombre limpio y tamaño de cosmética (card 22, 2026-11-01) ──
@@ -8291,8 +8354,11 @@ function plKbMergeRemembered(pairs) {
     if (!A || !B) continue;
     if (plKbSharesStore(A, B)) { conflicts.push(`${A.name} · ${B.name}`); continue; }
     const [keep, drop] = A.priceUsd <= B.priceUsd ? [A, B] : [B, A];
-    keep.alternates.push({ source: drop.sourceLabel, price: drop.priceUsd, name: drop.name }, ...drop.alternates);
+    keep.alternates.push({ source: drop.sourceLabel, price: drop.priceUsd, name: drop.name,
+      store: drop.store || '', ...(drop.sourceImg ? { img: drop.sourceImg } : {}) }, ...drop.alternates);
     keep.sourceLabels = [...keep.sourceLabels, ...drop.sourceLabels];
+    keep.imgs = plKbUnionImages([...(keep.imgs || []), ...(drop.imgs || [])]);
+    plKbPickImage(keep);
     keep.multiSource = true;
     parent.set(drop.id, keep.id);
     parent.set(keep.id, keep.id);
@@ -9352,7 +9418,7 @@ function plBuildKbeautySiteItems(rows) {
       discardedBrands[raw] = (discardedBrands[raw] || 0) + 1;
       continue;
     }
-    items.push({ name: r.name, brand, price: r.price, code: r.code, site: r.site || '' });
+    items.push({ name: r.name, brand, price: r.price, code: r.code, site: r.site || '', ...(r.img ? { img: r.img } : {}) });
   }
   return { items, discardedBrands };
 }
@@ -9370,7 +9436,8 @@ async function plFetchKbeautyJson(url, headers = {}) {
 }
 
 function plKbeautyWorkerRow(x, brand = '') {
-  return { code: x.code, name: x.name, price: x.price, site: x.brand || brand, inStock: x.stock === undefined ? true : x.stock > 0 && !x.out };
+  return { code: x.code, name: x.name, price: x.price, site: x.brand || brand, inStock: x.stock === undefined ? true : x.stock > 0 && !x.out,
+    ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {}) };
 }
 
 // Bigs informa la cantidad de páginas en la primera: el resto va después.
@@ -9437,8 +9504,11 @@ async function terraNovaBookmarklet() {
     const total = text(listing).match(/([\d.]+)\s+productos/);
     const items = [...listing.querySelectorAll('.prod-item')].map(card => {
       const usd = text(card.querySelector('.price')).match(/USD\s*([\d,]+\.\d{2})/);
+      const src = card.querySelector('.prod-img img')?.getAttribute('src');
+      let img = '';
+      try { if (src) img = new URL(src, location.href).href; } catch { /* Sin foto si la URL es inválida. */ }
       return { code: text(card.querySelector('.prod-cod')).replace(/^Cód\.\s*/i, ''), name: text(card.querySelector('h1')),
-        price: usd ? Number(usd[1].replace(/,/g, '')) : 0 };
+        price: usd ? Number(usd[1].replace(/,/g, '')) : 0, img };
     }).filter(x => x.code && x.name);
     return { total: total ? Number(total[1].replace(/\./g, '')) : 0, items };
   };
@@ -9509,7 +9579,8 @@ async function importTerraNovaFile(file) {
     if (!data || data.source !== 'terranova' || !Array.isArray(data.items)) {
       throw new Error('no es un archivo bajado con el marcador ⬇ Terra Nova');
     }
-    const rows = data.items.map(x => ({ code: String(x.code), name: String(x.name || ''), price: Number(x.price), site: String(x.brand || ''), inStock: true }));
+    const rows = data.items.map(x => ({ code: String(x.code), name: String(x.name || ''), price: Number(x.price), site: String(x.brand || ''), inStock: true,
+      ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {}) }));
     const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : undefined; // la de la descarga, no la de hoy
     alert(plSetSiteSource('terranova', 'Terra Nova', rows, date, 'kbeauty').msg);
   } catch (err) {
@@ -10140,7 +10211,8 @@ function generatePriceList() {
     brand: isKbeauty
       ? (detectKbeautyBrand(it.name) || detectKbeautyBrand(it.brand) || plCanonicalBrand(it.brand))
       : (detectKnownBrand(it.name) || plCanonicalBrand(it.brand)),
-    sourceLabel: src.name
+    sourceLabel: src.name,
+    ...(isKbeauty ? { store: src.site || '' } : {})
   })));
   if (all.length === 0) {
     alert('Importá al menos una lista de proveedor primero.');
@@ -10207,12 +10279,14 @@ function generatePriceList() {
         : '',
       priceUsd: cheapest.price,
       sourceLabel: cheapest.sourceLabel,
-      alternates: arr.slice(1).map(a => isKbeauty ? { source: a.sourceLabel, price: a.price, name: a.name } : { source: a.sourceLabel, price: a.price }),
+      alternates: arr.slice(1).map(a => isKbeauty ? { source: a.sourceLabel, price: a.price, name: a.name,
+        store: a.store, ...(a.img ? { img: a.img } : {}) } : { source: a.sourceLabel, price: a.price }),
       // Cosmética (card 23): clave de la fila (para las decisiones), tiendas de sus ofertas y lo que usa el detector.
       ...(isKbeauty ? (() => {
         const k = plKbeautyKeyOf(cheapest.name, cheapest.brand);
         return { kbKey: groupKey, kbTokens: k.tokens, kbSize: arr.map(a => plKbSizeKey(a.name)).find(Boolean) || '', kbCx: k.cx,
-          sourceLabels: [...new Set(arr.map(a => a.sourceLabel))] };
+          sourceLabels: [...new Set(arr.map(a => a.sourceLabel))], store: cheapest.store,
+          sourceImg: cheapest.img || '', imgs: plKbCollectImages(arr) };
       })() : {}),
       multiSource: arr.length > 1,
       excluded: !!reason,
@@ -10233,6 +10307,7 @@ function generatePriceList() {
   // sin volver a preguntar.
   if (isKbeauty) {
     const find = plKbMergeRemembered(plFuzzyPairs.filter(p => p.remembered));
+    plItems.forEach(plKbPickImage);
     plFuzzyPairs = plKbRepointPending(plFuzzyPairs.filter(p => !p.remembered), find);
   } else {
     plMergeDuplicates(plFuzzyPairs.filter(p => p.remembered));
@@ -10694,7 +10769,7 @@ function plMatchesTypeFilter(it) {
 function plUntypedNote(visible) {
   if (plLine !== 'kbeauty') return '';
   const n = visible.filter(it => !it.type).length;
-  return n ? ` · ${n} sin tipo ⚠` : '';
+  return (n ? ` · ${n} sin tipo ⚠` : '') + ` · ${visible.filter(it => !it.img).length} sin foto`;
 }
 // Las opciones del filtro, con conteos de los productos no excluidos.
 function renderPlTypeFilter() {
@@ -10720,6 +10795,43 @@ function updatePlType(id, val) {
   renderPlTable();
 }
 
+function plKbImageCellHtml(it) {
+  return `<button type="button" class="pl-img-thumb${it.img ? '' : ' is-empty'}" onclick="openPlKbImageDialog(${it.id})" aria-label="Elegir foto de ${esc(it.displayName)}">
+    ${it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('foto rota'))">` : '—'}
+  </button>`;
+}
+function openPlKbImageDialog(id) {
+  const it = plItems.find(x => x.id === id && x.line === 'kbeauty');
+  if (!it) return;
+  const dialog = document.getElementById('pl-img-dialog');
+  document.getElementById('pl-img-product').textContent = it.displayName || it.name;
+  document.getElementById('pl-img-options').innerHTML = (it.imgs || []).map((image, idx) => {
+    const chosen = it.img === image.url && it.imgStore === image.store;
+    const label = PL_KBEAUTY_SITE_IMPORTS[image.store]?.label || (image.store === 'terranova' ? 'Terra Nova' : image.store || 'Otra fuente');
+    return `<button type="button" class="pl-img-option" aria-pressed="${chosen}" onclick="updatePlKbImage(${it.id}, ${idx})">
+      <img src="${esc(image.url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('foto rota'))">
+      ${esc(label)}${chosen ? ' · Elegida ✓' : ''}
+    </button>`;
+  }).join('') + `<button type="button" class="pl-img-option" aria-pressed="${!it.img}" onclick="updatePlKbImage(${it.id}, null)">Sin foto${!it.img ? ' · Elegida ✓' : ''}</button>`;
+  dialog.showModal();
+}
+function updatePlKbImage(id, idx) {
+  const it = plItems.find(x => x.id === id && x.line === 'kbeauty');
+  if (!it) return;
+  const image = idx === null ? null : it.imgs?.[idx];
+  if (idx !== null && !image) return;
+  const key = plBrandOverrideKey(it.name);
+  const automatic = plKbAutomaticImage(it);
+  if (image ? image.store === automatic?.store : !automatic) delete plKbImgOverrides[key];
+  else plKbImgOverrides[key] = image ? { store: image.store } : { none: true };
+  savePlKbImgOverrides();
+  plKbPickImage(it);
+  document.getElementById('pl-img-dialog').close();
+  const row = document.getElementById(`pl-row-${it.id}`);
+  if (row) row.outerHTML = plRowHtml(it);
+  renderPlSummary();
+}
+
 function plRowHtml(it) {
   const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
   const rowStyle = it.excluded ? 'opacity:.45;' : '';
@@ -10738,7 +10850,8 @@ function plRowHtml(it) {
       <td style="min-width:220px;" title="${esc(it.name)}">
         ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason] ? `<span title="Excluido automático — ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].label}" style="margin-right:4px;">${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].icon}</span>` : ''}${esc(it.displayName)}${it.size ? ` <span style="color:var(--muted);font-size:.8rem;white-space:nowrap;">· ${esc(it.size)}</span>` : ''}
       </td>
-      <td class="pl-kbeauty-only">${plTypeSelectHtml(it)}</td>
+      <td class="pl-kbeauty-only">${plTypeSelectHtml(it)}</td>${it.line === 'kbeauty' ? `
+      <td class="pl-kbeauty-only">${plKbImageCellHtml(it)}</td>` : ''}
       <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
       <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
       <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
@@ -10819,7 +10932,7 @@ function renderPlTable() {
   if (query !== plTableLastQuery) { plTableLimit = PL_TABLE_PAGE; plTableLastQuery = query; }
   const remaining = rowsToShow.length - plTableLimit;
   body.innerHTML = rowsToShow.slice(0, plTableLimit).map(plRowHtml).join('') + (remaining > 0
-    ? `<tr><td colspan="10" style="text-align:center;padding:12px;">
+    ? `<tr><td colspan="${plLine === 'kbeauty' ? 11 : 10}" style="text-align:center;padding:12px;">
          <button class="btn btn-outline" onclick="showMorePlRows()">Mostrar ${Math.min(PL_TABLE_PAGE, remaining)} más</button>
          <span style="font-size:.78rem;color:var(--muted);margin-left:8px;">quedan ${remaining.toLocaleString('es-AR')} · usá el buscador para ir directo</span>
        </td></tr>`
@@ -12904,17 +13017,25 @@ html.has-q .top .wrap { grid-template-areas: "q q cart"; }
 @media (min-width: 1100px) { .layout { grid-template-columns: minmax(0, 1fr) 300px; } }
 .brand-sec { margin-top: 18px; }
 .brand-h { position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--hdr-vis, 118px)); z-index: 5; margin: 0; padding: 10px 0 8px; background: var(--bg); font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 500; font-size: 21px; display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid var(--line); }
-.rows { display: grid; }
-.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; padding: 14px 0; border-bottom: 1px solid var(--line); }
-.r-brand { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); }
+.rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); column-gap: 14px; }
+.row { min-width: 0; display: grid; grid-column: auto; grid-row: span 6; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid; row-gap: 6px; padding: 10px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.ph { grid-row: 1; width: 100%; aspect-ratio: 1; border: 0; border-radius: 10px; overflow: hidden; display: grid; place-items: center; background: var(--accent-soft); color: var(--ink-2); padding: 0; }
+button.ph { cursor: zoom-in; }
+.ph img { width: 100%; height: 100%; object-fit: contain; background: white; }
+.ph span { font-size: 28px; font-weight: 700; }
+.r-brand { grid-row: 2; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--ink-2); }
 .rows:not(.plain) .r-brand { display: none; }
-.r-name { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; }
-.r-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 6px; }
-.r-sub { font-size: 13px; color: var(--ink-2); }
+.r-name { grid-row: 3; margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.r-line { grid-row: 4; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; align-self: start; min-width: 0; }
+.r-sub { grid-row: 5; font-size: 13px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .size-one { font-size: 13px; color: var(--ink-2); }
-.r-buy { display: grid; justify-items: end; align-content: start; gap: 6px; text-align: right; }
+.r-buy { grid-row: 6; display: grid; justify-items: start; align-self: end; gap: 6px; }
 .r-price { font-size: 18px; font-weight: 700; color: var(--price); font-variant-numeric: tabular-nums; line-height: 1.1; }
 .r-cuota { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.photo-dialog { width: min(92vw, 560px); max-height: 90dvh; padding: 12px; border: 0; border-radius: 16px; background: var(--surface); color: var(--ink); }
+.photo-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+.photo-dialog img { display: block; width: 100%; max-height: 65dvh; object-fit: contain; aspect-ratio: 1; }
+.photo-dialog h2 { font-size: 16px; margin: 12px 0; }
 
 aside.summary { display: none; }
 @media (min-width: 1100px) {
@@ -13115,7 +13236,7 @@ ${SC}
     var idx = ' ' + [bl, bl.replace(/[^a-z0-9]/g, ''), BRAND_ALIASES[bl] || '', fold(d.name), fold(d.size || '').replace(/\s/g, ''), fold(d.size || ''), fold(step.label), step.words,
       concerns.map(function (k) { return fold(CONCERN[k].label); }).join(' '), ingr.map(function (k) { return fold(INGR[k].label) + ' ' + k; }).join(' '), fold(d.orig)].join(' ').replace(/[^a-z0-9+%]+/g, ' ') + ' ';
     return {
-      i: i, brand: d.brand, name: d.name, size: d.size || '', price: d.price, type: d.type, orig: d.orig, step: step,
+      p: /^[0-9a-f]{20}$/.test(d.p || '') ? d.p : '', i: i, brand: d.brand, name: d.name, size: d.size || '', price: d.price, type: d.type, orig: d.orig, step: step,
       concerns: concerns, ingr: ingr, idx: idx, nameIdx: ' ' + fold(d.name).replace(/[^a-z0-9+%]+/g, ' '),
       key: d.brand + '||' + d.name + '||' + (d.size || ''), gkey: d.brand + '||' + fold(d.name)
     };
@@ -13324,6 +13445,40 @@ ${SC}
     if (on && !b.classList.contains('locked')) { lockY = global.scrollY; b.style.top = -lockY + 'px'; b.classList.add('locked'); }
     else if (!on && b.classList.contains('locked')) { b.classList.remove('locked'); b.style.top = ''; global.scrollTo(0, lockY); }
   }
+  var PHOTO_BASE = 'https://comparapi-proxy.agustincrovato7.workers.dev/f/';
+  function photoHtml(it) {
+    var initial = '<span aria-hidden="true">' + esc((it.brand || '?').charAt(0)) + '</span>';
+    if (!it.p) return '<div class="ph">' + initial + '</div>';
+    return '<button type="button" class="ph" data-photo="' + esc(it.key) + '" aria-label="Ver foto de ' + esc(it.name) + '">' +
+      '<img src="' + PHOTO_BASE + it.p + '-400.webp" loading="lazy" decoding="async" width="400" height="400" alt="" onerror="SF.photoFailed(this)"></button>';
+  }
+  function photoFailed(img) {
+    var button = img.parentNode, it = BY_KEY[button.dataset.photo];
+    var box = document.createElement('div'); box.className = 'ph';
+    box.innerHTML = '<span aria-hidden="true">' + esc(((it && it.brand) || '?').charAt(0)) + '</span>';
+    button.replaceWith(box);
+  }
+  var photoDialog;
+  document.addEventListener('click', function (e) {
+    var button = e.target.closest('[data-photo]'); if (!button) return;
+    var it = BY_KEY[button.dataset.photo]; if (!it || !it.p) return;
+    if (!photoDialog) {
+      photoDialog = document.createElement('dialog'); photoDialog.className = 'photo-dialog';
+      photoDialog.setAttribute('aria-labelledby', 'photo-title');
+      photoDialog.innerHTML = '<img width="800" height="800" alt=""><h2 id="photo-title"></h2><button type="button" class="btn btn-ghost">Cerrar</button>';
+      document.body.appendChild(photoDialog);
+      photoDialog.querySelector('button').addEventListener('click', function () { photoDialog.close(); });
+      photoDialog.addEventListener('click', function (ev) {
+        var r = photoDialog.getBoundingClientRect();
+        if (ev.target === photoDialog && (ev.clientX < r.left || ev.clientX > r.right || ev.clientY < r.top || ev.clientY > r.bottom)) photoDialog.close();
+      });
+      photoDialog.addEventListener('close', function () { closeModal(photoDialog); photoDialog.querySelector('img').removeAttribute('src'); });
+    }
+    photoDialog.querySelector('img').src = PHOTO_BASE + it.p + '-800.webp';
+    photoDialog.querySelector('img').alt = it.name;
+    photoDialog.querySelector('h2').textContent = it.name;
+    photoDialog.showModal(); openModal(photoDialog, button);
+  });
   function openModal(el, opener, opts) {
     opts = opts || {};
     el.hidden = false; open.push({ el: el, opener: opener, lock: opts.lock !== false });
@@ -13339,7 +13494,7 @@ ${SC}
   }
   document.addEventListener('keydown', function (e) {
     var top = open[open.length - 1]; if (!top) return;
-    if (e.key === 'Escape') { e.preventDefault(); closeModal(top.el); return; }
+    if (e.key === 'Escape') { e.preventDefault(); if (top.el.tagName === 'DIALOG') top.el.close(); else closeModal(top.el); return; }
     if (e.key === 'Tab') {
       var f = Array.prototype.filter.call(top.el.querySelectorAll(FOCUSABLE), function (x) { return x.offsetParent !== null; });
       if (!f.length) return;
@@ -13357,7 +13512,7 @@ ${SC}
     STEPS: STEPS, STEP: STEP, CONCERNS: CONCERNS, CONCERN: CONCERN, INGREDIENTS: INGREDIENTS, INGR: INGR, PRICE_RANGES: PRICE_RANGES, PROVINCIAS: PROVINCIAS,
     ITEMS: ITEMS, BY_KEY: BY_KEY, query: query, facets: facets, group: group, brandList: brandList, subline: subline, sizeLabel: sizeLabel, cuota3: cuota3,
     Cart: Cart, schedule: schedule, totals: totals, DELIVERY: DELIVERY, ENVIO_SUCURSAL: ENVIO_SUCURSAL, message: message, waUrl: waUrl, loadDatos: loadDatos, saveDatos: saveDatos,
-    openModal: openModal, closeModal: closeModal, focusEl: focusEl, announce: announce, date: global.CATALOG_DATE || ''
+    photoHtml: photoHtml, photoFailed: photoFailed, openModal: openModal, closeModal: closeModal, focusEl: focusEl, announce: announce, date: global.CATALOG_DATE || ''
   };
 })(window);
 ${SC}
@@ -13808,10 +13963,11 @@ ${SC}
     document.getElementById('nav').innerHTML = h;
   }
   function renderItem(g, it, c) {
-    return '<article class="row" data-row="' + g.gid + '"><div style="min-width:0"><span class="r-brand">' + esc(it.brand) + '</span><h3 class="r-name">' + esc(it.name) + '</h3>' +
-      '<div class="r-meta">' + c.tag + (SF.subline(it) ? '<span class="r-sub">' + esc(SF.subline(it)) + '</span>' : '') + c.sizes + '</div></div>' +
+    return '<article class="row" data-row="' + g.gid + '">' + SF.photoHtml(it) + '<span class="r-brand">' + esc(it.brand) + '</span><h3 class="r-name">' + esc(it.name) + '</h3>' +
+      '<div class="r-line">' + c.tag + c.sizes + '</div><span class="r-sub">' + esc(SF.subline(it) || '') + '</span>' +
       '<div class="r-buy"><span class="r-price">' + fmt(it.price) + '</span><span class="r-cuota">o 3 × ' + fmt(SF.cuota3(it.price)) + '</span>' + c.add + '</div></article>';
   }
+
   function renderSummary() {
     var lines = SF.Cart.lines(), el = document.getElementById('summary');
     el.innerHTML = '<h2>Tu pedido</h2>' + (lines.length
@@ -13828,18 +13984,82 @@ ${SC}
 }
 // ── SILKFACE:END
 
+// Adaptador fuera del bloque regenerado: port.py conserva su template sin parámetros.
+const plKbSilkfaceTemplate = buildSilkfaceHtml;
+buildSilkfaceHtml = function (photoKeys) {
+  const html = plKbSilkfaceTemplate();
+  if (!html || !photoKeys) return html;
+  const items = plPublishableItems().filter(it => Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs) > 0);
+  return html.replace(/var DATA = (\[.*?\]);\n/s, (match, json) => {
+    const data = JSON.parse(json);
+    data.forEach((d, i) => {
+      const key = photoKeys.get(items[i].img);
+      if (/^[0-9a-f]{20}$/.test(key || '')) d.p = key;
+    });
+    return 'var DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';\n';
+  });
+};
+
+// De a una foto por pedido: con lotes de 5 el Worker (plan gratis) se cortaba en las fotos pesadas.
+const PL_KB_PHOTO_BATCH = 1, PL_KB_PHOTO_CONCURRENCY = 4;
+async function plKbPreparePhotos(items, onProgress) {
+  const urls = [...new Set(items.map(it => it.img).filter(Boolean))];
+  const result = { keys: new Map(), fallidas: 0, cupo: 0 };
+  let next = 0, done = 0;
+  const secret = getPublishSecret();
+  const progress = () => { if (onProgress) onProgress(done, urls.length); };
+  progress();
+  async function run() {
+    while (next < urls.length) {
+      const batch = urls.slice(next, next += PL_KB_PHOTO_BATCH);
+      try {
+        const resp = await fetch(`${WORKER}/fotos/preparar`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Publish-Secret': secret },
+          body: JSON.stringify({ urls: batch }), signal: AbortSignal.timeout(60000)
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        for (const url of batch) {
+          const r = data.results?.[url];
+          if ((r?.status === 'ok' || r?.status === 'existe') && /^[0-9a-f]{20}$/.test(r.key || '')) result.keys.set(url, r.key);
+          else { result.fallidas++; if (r?.status === 'cupo') result.cupo++; }
+        }
+      } catch (e) { result.fallidas += batch.length; }
+      done += batch.length; progress();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(PL_KB_PHOTO_CONCURRENCY, Math.ceil(urls.length / PL_KB_PHOTO_BATCH)) }, run));
+  return result;
+}
+
+function plKbPhotoSummary(photos, items) {
+  return ` · ${items.filter(it => photos.keys.has(it.img)).length} con foto` +
+    (photos.fallidas ? ` · ${photos.fallidas} fotos sin preparar (se reintentan en la próxima publicación)` : '') +
+    (photos.cupo ? ' · se agotó el cupo gratis de fotos del mes' : '');
+}
+
 // Cada línea publica su propia lista (card 21): Perfumes → docs/catalogo.html (Crovato Fragrances),
 // Cosmética coreana → docs/silkface.html (Silkface). El Worker solo acepta esos dos destinos.
 const PL_PUBLISH_TARGETS = {
   perfumes: { target: 'catalogo', file: 'catalogo.html', label: 'catálogo de perfumes', build: () => buildCatalogHtml() },
-  kbeauty: { target: 'silkface', file: 'silkface.html', label: 'lista Silkface', build: () => buildSilkfaceHtml() }
+  kbeauty: { target: 'silkface', file: 'silkface.html', label: 'lista Silkface', build: photoKeys => buildSilkfaceHtml(photoKeys) }
 };
 function plPublishTarget() { return PL_PUBLISH_TARGETS[plLine] || null; }
 
-function exportPlSearchablePage() {
+async function exportPlSearchablePage() {
   const t = plPublishTarget();
   if (!t) return;
-  const html = t.build();
+  let photos, items;
+  const statusEl = document.getElementById('pl-publish-result');
+  if (t.target === 'silkface') {
+    items = plPublishableItems();
+    if (getPublishSecret()) {
+      photos = await plKbPreparePhotos(items, (n, total) => { statusEl.textContent = `Preparando fotos ${n} de ${total}…`; });
+      statusEl.textContent = 'Página descargada' + plKbPhotoSummary(photos, items);
+    } else statusEl.textContent = 'Página descargada sin fotos: configurá la clave de publicación para prepararlas.';
+    statusEl.style.color = '';
+  }
+  const html = t.build(photos?.keys);
   if (!html) { alert('No hay productos para exportar.'); return; }
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -13882,7 +14102,7 @@ function renderPublishSecretStatus() {
 async function publishCatalogAuto() {
   const t = plPublishTarget();
   if (!t) return;
-  const html = t.build();
+  let html = t.build();
   if (!html) { alert('No hay productos para exportar.'); return; }
 
   const secret = getPublishSecret();
@@ -13900,6 +14120,7 @@ async function publishCatalogAuto() {
   statusEl.style.color = '';
 
   try {
+    let photos, photoItems;
     // Un Worker viejo ignora "target" y escribiría docs/catalogo.html: antes de publicar otra lista se
     // comprueba que el Worker desplegado conozca el destino (ruta /publish-targets, card 21).
     if (t.target !== 'catalogo') {
@@ -13912,6 +14133,11 @@ async function publishCatalogAuto() {
         throw new Error(`el Worker desplegado no conoce la ${t.label}. Pegá worker.js en el dashboard de Cloudflare y volvé a probar (no se publicó nada).`);
       }
     }
+    if (t.target === 'silkface') {
+      photoItems = plPublishableItems();
+      photos = await plKbPreparePhotos(photoItems, (n, total) => { statusEl.textContent = `Preparando fotos ${n} de ${total}…`; });
+      html = t.build(photos.keys);
+    }
     const resp = await fetch(`${WORKER}/publish-catalog`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Publish-Secret': secret },
@@ -13920,6 +14146,7 @@ async function publishCatalogAuto() {
     const data = await resp.json();
     if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
     statusEl.innerHTML = `✓ Publicado — <a href="${data.url}" target="_blank">${data.url}</a>`;
+    if (photos) statusEl.appendChild(document.createTextNode(plKbPhotoSummary(photos, photoItems)));
     statusEl.style.color = 'var(--success)';
   } catch (e) {
     statusEl.textContent = `✗ No se pudo publicar: ${e.message}`;
