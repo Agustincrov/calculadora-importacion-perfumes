@@ -269,6 +269,7 @@ async function fetchLgPage(page, cat = 'PERFUMARIA') {
     stock: p.temEstoque === 1 || p.temEstoque === true,
     sub1:  p.subcategoria1 || '',
     sub2:  p.subcategoria2 || '',
+    img: typeof p.urls?.[0] === 'string' && p.urls[0].startsWith('https://') ? p.urls[0] : '',
   }));
   return jsonResp({ page, total: d.totalElements ?? null, pages: d.totalPages ?? null, items });
 }
@@ -453,11 +454,21 @@ async function fetchIntershopPage(q) {
   const items = html.split('intershop-product-card"').slice(1).map(card => {
     const url = card.match(/href="(https:\/\/intershop\.com\.py\/item\/[^"]+)"/)?.[1] || '';
     const price = card.match(/intershop-product-price">\s*U\$\s*([\d.,]+)/);
+    let img = '';
+    const tag = card.match(/<img\b[^>]*\bclass=["']([^"']*\s)?intershop-product-img(?:\s[^"']*)?["'][^>]*>/i)?.[0];
+    const src = tag?.match(/\ssrc=["']([^"']*)["']/i)?.[1];
+    if (src) {
+      try {
+        const url = new URL(decodeEntities(src), 'https://intershop.com.py/');
+        if (url.protocol === 'https:') img = url.href;
+      } catch { /* Sin foto válida. */ }
+    }
     return {
       code: kbeautyHtmlText(card.match(/intershop-product-ref[^>]*>([^<]*)</)?.[1]) || url.match(/-(\d+)$/)?.[1] || '',
       name: kbeautyHtmlText(fullNames[url] || card.match(/intershop-product-name">([^<]*)</)?.[1]),
       price: price ? Number(price[1].replace(/,/g, '')) || null : null,
       stock: card.includes('add-to-cart-btn') ? 1 : 0,
+      img,
     };
   }).filter(x => x.code && x.name);
   const pages = Math.max(1, ...[...html.matchAll(/[?&](?:amp;)?page=(\d+)/g)].map(m => Number(m[1])));
@@ -469,6 +480,8 @@ async function fetchIntershopPage(q) {
 const PHOTO_HOSTS = new Set([
   'www.pontocom.com', 'resource.megaeletronicos.com', 'bigs.com.py',
   'www.starcompany-py.com', 'assets-terranova.egondola.app',
+  'api.eleganciacompany.com', 'img.genove.com.py', 'www.lgimportados.com',
+  'intershop.com.py', 'compras.macedonia.com.py', 'dados.sfo3.cdn.digitaloceanspaces.com',
 ]);
 const PHOTO_VERSION = 'v2'; // Cambiarla cuando cambie la transformación, así se generan de nuevo.
 const PHOTO_MAX_BYTES = 20 * 1024 * 1024;

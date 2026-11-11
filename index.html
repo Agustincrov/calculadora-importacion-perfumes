@@ -8718,7 +8718,7 @@ async function importPontocom({ quiet = false } = {}) {
       if (brand && !BRAND_CATEGORY[brand] && !plIsNonPerfumeCategory(name)) newBrands[brand] = (newBrands[brand] || 0) + 1;
       const siteCat = codesIn['perfumes-arabes'].has(it.code) ? 'arabe'
                     : codesIn['perfumes-nicho'].has(it.code) ? 'nicho' : '';
-      items.push({ name, brand, price: it.price, code: it.code, stock: it.stock, siteCat });
+      items.push({ name, brand, price: it.price, code: it.code, stock: it.stock, siteCat, ...(typeof it.img === 'string' && it.img.startsWith('https://') ? { img: it.img } : {}) });
     }
     if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
 
@@ -8828,7 +8828,7 @@ async function macedoniaBookmarklet() {
     return;
   }
   const base = '/wp-json/wc/store/v1/products?category=135&stock_status=instock&per_page=100&orderby=id&order=desc'
-    + '&_fields=id,sku,name,prices,categories&page=';
+    + '&_fields=id,sku,name,prices,categories,images&page=';
   const title = document.title;
   const txt = document.createElement('textarea'); // decodifica entidades HTML ("VICTORIA&#8217;S")
   const decode = s => { txt.innerHTML = s; return txt.value; };
@@ -8854,6 +8854,7 @@ async function macedoniaBookmarklet() {
       name: decode(String(p.name || '')).replace(/\s+/g, ' ').trim(),
       pyg: parseInt(p.prices && p.prices.price, 10) || 0,
       cats: (p.categories || []).map(c => c.id),
+      img: typeof p.images?.[0]?.src === 'string' && p.images[0].src.startsWith('https://') ? p.images[0].src : '',
     }));
     const date = new Date().toLocaleDateString('en-CA');
     const a = document.createElement('a');
@@ -8903,6 +8904,7 @@ async function madridCenterBookmarklet() {
           brand: typeof p.marca === 'string' ? p.marca : (p.marca && p.marca.nombre) || '',
           cat: typeof p.categoria === 'string' ? p.categoria : (p.categoria && p.categoria.nombre) || '',
           stock: p.stock ? Number(p.stock.cantidad) || (p.stock.disponible ? 1 : 0) : 0,
+          img: typeof p.imagen_principal?.url === 'string' && p.imagen_principal.url.startsWith('https://') ? p.imagen_principal.url : '',
         });
       }
       document.title = `Madrid Center ${items.length}/${(d.paginacion && d.paginacion.total) || '?'}…`;
@@ -8954,7 +8956,8 @@ async function importMadridCenterFile(file) {
       .map(x => ({
         code: x.code, name: plCleanMadridName(x.name || ''), price: Math.round(Number(x.price) * 100) / 100,
         site: x.brand || plSiteBrandFromName(plCleanMadridName(x.name || '')),
-        siteCat: /ARABE/.test(plStripAccents(String(x.cat || '')).toUpperCase()) ? 'arabe' : ''
+        siteCat: /ARABE/.test(plStripAccents(String(x.cat || '')).toUpperCase()) ? 'arabe' : '',
+        ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {})
       }));
     const date = /^\d{4}-\d{2}-\d{2}$/.test(data.date) ? data.date : undefined; // la de la descarga, no la de hoy
     alert(plSetSiteSource('madridcenter', 'Madrid Center', rows, date).msg);
@@ -8989,7 +8992,7 @@ async function importMacedoniaFile(file) {
       const brand = detectKnownBrand(name) || (prefix ? prefix[1] : '');
       if (!brand) noBrand++;
       else if (!BRAND_CATEGORY[brand]) newBrands[brand] = (newBrands[brand] || 0) + 1;
-      items.push({ name, brand, price: Math.round(it.pyg / rate * 100) / 100, pyg: it.pyg, code: it.code });
+      items.push({ name, brand, price: Math.round(it.pyg / rate * 100) / 100, pyg: it.pyg, code: it.code, ...(typeof it.img === 'string' && it.img.startsWith('https://') ? { img: it.img } : {}) });
     }
     if (items.length === 0) throw new Error('no quedó ningún producto con stock (¿cambió el sitio?)');
 
@@ -9106,7 +9109,7 @@ function plBuildSiteItems(rows) {
     const brand = detectKnownBrand(r.name) || plSiteBrand(r.site);
     if (!brand) noBrand++;
     else if (!BRAND_CATEGORY[brand] && !r.siteCat) newBrands[brand] = (newBrands[brand] || 0) + 1;
-    items.push({ name: r.name, brand, price: r.price, code: r.code, ...(r.siteCat ? { siteCat: r.siteCat } : {}), ...(r.extra || {}) });
+    items.push({ name: r.name, brand, price: r.price, code: r.code, ...(r.siteCat ? { siteCat: r.siteCat } : {}), ...(r.extra || {}), ...(r.img ? { img: r.img } : {}) });
   }
   return { items, newBrands, noBrand };
 }
@@ -9155,9 +9158,17 @@ async function plFetchEleganciaRows(progress) {
     pages.push(d);
     progress(d.data.length);
   }
-  return pages.flatMap(pg => pg.data).filter(x => x.stock > 0).map(x => ({
-    code: String(x.codigo || x.id), name: plCleanEleganciaName(x.nombre || ''), price: Number(x.precio), site: x.marca && x.marca.nombre
-  }));
+  return pages.flatMap(pg => pg.data).filter(x => x.stock > 0).map(x => {
+    let img = '';
+    const src = x.imagen_principal?.[0]?.url;
+    if (typeof src === 'string' && src) {
+      try { img = new URL(src, 'https://api.eleganciacompany.com/').href; } catch { /* Sin foto válida. */ }
+    }
+    return {
+      code: String(x.codigo || x.id), name: plCleanEleganciaName(x.nombre || ''), price: Number(x.precio), site: x.marca && x.marca.nombre,
+      ...(typeof img === 'string' && img.startsWith('https://') ? { img: img } : {})
+    };
+  });
 }
 
 // Star Company: vía Worker (/starcompany), el sitio no manda CORS. Solo lista productos con stock, 96 por página.
@@ -9177,7 +9188,7 @@ async function plFetchStarCompanyRows(progress) {
   if (first.total && rows.length < first.total * 0.95) throw new Error(`llegaron ${rows.length} de ${first.total} productos`);
   return rows.filter(x => x.stock > 0).map(x => ({
     code: x.code, name: plStripAccents(x.name).toUpperCase().replace(/[’´`]/g, "'").replace(/\s+/g, ' ').trim(),
-    price: x.price, site: x.brand
+    price: x.price, site: x.brand, ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {})
   }));
 }
 
@@ -9215,7 +9226,8 @@ async function plFetchGenoveRows(progress) {
   }
   return products.filter(x => x.stock > 0 && x.active !== false && subOf[x.id] !== 'kids').map(x => ({
     code: String(x.codigo || x.id), name: plCleanGenoveName(x.name || ''), price: Number(x.price),
-    site: x.brand && x.brand.name, siteCat: subOf[x.id] || '', extra: { wholesale: Number(x.wholesale_price) || undefined }
+    site: x.brand && x.brand.name, siteCat: subOf[x.id] || '', extra: { wholesale: Number(x.wholesale_price) || undefined },
+    ...(typeof x.images?.[0]?.url === 'string' && x.images?.[0]?.url.startsWith('https://') ? { img: x.images?.[0]?.url } : {})
   }));
 }
 
@@ -9325,7 +9337,8 @@ async function plFetchLgRows(progress) {
     .filter(x => x.stock && x.sub1 !== 'Infantil' && !/FRACCIONADO|^TUBETE\b|\b(B\d{3,4}(-\d+)?|MY\d{3}|ZMA\d+(-\d+)?)\b/i.test(x.name))
     .map(x => ({
       code: x.code, name: plCleanLgName(x.name), price: Math.round(x.price * 100) / 100,
-      site: x.brand || plSiteBrandFromName(plCleanLgName(x.name)), siteCat: x.sub2 === 'Arabe' ? 'arabe' : ''
+      site: x.brand || plSiteBrandFromName(plCleanLgName(x.name)), siteCat: x.sub2 === 'Arabe' ? 'arabe' : '',
+      ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {})
     }));
 }
 
@@ -9400,7 +9413,7 @@ async function plFetchIntershopRows(progress) {
   const arabe = new Set(arabes.map(x => x.code));
   return rows.filter(x => x.stock > 0).map(x => {
     const name = plCleanIntershopName(x.name);
-    return { code: x.code, name, price: x.price, site: plSiteBrandFromName(name), siteCat: arabe.has(x.code) ? 'arabe' : '' };
+    return { code: x.code, name, price: x.price, site: plSiteBrandFromName(name), siteCat: arabe.has(x.code) ? 'arabe' : '', ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {}) };
   }).filter(x => !INTERSHOP_NOT_PERFUME_RE.test(x.name));
 }
 
