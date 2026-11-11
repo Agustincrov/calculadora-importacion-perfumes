@@ -11191,7 +11191,7 @@ function exportPlExcel() {
 
 // Archivo único (sin hosting) con buscador en vivo — se lo mandás al cliente como cualquier
 // archivo por WhatsApp y lo abre en el navegador del celu, sin necesitar Excel.
-function buildCatalogHtml() {
+function buildCatalogHtml(photoKeys) {
   const sorted = plPublishableItems()
     .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
   if (sorted.length === 0) return null;
@@ -11199,12 +11199,14 @@ function buildCatalogHtml() {
   const data = sorted.map(it => {
     // Género sobre el nombre original: plCleanName saca FEM/MASC del nombre visible
     const g = plGenderOf(it.name);
+    const key = photoKeys?.get(it.img);
     return {
       brand: it.brand || 'Sin categoría',
       name: it.displayName,
       price: Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs),
       cat: plCategoryFor(it), // 'nicho' | 'disenador' | 'arabe' | '' (sin clasificar)
-      ...(g ? { g } : {}) // 'F' | 'M'; sin el campo si el nombre no lo dice
+      ...(g ? { g } : {}), // 'F' | 'M'; sin el campo si el nombre no lo dice
+      ...(typeof key === 'string' && /^[0-9a-f]{20}$/.test(key) ? { p: key } : {})
     };
   });
   // Misma marca y mismo nombre visible pero distinto género (ej. Fakhar EDP 100ML de hombre y de mujer):
@@ -11439,14 +11441,14 @@ a { color: var(--vino); }
 .hdr .wordmark { grid-area: brand; font-size: 15px; }
 .hdr .search { grid-area: search; }
 .hdr .icons { grid-area: icons; display: flex; }
-.hdr.compact .wordmark, .has-q .hdr .wordmark { display: none; }
-.hdr.compact .hdr-in, .has-q .hdr .hdr-in { grid-template-areas: "search icons"; padding-top: 10px; }
-.has-q .hdr #infoBtn, .hdr.compact #infoBtn { display: none; }
+.has-q .hdr .wordmark { display: none; }
+.has-q .hdr .hdr-in { grid-template-areas: "search icons"; padding-top: 10px; }
+.has-q .hdr #infoBtn { display: none; }
 @media (min-width: 900px) {
-  .hdr-in, .hdr.compact .hdr-in, .has-q .hdr .hdr-in { grid-template-columns: auto 1fr auto; grid-template-areas: "brand search icons"; gap: 28px; padding: 12px 32px; }
-  .hdr .wordmark, .hdr.compact .wordmark, .has-q .hdr .wordmark { display: block; font-size: 20px; letter-spacing: .2em; }
+  .hdr-in, .has-q .hdr .hdr-in { grid-template-columns: auto 1fr auto; grid-template-areas: "brand search icons"; gap: 28px; padding: 12px 32px; }
+  .hdr .wordmark, .has-q .hdr .wordmark { display: block; font-size: 20px; letter-spacing: .2em; }
   .hdr .search { max-width: 600px; width: 100%; justify-self: center; }
-  .hdr.compact #infoBtn, .has-q .hdr #infoBtn { display: inline-flex; }
+  .has-q .hdr #infoBtn { display: inline-flex; }
 }
 .has-q .announce { display: none; }
 
@@ -11589,6 +11591,117 @@ body.has-bar { padding-bottom: 76px; }
 .info-list li { display: grid; grid-template-columns: 24px 1fr; gap: 10px; font-size: 15px; }
 .info-list .ic { color: var(--vino); }
 </style>
+<style>
+/* Tarjetas con foto y filas alineadas por subgrid. */
+.brand-sec, #results.flat {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px 12px;
+}
+.brand-h { grid-column:1 / -1; align-self:start; margin-bottom:8px; }
+.row {
+  min-width:0; display:grid; grid-column:auto; grid-row:span 6;
+  grid-template-columns:minmax(0,1fr); grid-template-rows:subgrid;
+  align-items:start; gap:8px; padding:12px; margin-bottom:8px;
+  border:1px solid var(--borde-marco); border-radius:12px; background:var(--footer);
+}
+.ph-info, .row .buy { display:contents; }
+.ph {
+  grid-row:1; display:grid; place-items:center; width:100%; aspect-ratio:1; min-width:0;
+  padding:0; border:0; border-radius:8px; overflow:hidden; background:var(--lino);
+  color:var(--vino); font-family:var(--f-display); font-size:48px;
+}
+button.ph { cursor:zoom-in; }
+button.ph:hover { outline:1px solid var(--borde-marco); }
+button.ph:active { opacity:.8; }
+.ph img { width:100%; height:100%; min-height:0; aspect-ratio:1; object-fit:contain; background:white; }
+.ph-initial { grid-area:1 / 1; }
+.ph img { grid-area:1 / 1; }
+.row .br { grid-row:2; min-height:0; }
+.row .nm { grid-row:3; min-width:0; overflow-wrap:anywhere; }
+.row .meta { grid-row:4; margin:0; align-self:start; gap:14px 8px; padding:4px 0; min-width:0; }
+.row .sizes { min-width:0; max-width:100%; gap:14px 8px; }
+.row .pr { grid-row:5; align-self:end; }
+.ph-installments { display:block; font:11px/1.5 var(--f-sans); font-weight:400; color:var(--meta); }
+.row .add, .row .stepper { grid-row:6; width:100%; align-self:end; }
+#ph-zoom { position:fixed; inset:0; z-index:100; display:grid; place-items:center; background:#14110eb3; padding:16px; isolation:isolate; }
+#ph-zoom figure { margin:0; width:min(100%,560px); max-height:calc(100dvh - 32px); overflow:auto; background:var(--footer); border-radius:12px; padding:16px; }
+#ph-zoom .ph-zoom-head { display:flex; justify-content:space-between; align-items:start; gap:16px; margin-bottom:12px; }
+#ph-title { margin:0; font:500 24px/1.2 var(--f-serif); }
+#ph-zoom img { display:block; width:100%; max-height:65dvh; aspect-ratio:1; object-fit:contain; background:white; }
+#ph-error { color:var(--vino); }
+
+/* Mobile header: only its position changes while scrolling, never its height. */
+@media (max-width: 1023px) {
+  .hdr { top: calc(env(safe-area-inset-top, 0px) - var(--hdr-off, 0px)); }
+  .hdr .hdr-in {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "brand info" "search cart";
+    gap: 2px 4px; padding-top: 6px; padding-bottom: 10px;
+  }
+  .hdr .icons { display: contents; }
+  .hdr #infoBtn { grid-area: info; display: inline-flex; }
+  .hdr #cartBtn { grid-area: cart; }
+  .hdr .wordmark { display: block; font-size: 15px; letter-spacing: .16em; }
+  .hdr .search { min-width: 0; max-width: none; width: 100%; }
+  html.has-q .hdr .wordmark, html.has-q .hdr #infoBtn { display: none; }
+  html.has-q .hdr .hdr-in { grid-template-areas: "search cart"; padding-top: 10px; }
+  .brand-h { top: calc(env(safe-area-inset-top, 0px) + var(--hdr-vis, 59px)); }
+  .brand-sec { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + var(--hdr-vis, 59px)); }
+}
+</style>
+<script>
+var PH_GROUPS;
+var PH_FAILED = new Set();
+var PH_BASE = 'https://comparapi-proxy.agustincrovato7.workers.dev/f/';
+function phPhoto(g) {
+  if (!PH_GROUPS) {
+    PH_GROUPS = Object.create(null);
+    CF.group(CF.ITEMS).forEach(function (group) {
+      var source = group.sizes.find(function (it) { return /^[0-9a-f]{20}$/.test(it.p || ''); });
+      if (source) PH_GROUPS[group.key] = source.p;
+    });
+  }
+  return PH_GROUPS[g.key] || '';
+}
+function phHtml(g) {
+  var it = g.head, url = phPhoto(g), esc = CF.esc;
+  var initial = '<span class="ph-initial" aria-hidden="true">' + esc(it.brand.charAt(0)) + '</span>';
+  if (!url || PH_FAILED.has(url)) return '<div class="ph" role="img" aria-label="Sin foto de ' + esc(it.brand + ' ' + it.display) + '">' + initial + '</div>';
+  return '<button type="button" class="ph" data-photo="' + esc(url) + '" data-photo-name="' + esc(it.brand + ' · ' + it.display) + '" aria-label="Ampliar foto de ' + esc(it.display) + '">' + initial + '<img src="' + esc(PH_BASE + url + '-400.webp') + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"></button>';
+}
+function phInstallments(price) {
+  var plan = CF.CUOTAS.find(function (p) { return p.n === 3; });
+  return '<span class="ph-installments">3 cuotas de ' + CF.fmt(Math.round(price * (1 + plan.pct / 100) / 3)) + '</span>';
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var zoom = document.getElementById('ph-zoom');
+  var image = zoom.querySelector('img');
+  var error = document.getElementById('ph-error');
+  document.addEventListener('click', function (e) {
+    var opener = e.target.closest('[data-photo]');
+    if (opener) {
+      document.getElementById('ph-title').textContent = opener.getAttribute('data-photo-name');
+      image.alt = opener.getAttribute('data-photo-name');
+      error.hidden = true;
+      image.hidden = false;
+      image.src = PH_BASE + opener.getAttribute('data-photo') + '-800.webp';
+      CF.openModal(zoom, opener);
+    } else if (e.target === zoom || e.target.closest('#ph-close')) CF.closeModal(zoom);
+  });
+  image.addEventListener('error', function () { image.hidden = true; error.hidden = false; });
+  // Failed thumbnails keep their space and the same initial as an absent photo.
+  document.addEventListener('error', function (e) {
+    var img = e.target;
+    if (!img.matches || !img.matches('.ph img')) return;
+    var button = img.closest('[data-photo]');
+    PH_FAILED.add(button.getAttribute('data-photo'));
+    var replacement = document.createElement('div');
+    replacement.className = 'ph'; replacement.setAttribute('role', 'img');
+    replacement.setAttribute('aria-label', 'Sin foto de ' + button.getAttribute('data-photo-name'));
+    replacement.appendChild(button.querySelector('.ph-initial'));
+    button.replaceWith(replacement);
+  }, true);
+});
+${SC}
 </head>
 <body>
 <div class="announce" id="announce"></div>
@@ -11792,7 +11905,7 @@ ${SC}
 
     var it = {
       i: idx, key: d.brand + '||' + d.name, brand: d.brand, name: d.name, price: d.price, cat: d.cat || '',
-      display: display, ml: ml, conc: conc, gender: d.g || gender, nameGender: gender, g: d.g || '', tester: tester, decode: decode, dented: dented, kit: kit
+      p: d.p || '', display: display, ml: ml, conc: conc, gender: d.g || gender, nameGender: gender, g: d.g || '', tester: tester, decode: decode, dented: dented, kit: kit
     };
     it.idx = ' ' + fold([d.brand, BRAND_ALIASES[d.brand] || '', d.name, display, conc ? CONC_LONG[conc] + ' ' + conc : '', ml ? ml + 'ml' : '',
       tester ? 'tester' : '', decode ? 'decode sin codigo de lote' : '', kit ? 'kit set' : '',
@@ -12105,10 +12218,10 @@ ${SC}
       line: 'Original, mismo perfume. Sin código de lote en el frasco.'
     }
   };
-  function conditionChips(it, compact) {
+  function conditionChips(it, shortLabel) {
     var h = '';
     if (it.tester) h += '<button type="button" class="tag tag-btn" data-explain="tester" aria-label="Tester: ver qué significa">Tester</button>';
-    if (it.decode) h += '<button type="button" class="tag tag-btn" data-explain="decode" aria-label="Sin código de lote: ver qué significa">' + (compact ? 'Decode' : 'Sin código de lote') + '</button>';
+    if (it.decode) h += '<button type="button" class="tag tag-btn" data-explain="decode" aria-label="Sin código de lote: ver qué significa">' + (shortLabel ? 'Decode' : 'Sin código de lote') + '</button>';
     if (it.dented) h += '<span class="tag tag-plain">Caja abollada</span>';
     return h;
   }
@@ -12640,11 +12753,11 @@ ${SC}
     var multi = g.sizes.length > 1;
     // Con varios tamaños, los tags de tamaño van donde iría "· 100 ML"; el precio y "Agregar" siguen al elegido
     var spec = [it.conc, !multi && it.ml ? it.ml + ' ml' : '', it.kit ? 'Kit' : ''].filter(Boolean).join(' · ');
-    return '<div class="row" data-g="' + esc(g.key) + '" data-key="' + esc(it.key) + '"><div><div class="br">' + esc(it.brand) + '</div><div class="nm">' + esc(it.display) + '</div>' +
+    return '<div class="row" data-g="' + esc(g.key) + '" data-key="' + esc(it.key) + '">' + phHtml(g) + '<div class="ph-info"><div class="br">' + esc(it.brand) + '</div><div class="nm">' + esc(it.display) + '</div>' +
       '<div class="meta">' + (spec ? '<span class="spec">' + esc(spec) + '</span>' : '') +
       (multi ? '<span class="sizes" role="group" aria-label="Tamaño de ' + esc(it.display) + '">' + g.sizes.map(function (s, i) { return '<button type="button" class="sz" data-size="' + i + '" aria-pressed="' + (s === it) + '">' + s.ml + ' ml</button>'; }).join('') + '</span>' : '') +
       CF.conditionChips(it) + '</div></div>' +
-      '<div class="buy"><div class="pr">' + fmt(it.price) + '</div>' + buyCtl(it) + '</div></div>';
+      '<div class="buy"><div class="pr">' + fmt(it.price) + phInstallments(it.price) + '</div>' + buyCtl(it) + '</div></div>';
   }
 
   function run() {
@@ -12773,6 +12886,7 @@ ${SC}
   var tmr;
   function onQuery(v) {
     root.classList.toggle('has-q', !!v.trim());
+    setHdrH();
     $('qClear').hidden = !v;
     clearTimeout(tmr);
     tmr = setTimeout(function () { st.q = v; shown = PAGE; run(); }, 120);
@@ -12814,16 +12928,15 @@ ${SC}
     if (b.first + PAGE > shown) { shown = b.first + PAGE; paint(); }
     var sec = document.querySelector('.brand-sec[data-brand="' + CSS.escape(brand) + '"]');
     if (!sec) return;
-    // Durante el salto el header queda compacto (no cambia de alto con cada corrección) y se alinea a mano:
+    // Se alinea debajo de la parte visible del header, sin cambiar su alto:
     // las secciones que se arman al pasar cambian su alto estimado por el real: se corrige hasta que la marca
     // queda quieta 3 cuadros seguidos (máx. 40)
-    jumping = true; $('hdr').classList.add('compact');
+    setHdrH();
     var frames = 0, still = 0;
     (function align() {
-      var off = sec.getBoundingClientRect().top - $('hdr').getBoundingClientRect().height;
+      var off = sec.getBoundingClientRect().top - parseFloat(getComputedStyle(sec.querySelector('.brand-h')).top);
       if (Math.abs(off) > 1) { window.scrollBy(0, off); still = 0; } else still++;
       if (still < 3 && frames++ < 40) requestAnimationFrame(align);
-      else { lastY = window.scrollY; setTimeout(function () { jumping = false; }, 150); }
     })();
     // El foco va al encabezado de la marca elegida; el anillo solo se ve si se navega con teclado
     CF.focusEl(sec.querySelector('.brand-h button'));
@@ -12838,33 +12951,29 @@ ${SC}
     brandFilter = e.target.value; $('brandsL').innerHTML = brandItems();
   });
 
-  // Alto del header (cambia al achicarse): el encabezado de marca fijo va justo debajo
-  function setHdrH() { root.style.setProperty('--hdr-h', Math.round($('hdr').getBoundingClientRect().height) + 'px'); }
-  if (window.ResizeObserver) new ResizeObserver(setHdrH).observe($('hdr'));
+  // Measure layout only; scrolling is handled by CSS sticky positioning.
+  function setHdrH() {
+    var hdr = $('hdr'), search = hdr.querySelector('.search');
+    var height = hdr.getBoundingClientRect().height;
+    var off = window.matchMedia('(max-width: 1023px)').matches ?
+      Math.max(0, search.getBoundingClientRect().top - hdr.getBoundingClientRect().top - 10) : 0;
+    root.style.setProperty('--hdr-off', off + 'px');
+    root.style.setProperty('--hdr-vis', (height - off) + 'px');
+    root.style.setProperty('--hdr-h', height + 'px');
+  }
+  if (window.ResizeObserver) {
+    var hdrObserver = new ResizeObserver(setHdrH);
+    hdrObserver.observe($('hdr'));
+    hdrObserver.observe($('hdr').querySelector('.search'));
+  }
+  window.addEventListener('resize', setHdrH);
   setHdrH();
 
-  // Header compacto al bajar. Cambiar su alto cambia el alto de la página: pegado al final, el navegador corrige
-  // el scroll hacia arriba (y en iOS se suma el rebote), eso lo volvía a agrandar y quedaba en un bucle. Por eso:
-  // se ignora el scroll que provoca el propio cambio (300 ms), hace falta moverse 24 px en la misma dirección,
-  // se ignora el rebote fuera de los límites y no se agranda pegado al final.
-  var lastY = 0, jumping = false, hdrLock = 0, acc = 0;
-  window.addEventListener('scroll', function () {
-    if (jumping) return;
-    var hdr = $('hdr'), y = window.scrollY, max = document.documentElement.scrollHeight - window.innerHeight;
-    var dy = y - lastY; lastY = y;
-    if (y < 0 || y > max) return;
-    if (performance.now() < hdrLock) return;
-    acc = (acc > 0) === (dy > 0) ? acc + dy : dy;
-    var want = y <= 140 ? false : acc > 24 ? true : acc < -24 ? false : null;
-    if (want === null || want === hdr.classList.contains('compact')) return;
-    if (!want && y > 140 && max - y < 80) return;
-    hdr.classList.toggle('compact', want);
-    hdrLock = performance.now() + 300; acc = 0;
-  }, { passive: true });
   CF.watchKeyboard();
   run(); cartUi();
 })();
 ${SC}
+<div id="ph-zoom" hidden role="dialog" aria-labelledby="ph-title"><figure><div class="ph-zoom-head"><h2 id="ph-title"></h2><button id="ph-close" type="button" class="btn btn-outline" data-autofocus>Cerrar</button></div><img alt="" referrerpolicy="no-referrer"><p id="ph-error" hidden>No se pudo cargar la foto.</p></figure></div>
 </body>
 </html>`;
 
@@ -14127,13 +14236,71 @@ buildSilkfaceHtml = function (photoKeys) {
 
 // De a una foto por pedido: con lotes de 5 el Worker (plan gratis) se cortaba en las fotos pesadas.
 const PL_KB_PHOTO_BATCH = 1, PL_KB_PHOTO_CONCURRENCY = 4;
+const PL_PHOTO_VERSION = 'v2'; // Tiene que coincidir con PHOTO_VERSION de worker.js.
+function plPhotoCacheOpen() {
+  return new Promise(resolve => {
+    if (typeof indexedDB === 'undefined') { resolve(null); return; }
+    let settled = false;
+    const finish = db => {
+      if (settled) { if (db) db.close(); return; }
+      settled = true; clearTimeout(timer); resolve(db);
+    };
+    // Un upgrade bloqueado por otra pestaña tampoco debe frenar la publicación.
+    const timer = setTimeout(() => finish(null), 3000);
+    try {
+      const req = indexedDB.open('importo-fotos', 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains('keys')) req.result.createObjectStore('keys');
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        db.onversionchange = () => db.close();
+        finish(db);
+      };
+      req.onerror = req.onblocked = () => finish(null);
+    } catch (e) { finish(null); }
+  });
+}
+
+function plPhotoCacheRead(db, urls) {
+  return new Promise(resolve => {
+    const keys = new Map();
+    try {
+      const tx = db.transaction('keys', 'readonly'), store = tx.objectStore('keys');
+      tx.oncomplete = () => resolve(keys);
+      tx.onerror = tx.onabort = () => resolve(new Map());
+      urls.forEach(url => {
+        const req = store.get(url);
+        req.onsuccess = () => {
+          const entry = req.result;
+          if (entry?.version === PL_PHOTO_VERSION && typeof entry.key === 'string' && /^[0-9a-f]{20}$/.test(entry.key)) keys.set(url, entry.key);
+        };
+      });
+    } catch (e) { resolve(new Map()); }
+  });
+}
+
+function plPhotoCacheWrite(db, keys) {
+  return new Promise(resolve => {
+    try {
+      const tx = db.transaction('keys', 'readwrite'), store = tx.objectStore('keys');
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = tx.onabort = () => resolve(false);
+      keys.forEach((key, url) => store.put({ key, version: PL_PHOTO_VERSION }, url));
+    } catch (e) { resolve(false); }
+  });
+}
+
 async function plKbPreparePhotos(items, onProgress) {
-  const urls = [...new Set(items.map(it => it.img).filter(Boolean))];
+  const allUrls = [...new Set(items.map(it => it.img).filter(Boolean))];
   const result = { keys: new Map(), fallidas: 0, cupo: 0 };
+  let cache = allUrls.length ? await plPhotoCacheOpen() : null;
+  if (cache) result.keys = await plPhotoCacheRead(cache, allUrls);
+  const urls = allUrls.filter(url => !result.keys.has(url));
   let next = 0, done = 0;
   const secret = getPublishSecret();
   const progress = () => { if (onProgress) onProgress(done, urls.length); };
-  progress();
+  if (urls.length) progress();
   async function run() {
     while (next < urls.length) {
       const batch = urls.slice(next, next += PL_KB_PHOTO_BATCH);
@@ -14144,16 +14311,23 @@ async function plKbPreparePhotos(items, onProgress) {
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
+        const prepared = new Map();
         for (const url of batch) {
           const r = data.results?.[url];
-          if ((r?.status === 'ok' || r?.status === 'existe') && /^[0-9a-f]{20}$/.test(r.key || '')) result.keys.set(url, r.key);
+          if ((r?.status === 'ok' || r?.status === 'existe') && typeof r.key === 'string' && /^[0-9a-f]{20}$/.test(r.key)) {
+            result.keys.set(url, r.key); prepared.set(url, r.key);
+          }
           else { result.fallidas++; if (r?.status === 'cupo') result.cupo++; }
         }
+        const db = cache;
+        if (db && prepared.size && !await plPhotoCacheWrite(db, prepared) && cache === db) { db.close(); cache = null; }
       } catch (e) { result.fallidas += batch.length; }
       done += batch.length; progress();
     }
   }
-  await Promise.all(Array.from({ length: Math.min(PL_KB_PHOTO_CONCURRENCY, Math.ceil(urls.length / PL_KB_PHOTO_BATCH)) }, run));
+  try {
+    await Promise.all(Array.from({ length: Math.min(PL_KB_PHOTO_CONCURRENCY, Math.ceil(urls.length / PL_KB_PHOTO_BATCH)) }, run));
+  } finally { if (cache) cache.close(); }
   return result;
 }
 
@@ -14166,7 +14340,7 @@ function plKbPhotoSummary(photos, items) {
 // Cada línea publica su propia lista (card 21): Perfumes → docs/catalogo.html (Crovato Fragrances),
 // Cosmética coreana → docs/silkface.html (Silkface). El Worker solo acepta esos dos destinos.
 const PL_PUBLISH_TARGETS = {
-  perfumes: { target: 'catalogo', file: 'catalogo.html', label: 'catálogo de perfumes', build: () => buildCatalogHtml() },
+  perfumes: { target: 'catalogo', file: 'catalogo.html', label: 'catálogo de perfumes', build: photoKeys => buildCatalogHtml(photoKeys) },
   kbeauty: { target: 'silkface', file: 'silkface.html', label: 'lista Silkface', build: photoKeys => buildSilkfaceHtml(photoKeys) }
 };
 function plPublishTarget() { return PL_PUBLISH_TARGETS[plLine] || null; }
@@ -14176,7 +14350,7 @@ async function exportPlSearchablePage() {
   if (!t) return;
   let photos, items;
   const statusEl = document.getElementById('pl-publish-result');
-  if (t.target === 'silkface') {
+  if (t.target === 'silkface' || t.target === 'catalogo') {
     items = plPublishableItems();
     if (getPublishSecret()) {
       photos = await plKbPreparePhotos(items, (n, total) => { statusEl.textContent = `Preparando fotos ${n} de ${total}…`; });
@@ -14258,7 +14432,7 @@ async function publishCatalogAuto() {
         throw new Error(`el Worker desplegado no conoce la ${t.label}. Pegá worker.js en el dashboard de Cloudflare y volvé a probar (no se publicó nada).`);
       }
     }
-    if (t.target === 'silkface') {
+    if (t.target === 'silkface' || t.target === 'catalogo') {
       photoItems = plPublishableItems();
       photos = await plKbPreparePhotos(photoItems, (n, total) => { statusEl.textContent = `Preparando fotos ${n} de ${total}…`; });
       html = t.build(photos.keys);
