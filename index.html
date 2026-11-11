@@ -1013,7 +1013,7 @@
               <th class="bg-input">Marca</th>
               <th class="bg-input">Producto</th>
               <th class="bg-input pl-kbeauty-only">Tipo</th>
-              <th class="bg-input pl-kbeauty-only">Foto</th>
+              <th class="bg-input">Foto</th>
               <th class="bg-input">Origen</th>
               <th class="bg-p1">Costo USD</th>
               <th class="bg-p2">Costo total ARS</th>
@@ -1032,7 +1032,7 @@
       </div>
     </div>
 
-    <dialog id="pl-img-dialog" class="pl-kbeauty-only" aria-labelledby="pl-img-title"
+    <dialog id="pl-img-dialog" aria-labelledby="pl-img-title"
       onclick="if (event.target === this) { const r = this.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) this.close(); }">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
         <h3 id="pl-img-title" style="margin:0;">Elegir foto</h3>
@@ -7763,9 +7763,11 @@ function plMergeDuplicate(idA, idB) {
     plKbPickImage(cheap);
   } else {
     cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
+    plPfMergeImages(cheap, exp);
   }
   cheap.multiSource = true;
   plItems = plItems.filter(x => x.id !== exp.id);
+  if (!cheap.sourceLabels) plPfRefreshImages();
   return { cheap, exp }; // para que quien llame sepa qué filas tocar sin reconstruir toda la tabla
 }
 
@@ -7779,6 +7781,7 @@ function plMergeDuplicates(pairs) {
     if (!a || !b || removed.has(a.id) || removed.has(b.id)) return;
     const [cheap, exp] = a.priceUsd <= b.priceUsd ? [a, b] : [b, a];
     cheap.alternates.push({ source: exp.sourceLabel, price: exp.priceUsd });
+    if (cheap.line !== 'kbeauty') plPfMergeImages(cheap, exp);
     cheap.multiSource = true;
     removed.add(exp.id);
   });
@@ -8007,9 +8010,9 @@ try {
 function savePlKbImgOverrides() {
   try { localStorage.setItem('importo-kbeauty-img-overrides', JSON.stringify(plKbImgOverrides)); } catch {}
 }
-function plKbUnionImages(imgs) {
+function plKbUnionImages(imgs, priority = PL_KB_IMG_PRIORITY) {
   const stores = new Set(), urls = new Set();
-  const rank = store => { const n = PL_KB_IMG_PRIORITY.indexOf(store); return n < 0 ? PL_KB_IMG_PRIORITY.length : n; };
+  const rank = store => { const n = priority.indexOf(store); return n < 0 ? priority.length : n; };
   return imgs.slice().sort((a, b) => rank(a.store) - rank(b.store)).filter(x => {
     if (!x.url || stores.has(x.store) || urls.has(x.url)) return false;
     stores.add(x.store); urls.add(x.url);
@@ -8035,6 +8038,65 @@ function plKbPickImage(it) {
     : ((it.imgs || []).find(x => x.store === override?.store) || plKbAutomaticImage(it));
   it.img = image?.url || '';
   it.imgStore = image?.store || '';
+}
+
+// Fotos de perfumes: las candidatas propias se conservan aparte de las compartidas por familia.
+const PL_PF_IMG_PRIORITY = ['macedonia', 'genove', 'madridcenter', 'elegancia', 'multipass', 'star', 'pontocom', 'intershop', 'lg'];
+const plPfRowImages = new WeakMap();
+let plPfImgOverrides = {};
+try {
+  const saved = JSON.parse(localStorage.getItem('importo-perfume-img-overrides') || '{}');
+  if (saved && typeof saved === 'object' && !Array.isArray(saved)) plPfImgOverrides = saved;
+} catch {}
+function savePlPfImgOverrides() {
+  try { localStorage.setItem('importo-perfume-img-overrides', JSON.stringify(plPfImgOverrides)); } catch {}
+}
+function plPfImageFamily(it) {
+  const { core } = plNormalizeCore(it.name);
+  return JSON.stringify([it.brand || '', plCoreTokensExcludingBrand(it, core), plGenderOf(it.name) || '']);
+}
+function plPfCheapestImages(images) {
+  const byStore = new Map();
+  for (const image of images) {
+    if (!image.url) continue;
+    const previous = byStore.get(image.store);
+    if (!previous || image.price < previous.price) byStore.set(image.store, image);
+  }
+  return [...byStore.values()];
+}
+function plPfCollectImages(offers) {
+  return plPfCheapestImages(offers.filter(a => typeof a.img === 'string' && a.img.startsWith('https://'))
+    .map(a => ({ store: a.store || '', url: a.img, price: a.price })));
+}
+function plPfMergeImages(keep, drop) {
+  plPfRowImages.set(keep, plPfCheapestImages([...(plPfRowImages.get(keep) || []), ...(plPfRowImages.get(drop) || [])]));
+}
+function plPfPickImage(it) {
+  const override = plPfImgOverrides[it.imgFamily];
+  const image = override?.none === true ? null
+    : ((it.imgs || []).find(x => x.store === override?.store) || it.imgs?.[0]);
+  it.img = image?.url || '';
+  it.imgStore = image?.store || '';
+}
+function plPfRefreshImages() {
+  const families = new Map();
+  for (const it of plItems) {
+    if (it.line === 'kbeauty') continue;
+    it.imgFamily = plPfImageFamily(it);
+    if (!families.has(it.imgFamily)) families.set(it.imgFamily, { rows: [], images: [] });
+    const family = families.get(it.imgFamily);
+    family.rows.push(it);
+    family.images.push(...(plPfRowImages.get(it) || []));
+  }
+  for (const family of families.values()) {
+    const imgs = plKbUnionImages(plPfCheapestImages(family.images), PL_PF_IMG_PRIORITY)
+      .map(({ store, url }) => ({ store, url }));
+    for (const it of family.rows) {
+      if (imgs.length) it.imgs = imgs;
+      else delete it.imgs;
+      plPfPickImage(it);
+    }
+  }
 }
 
 // ── Nombre limpio y tamaño de cosmética (card 22, 2026-11-01) ──
@@ -10225,7 +10287,7 @@ function generatePriceList() {
       ? (detectKbeautyBrand(it.name) || detectKbeautyBrand(it.brand) || plCanonicalBrand(it.brand))
       : (detectKnownBrand(it.name) || plCanonicalBrand(it.brand)),
     sourceLabel: src.name,
-    ...(isKbeauty ? { store: src.site || '' } : {})
+    store: isKbeauty ? (src.site || '') : (src.site || (src.pontocom ? 'pontocom' : src.macedonia ? 'macedonia' : ''))
   })));
   if (all.length === 0) {
     alert('Importá al menos una lista de proveedor primero.');
@@ -10300,12 +10362,13 @@ function generatePriceList() {
         return { kbKey: groupKey, kbTokens: k.tokens, kbSize: arr.map(a => plKbSizeKey(a.name)).find(Boolean) || '', kbCx: k.cx,
           sourceLabels: [...new Set(arr.map(a => a.sourceLabel))], store: cheapest.store,
           sourceImg: cheapest.img || '', imgs: plKbCollectImages(arr) };
-      })() : {}),
+      })() : { store: cheapest.store }),
       multiSource: arr.length > 1,
       excluded: !!reason,
       autoExcludedReason: reason,
       manualPrice: null
     });
+    if (!isKbeauty) plPfRowImages.set(plItems[plItems.length - 1], plPfCollectImages(arr));
   }
 
   if (brokenPrices.length) {
@@ -10324,6 +10387,7 @@ function generatePriceList() {
     plFuzzyPairs = plKbRepointPending(plFuzzyPairs.filter(p => !p.remembered), find);
   } else {
     plMergeDuplicates(plFuzzyPairs.filter(p => p.remembered));
+    plPfRefreshImages();
     plFuzzyPairs = plFuzzyPairs.filter(p => !p.remembered);
   }
 
@@ -10520,6 +10584,7 @@ function resolvePlFuzzyPair(idx, sameProduct) {
       document.getElementById(`pl-row-${merged.exp.id}`)?.remove();
       const cheapRow = document.getElementById(`pl-row-${merged.cheap.id}`);
       if (cheapRow) cheapRow.outerHTML = plRowHtml(merged.cheap);
+      if (merged.cheap.line !== 'kbeauty') plPfRefreshImageCells();
 
       // Otros pares pendientes que apuntaban al ítem que acaba de desaparecer quedan huérfanos
       // (no se pueden resolver desde la UI) — se dan por resueltos para no dejar la card
@@ -10780,7 +10845,7 @@ function plMatchesTypeFilter(it) {
   return !f || (f === 'none' ? !it.type : it.type === f);
 }
 function plUntypedNote(visible) {
-  if (plLine !== 'kbeauty') return '';
+  if (plLine !== 'kbeauty') return ` · ${visible.filter(it => !it.img).length} sin foto`;
   const n = visible.filter(it => !it.type).length;
   return (n ? ` · ${n} sin tipo ⚠` : '') + ` · ${visible.filter(it => !it.img).length} sin foto`;
 }
@@ -10845,6 +10910,51 @@ function updatePlKbImage(id, idx) {
   renderPlSummary();
 }
 
+function plPfImageCellHtml(it) {
+  return `<button type="button" class="pl-img-thumb${it.img ? '' : ' is-empty'}" onclick="openPlPfImageDialog(${it.id})" aria-label="Elegir foto de ${esc(it.displayName)}">
+    ${it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('foto rota'))">` : '—'}
+  </button>`;
+}
+function openPlPfImageDialog(id) {
+  const it = plItems.find(x => x.id === id && x.line !== 'kbeauty');
+  if (!it) return;
+  document.getElementById('pl-img-product').textContent = it.displayName || it.name;
+  document.getElementById('pl-img-options').innerHTML = (it.imgs || []).map((image, idx) => {
+    const chosen = it.img === image.url && it.imgStore === image.store;
+    const label = PL_SITE_IMPORTS[image.store]?.label
+      || ({ pontocom: 'Ponto Com', macedonia: 'Macedonia', madridcenter: 'Madrid Center' })[image.store]
+      || image.store || 'Otra fuente';
+    return `<button type="button" class="pl-img-option" aria-pressed="${chosen}" onclick="updatePlPfImage(${it.id}, ${idx})">
+      <img src="${esc(image.url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(document.createTextNode('foto rota'))">
+      ${esc(label)}${chosen ? ' · Elegida ✓' : ''}
+    </button>`;
+  }).join('') + `<button type="button" class="pl-img-option" aria-pressed="${!it.img}" onclick="updatePlPfImage(${it.id}, null)">Sin foto${!it.img ? ' · Elegida ✓' : ''}</button>`;
+  document.getElementById('pl-img-dialog').showModal();
+}
+function plPfRefreshImageCells(family) {
+  for (const it of plItems) {
+    if (it.line === 'kbeauty' || (family && it.imgFamily !== family)) continue;
+    const cell = document.getElementById(`pl-pf-img-${it.id}`);
+    if (cell) cell.innerHTML = plPfImageCellHtml(it);
+  }
+}
+function updatePlPfImage(id, idx) {
+  const it = plItems.find(x => x.id === id && x.line !== 'kbeauty');
+  if (!it) return;
+  const image = idx === null ? null : it.imgs?.[idx];
+  if (idx !== null && !image) return;
+  const automatic = it.imgs?.[0];
+  if (image ? image.store === automatic?.store : !automatic) delete plPfImgOverrides[it.imgFamily];
+  else plPfImgOverrides[it.imgFamily] = image ? { store: image.store } : { none: true };
+  savePlPfImgOverrides();
+  for (const row of plItems) {
+    if (row.line !== 'kbeauty' && row.imgFamily === it.imgFamily) plPfPickImage(row);
+  }
+  document.getElementById('pl-img-dialog').close();
+  plPfRefreshImageCells(it.imgFamily);
+  renderPlSummary();
+}
+
 function plRowHtml(it) {
   const price = it.manualPrice != null ? it.manualPrice : it.finalPriceArs;
   const rowStyle = it.excluded ? 'opacity:.45;' : '';
@@ -10864,7 +10974,7 @@ function plRowHtml(it) {
         ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason] ? `<span title="Excluido automático — ${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].label}" style="margin-right:4px;">${PL_AUTO_EXCLUDED_REASONS[it.autoExcludedReason].icon}</span>` : ''}${esc(it.displayName)}${it.size ? ` <span style="color:var(--muted);font-size:.8rem;white-space:nowrap;">· ${esc(it.size)}</span>` : ''}
       </td>
       <td class="pl-kbeauty-only">${plTypeSelectHtml(it)}</td>${it.line === 'kbeauty' ? `
-      <td class="pl-kbeauty-only">${plKbImageCellHtml(it)}</td>` : ''}
+      <td class="pl-kbeauty-only">${plKbImageCellHtml(it)}</td>` : `<td id="pl-pf-img-${it.id}">${plPfImageCellHtml(it)}</td>`}
       <td style="font-size:.78rem;color:var(--muted);">${origen}</td>
       <td class="cell-computed">USD ${it.priceUsd.toFixed(2)}</td>
       <td class="cell-computed">${fmt_ars(it.costTotal)}</td>
@@ -11005,6 +11115,7 @@ function updatePlBrand(id, val) {
     it.displayName = plDisplayNameFor(it);
     delete plBrandOverrides[key];
     savePlBrandOverrides();
+    if (it.line !== 'kbeauty') plPfRefreshImages();
     renderPlTable(); // cambia la marca → cambia el orden de la fila, hace falta re-ordenar la tabla
     renderPlBrandFilter(); // la marca cambió de grupo — recontar y re-listar el panel de filtro
     return;
@@ -11026,6 +11137,7 @@ function updatePlBrand(id, val) {
   // sobrevive aunque el nombre de la marca no aparezca en el texto del producto.
   plBrandOverrides[key] = it.brand;
   savePlBrandOverrides();
+  if (!isKbeauty) plPfRefreshImages();
   renderPlTable(); // cambia la marca → cambia el orden de la fila, hace falta re-ordenar la tabla
   renderPlBrandFilter(); // la marca cambió de grupo — recontar y re-listar el panel de filtro
 }
