@@ -56,6 +56,7 @@ async function handle(req, env) {
     if (path === '/megaeletro') return await fetchMegaEletroPage(new URL(req.url).searchParams);
     if (path === '/flash') return await fetchFlashPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/intershop') return await fetchIntershopPage(new URL(req.url).searchParams);
+    if (path === '/asm' && req.method === 'GET') return await fetchAsmPage(new URL(req.url).searchParams);
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req, env);
     // La app lo consulta antes de publicar una lista que no sea el catálogo: un Worker viejo no la conoce.
     if (path === '/publish-targets') return jsonResp({ targets: Object.keys(PUBLISH_TARGETS) });
@@ -476,12 +477,59 @@ async function fetchIntershopPage(q) {
   return jsonResp({ page, pages, items });
 }
 
+// ASM Importados — Store API de WooCommerce en Gs; la portada publica la tasa Gs/USD.
+async function fetchAsmPage(q) {
+  const page = Number(q.get('page'));
+  if (!Number.isInteger(page) || page < 1 || page > 30) return jsonResp({ error: 'page inválida' }, 400);
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+  const cf = { cacheTtl: 900, cacheEverything: true };
+  const [r, rate] = await Promise.all([
+    fetch(`https://asmimportados.com.py/wp-json/wc/store/v1/products?per_page=100&page=${page}&orderby=id&order=asc`, { headers, cf }),
+    page === 1 ? (async () => {
+      try {
+        const home = await fetch('https://asmimportados.com.py/', {
+          headers: { 'User-Agent': headers['User-Agent'], 'Accept': 'text/html,application/xhtml+xml' }, cf,
+        });
+        if (!home.ok) return null;
+        const value = (await home.text()).match(/"asm-cambio-gs"\s*:\s*"([\d.,]+)"/)?.[1];
+        const rate = Number(value?.replace(/\./g, '').replace(',', '.'));
+        return Number.isFinite(rate) && rate > 0 ? rate : null;
+      } catch { return null; }
+    })() : null,
+  ]);
+  if (!r.ok) return jsonResp({ error: `asm respondió ${r.status}` }, 502);
+  let data;
+  try { data = await r.json(); } catch { return jsonResp({ error: 'asm: listado inválido' }, 502); }
+  if (!Array.isArray(data)) return jsonResp({ error: 'asm: listado inválido' }, 502);
+  const totalPages = Number(r.headers.get('X-WP-TotalPages'));
+  const pages = Number.isInteger(totalPages) && totalPages >= 1 ? totalPages : 1;
+  // El helper compartido no decodifica ñ; se completa acá sin afectar otros importadores.
+  const text = s => kbeautyHtmlText(s).replace(/&ntilde;/g, 'ñ').replace(/&Ntilde;/g, 'Ñ');
+  const items = data.map(p => {
+    const pyg = parseInt(p.prices?.price, 10);
+    const src = p.images?.[0]?.src;
+    return {
+      code: String(p.id), sku: p.sku || '',
+      name: text(text(p.name)),
+      pyg: pyg > 0 ? pyg : null, stock: p.is_in_stock ? 1 : 0,
+      cats: Array.isArray(p.categories) ? p.categories.map(c => text(c.name)) : [],
+      img: typeof src === 'string' && src.startsWith('https://asmimportados.com.py/') ? src : '',
+    };
+  });
+  return jsonResp({ page, pages, rate, items });
+}
+
 // ── Fotos de Silkface — originales privados, nombres públicos opacos ──
 const PHOTO_HOSTS = new Set([
   'www.pontocom.com', 'resource.megaeletronicos.com', 'bigs.com.py',
   'www.starcompany-py.com', 'assets-terranova.egondola.app',
   'api.eleganciacompany.com', 'img.genove.com.py', 'www.lgimportados.com',
   'intershop.com.py', 'compras.macedonia.com.py', 'dados.sfo3.cdn.digitaloceanspaces.com',
+  'asmimportados.com.py',
 ]);
 const PHOTO_VERSION = 'v2'; // Cambiarla cuando cambie la transformación, así se generan de nuevo.
 const PHOTO_MAX_BYTES = 20 * 1024 * 1024;

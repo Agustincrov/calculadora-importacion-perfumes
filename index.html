@@ -802,7 +802,18 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Traer catálogo Intershop
         </button>
-        <button class="btn btn-outline pl-perfume-only" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados, Mobile Zone e Intershop uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
+        <button class="btn btn-outline pl-perfume-only" id="pl-asm-btn" onclick="importSiteCatalog('asm')" title="Trae los perfumes con stock de asmimportados.com.py (precio en Gs pasado a US$ con la cotización de la tienda, sin cosméticos ni splash). Si ya estaba cargado, lo reemplaza.">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Traer catálogo ASM
+        </button>
+        <label class="pl-perfume-only" style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
+          Gs/USD ASM
+          <input type="number" id="pl-asm-rate" step="1" min="1" placeholder="del sitio"
+            style="width:90px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:var(--bg);color:var(--text);"
+            onchange="setAsmRate(this.value)" />
+          <span class="col-tip" data-tip="Cotización con la que ASM pasa sus precios de US$ a guaraníes. Vacío: se usa la que publica la tienda al traer el catálogo. Si cargás un valor, se usa ese."></span>
+        </label>
+        <button class="btn btn-outline pl-perfume-only" id="pl-all-sites-btn" onclick="importAllSiteCatalogs()" title="Trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados, Mobile Zone, Intershop y ASM Importados uno detrás del otro (un par de minutos) y avisa al final. Macedonia y Madrid Center se cargan aparte con su archivo.">
           Traer todos
         </button>
         <label class="pl-perfume-only" style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted);">
@@ -8041,7 +8052,7 @@ function plKbPickImage(it) {
 }
 
 // Fotos de perfumes: las candidatas propias se conservan aparte de las compartidas por familia.
-const PL_PF_IMG_PRIORITY = ['macedonia', 'genove', 'madridcenter', 'elegancia', 'multipass', 'star', 'pontocom', 'intershop', 'lg'];
+const PL_PF_IMG_PRIORITY = ['macedonia', 'genove', 'madridcenter', 'elegancia', 'multipass', 'star', 'pontocom', 'intershop', 'lg', 'asm'];
 const plPfRowImages = new WeakMap();
 let plPfImgOverrides = {};
 try {
@@ -9479,6 +9490,52 @@ async function plFetchIntershopRows(progress) {
   }).filter(x => !INTERSHOP_NOT_PERFUME_RE.test(x.name));
 }
 
+// ASM Importados: Store API vía Worker, precios en Gs y cotización de la tienda en la primera página.
+const ASM_NOT_PERFUME_CATS = ['Cosméticos', 'Shampoo', 'Tratamiento Capilar', 'Acondicionador', 'Splash'];
+const ASM_GROUP_CATS = ['Marcas', 'Perfumes y Cosméticos', 'Diseñador', 'Nicho', 'Árabes', 'Perfumes Masculinos', 'Perfumes Femeninos', 'Perfume Unisex', 'Kits', 'Promo', ...ASM_NOT_PERFUME_CATS];
+
+function setAsmRate(v) {
+  const n = Number(v);
+  const value = Number.isFinite(n) && n > 0 ? String(n) : '';
+  document.getElementById('pl-asm-rate').value = value;
+  try {
+    if (value) localStorage.setItem('importo-asm-rate', value);
+    else localStorage.removeItem('importo-asm-rate');
+  } catch {}
+  return value ? n : 0;
+}
+
+function plCleanAsmName(raw) {
+  const name = plStripAccents(String(raw || '')).toUpperCase().replace(/’/g, "'")
+    .replace(/^\d+\.\s*/, '')
+    .replace(/\*/g, ' ')
+    .replace(/\s*\(\s*[\d-]+\s*\)/g, '')
+    .replace(/\s+/g, ' ').trim();
+  return plCleanPontocomName(name);
+}
+
+async function plFetchAsmRows(progress) {
+  const page = async n => {
+    const d = await plFetchKbeautyJson(`${WORKER}/asm?page=${n}`);
+    if (!Array.isArray(d?.items)) throw new Error('listado inválido');
+    progress(d.items.length);
+    return d;
+  };
+  const first = await page(1);
+  if (!Number.isInteger(first.pages) || first.pages < 1 || first.pages > 30) throw new Error('cantidad de páginas inválida');
+  const rate = setAsmRate(document.getElementById('pl-asm-rate').value) || first.rate;
+  if (!Number.isFinite(rate) || !(rate > 0)) throw new Error('no se pudo leer la cotización de ASM: cargala a mano en "Gs/USD ASM"');
+  const rest = await plMapLimit(Array.from({ length: first.pages - 1 }, (_, k) => k + 2), 6, page);
+  return [first, ...rest].flatMap(d => d.items)
+    .filter(x => x.stock > 0 && x.pyg > 0 && !x.cats.some(c => ASM_NOT_PERFUME_CATS.includes(c)))
+    .map(x => {
+      const name = plCleanAsmName(x.name);
+      const site = x.cats.find(c => !ASM_GROUP_CATS.includes(c)) || plSiteBrandFromName(name);
+      const siteCat = x.cats.includes('Árabes') ? 'arabe' : x.cats.includes('Nicho') ? 'nicho' : x.cats.includes('Diseñador') ? 'disenador' : '';
+      return { code: x.code, name, price: Math.round(x.pyg / rate * 100) / 100, site, siteCat, extra: { pyg: x.pyg }, ...(typeof x.img === 'string' && x.img.startsWith('https://') ? { img: x.img } : {}) };
+    });
+}
+
 // ── Importadores de cosmética coreana ────────────────────────────
 // Separados de perfumes: las exclusiones de skincare se aplican recién al generar.
 function plBuildKbeautySiteItems(rows) {
@@ -9759,7 +9816,8 @@ const PL_SITE_IMPORTS = {
   multipass: { label: 'Multipass', btn: 'pl-multipass-btn', fetchRows: plFetchMultipassRows },
   lg:        { label: 'LG Importados', btn: 'pl-lg-btn', fetchRows: plFetchLgRows },
   mobilezone: { label: 'Mobile Zone', btn: 'pl-mobilezone-btn', fetchRows: plFetchMobileZoneRows },
-  intershop: { label: 'Intershop', btn: 'pl-intershop-btn', fetchRows: plFetchIntershopRows }
+  intershop: { label: 'Intershop', btn: 'pl-intershop-btn', fetchRows: plFetchIntershopRows },
+  asm:       { label: 'ASM Importados', btn: 'pl-asm-btn', fetchRows: plFetchAsmRows }
 };
 
 // Arma los ítems de un sitio y reemplaza su carga anterior (marcada con `site`). Devuelve el aviso y si tiene
@@ -14470,6 +14528,7 @@ renderPlLine(); // también pinta las fuentes de la línea activa (card 19)
 plLoadSources().then(renderPlSourceTags); // IndexedDB es asincrónico: se repintan las fuentes al terminar de leer
 renderPublishSecretStatus();
 document.getElementById('pl-macedonia-rate').value = macedoniaRate;
+try { setAsmRate(localStorage.getItem('importo-asm-rate') || ''); } catch {}
 
 // ─────────────────────────────────────────────
 // Export plain text notes
