@@ -154,6 +154,8 @@ Podés cargar varias listas, de cualquiera de estas formas:
 - **Traer catálogo Elegancia / Atacado Connect / Genove / Star Company / Multipass / LG Importados / Mobile Zone / Intershop:** igual que Ponto Com, cada uno trae los perfumes con stock de su sitio (eleganciacompany.com, atacadoconnect.com, genove.com.py, starcompany-py.com, multipass.com.py, lgimportados.com, mobilezone.com.py e intershop.com.py) en unos segundos y reemplaza la carga anterior. Los precios ya vienen en dólares: Elegancia sin IVA, Genove el precio minorista. Atacado Connect trae lo mismo que su Excel "Baixar lista", así que ya no hace falta descargarlo. Star Company usa los mismos nombres que sus listas de WhatsApp, así que reemplaza a pegarlas. LG Importados usa el precio promocional cuando lo tiene y deja afuera los frascos fraccionados y las imitaciones con nombre parecido (Locoscte, Vercage, Cool…). Intershop no informa la marca: sale del nombre, y los que no se reconocen quedan con ⚠. No se cargan los infantiles, body splash, cremas, viales ni las marcas de muy bajo costo.
 - **Traer todos:** trae Ponto Com, Elegancia, Atacado Connect, Genove, Star Company, Multipass, LG Importados, Mobile Zone e Intershop uno detrás del otro (un par de minutos) y al final muestra un solo aviso con lo que cargó cada uno. Macedonia y Madrid Center quedan aparte porque necesitan su archivo.
 
+Las tiendas que tienen fotos las guardan al importar. Para obtenerlas en listas de perfumes cargadas antes del 11 de noviembre de 2026, volvé a importar las tiendas. En Macedonia y Madrid Center, arrastrá otra vez los marcadores desde la app y descargá archivos nuevos: los marcadores anteriores no guardaban fotos.
+
 **Borrar todo** quita todas las listas cargadas y el resultado de la pestaña abierta (Perfumes o Cosmética coreana).
 
 **Marcas conocidas:** la marca de cada producto se detecta buscando su nombre dentro del nombre del producto (la app ya conoce más de 300 marcas). Si falta una, agregala acá, o corregila directamente en la tabla de revisión: la próxima vez la reconoce sola.
@@ -183,6 +185,7 @@ Nunca se mezclan tamaños distintos, versiones masculina y femenina, testers con
 
 La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios), costo, margen, precio final y ganancia (en pesos y en dólares al USDT).
 
+- En la columna **Foto** podés tocar la imagen para elegir la de otra tienda o **Sin foto**. La elección se guarda y se aplica a los tamaños del mismo perfume; volver a elegir la foto automática borra la corrección.
 - Podés **corregir la marca** (queda recordada para la próxima vez).
 - Podés **cambiar el precio final** a mano (↺ vuelve al calculado).
 - **+** agrega el producto como fila en la lista activa de la Calculadora.
@@ -195,13 +198,14 @@ La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios)
 - **Descargar página buscable:** descarga ese mismo archivo (`catalogo.html` o `silkface.html`) en vez de publicarlo.
 - **Exportar Excel:** descarga la lista con marca, producto y precio.
 
-Al publicar o descargar Silkface con la clave configurada, aparece **Preparando fotos…**. El resultado informa cuántas tienen foto y, si corresponde, las fotos sin preparar (se reintentan en la próxima publicación) o que se agotó el cupo gratis del mes. Si descargás sin clave, la página sale sin fotos y la app lo avisa.
+Al publicar o descargar cualquiera de las dos listas con la clave configurada, se preparan solo las fotos nuevas y aparece **Preparando fotos…**. La primera carga grande de perfumes tardó aproximadamente 4 fotos por segundo. El resultado informa cuántas tienen foto y, si corresponde, las fotos sin preparar: se reintentan la próxima vez. También avisa si se agotó el cupo. Las marcas apagadas y los productos excluidos no preparan ni gastan fotos. Si descargás sin clave, la página sale sin fotos y la app lo avisa.
 
 En el catálogo, tus clientes pueden:
 
 - **Buscar** con palabras en cualquier orden y sin acentos ("dior sauvage", "khamrah 100ml", "jpg"). Si escriben mal una letra, la página corrige ("aqua di gio" → Acqua di Gio). Si no hay resultados, les ofrece consultarte por WhatsApp.
 - **Filtrar** por precio, categoría (nicho, diseñador, árabe), tamaño, testers y marca, y **ordenar** por precio.
 - Ver cada perfume con el **nombre limpio** y sus **tamaños** como etiquetas al lado de la concentración: al elegir un tamaño cambian el precio y el botón. Los testers y los perfumes sin código de lote llevan una etiqueta que, al tocarla, explica qué son.
+- Ver la **foto** disponible y tocarla para agrandarla; si falta, aparece la inicial de la marca. La tarjeta también muestra el precio en 3 cuotas.
 - **Saltar entre marcas:** el nombre de la marca queda fijo arriba mientras se recorre; al tocarlo se abre la lista de marcas (con buscador) para ir directo a otra.
 - **Armar el carrito y mandarte el pedido por WhatsApp** con su nombre, provincia, forma de entrega y de pago. Antes de enviarlo ven el mensaje tal cual te llega.
 

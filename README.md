@@ -43,7 +43,7 @@ Importo fetches all rates automatically and computes every number in real time a
 - Prices every product with a per-category profit formula (fixed ARS amount + % of the product cost, one each for designer, Arabic and niche), using the same costing and rounding as the calculator
 - Excludes non-perfume items automatically; per-brand publish filter
 - A separate Korean cosmetics line (skincare only): its own sources, store importers, brand list, review and Excel export, never mixed with the perfumes. It has its own costs (12% product commission and ARS 2,000 shipping per unit) and profit formula (ARS 2,000 + 42.5% of product cost), editable in the generator
-- Exports to Excel, or publishes a searchable client catalog (`docs/catalogo.html`) to GitHub Pages in one click — with category, brand and price filters, a cart and a WhatsApp order button
+- Exports to Excel, or publishes a searchable client catalog (`docs/catalogo.html`) to GitHub Pages in one click — with product photos, category, brand and price filters, a cart and a WhatsApp order button
 - Product photos in Silkface can be enlarged; unavailable photos use a brand initial.
 - Publishes the Korean cosmetics line as its own branded list, Silkface (`docs/silkface.html`): browse by skincare routine step, filter by brand, key ingredient (detected from the product name) and price, sort by price or product type, same cart and WhatsApp order flow
 
@@ -104,7 +104,7 @@ User
 
 No build step required. Open any `.html` file directly in a browser.
 
-`wrangler.jsonc` deploys the app itself (`index.html` as static assets). The proxy (`worker.js`, module syntax) is a separate Worker, `comparapi-proxy`; it can be pasted into the Cloudflare dashboard or deployed with [Wrangler](https://developers.cloudflare.com/workers/wrangler/). Publishing the catalog needs two Worker secrets: `GITHUB_TOKEN` (fine-grained PAT, contents write on this repo only) and `PUBLISH_SECRET`. Silkface photos also require the `IMAGES` binding and a private R2 bucket bound as `FOTOS`.
+`wrangler.jsonc` deploys the app itself (`index.html` as static assets). The proxy (`worker.js`, module syntax) is a separate Worker, `comparapi-proxy`; it can be pasted into the Cloudflare dashboard or deployed with [Wrangler](https://developers.cloudflare.com/workers/wrangler/). Publishing the catalog needs two Worker secrets: `GITHUB_TOKEN` (fine-grained PAT, contents write on this repo only) and `PUBLISH_SECRET`. Perfume catalog and Silkface photos also require the `IMAGES` binding and a private R2 bucket bound as `FOTOS`.
 
 ---
 
