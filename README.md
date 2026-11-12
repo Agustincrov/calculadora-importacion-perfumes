@@ -37,7 +37,7 @@ Importo fetches all rates automatically and computes every number in real time a
 - Fully reactive — recalculates on every input change, persists business config (commission, shipping, fees, rounding) across reloads
 
 **Price-list generator**
-- Imports supplier lists from pasted WhatsApp text, Excel/Numbers, PDF catalogs, or pulls the online catalogs of a dozen Ciudad del Este stores (public APIs, or through the Worker when the site has no CORS)
+- Imports supplier lists from pasted WhatsApp text, Excel/Numbers, PDF catalogs, or pulls the online catalogs of a dozen Ciudad del Este stores (including ASM Importados; public APIs, or through the Worker when the site has no CORS)
 - Detects the brand from the product name (300+ known brands with aliases, accent-insensitive) and classifies it as niche, designer or Arabic
 - Merges the same product across suppliers keeping the cheapest, and suggests fuzzy duplicates for one-click review (decisions are remembered)
 - Prices every product with a per-category profit formula (fixed ARS amount + % of the product cost, one each for designer, Arabic and niche), using the same costing and rounding as the calculator
