@@ -189,7 +189,7 @@ La tabla muestra cada producto con su marca, proveedor (🔗 si está en varios)
 - Podés **corregir la marca** (queda recordada para la próxima vez).
 - Podés **cambiar el precio final** a mano (↺ vuelve al calculado).
 - **+** agrega el producto como fila en la lista activa de la Calculadora.
-- **×** lo excluye de la lista. Los productos que no son perfume (cremas, productos para el cabello, infantiles) se excluyen solos 🚫. Podés verlos y restaurarlos con **Mostrar excluidos**.
+- **×** lo excluye de la lista. Los productos que no son perfume (cremas, productos para el cabello, infantiles, cosmética facial, sprays de 200 ml o más sin concentración de perfume ni indicación de kit y filas llamadas solo PRODUCTO) se excluyen solos 🚫 con el motivo «no es perfume». Las marcas de clones seleccionadas (Brand Collection, Love Collection, Onlyou/Onlyou Collection/0nlyou Collection, Folie Pure, SPPC, Yves de Sistelle, NYC Scents, Legacy King y Legaly), Coral Escape y los nombres con SPPC al inicio o SISTELLE se excluyen con el motivo «marca excluida». Tubbees y el resto de Coral y Paris Bleu siguen entrando. Podés verlos y restaurarlos con **Mostrar excluidos**.
 - **Filtro de marcas para publicar:** destildá las marcas que no querés publicar. Se recuerda, y las marcas que aparecen por primera vez se marcan como "nueva".
 
 ### 5. Publicar

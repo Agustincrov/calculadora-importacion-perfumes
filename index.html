@@ -2108,6 +2108,7 @@ let plShowExcluded = false;
 let plAutoExcluded = {}; // { motivo: cantidad } de la última generación (category | notKbeauty | notSkincare | brokenPrice)
 const PL_AUTO_EXCLUDED_REASONS = {
   category:    { icon: '🚫', label: 'no es perfume' },
+  excludedBrand: { icon: '🚫', label: 'marca excluida' },
   notKbeauty:  { icon: '🌐', label: 'no es marca coreana' },
   notSkincare: { icon: '🚫', label: 'no es skincare' },
   // Ofertas descartadas (no productos): el producto queda con la siguiente tienda (ver plDropBrokenPrices).
@@ -2428,6 +2429,9 @@ const NON_PERFUME_PATTERNS = [
   /^MAC\s/i,      // maquillaje MAC Cosmetics
   /^(KIT\s)?INFANTIL\b/i, // productos infantiles con licencia (Disney, Batman, etc.), sueltos o en kit
   /^FRASCO\b/i,   // envases/frascos vacíos, no es un producto terminado
+  /\b(FACIAL|TONICO)\b/i, // cosmética facial
+  /^PRODUCTO$/i, // fila sin nombre de producto
+  /^(?!.*(\b(KIT|SET|EDP|EDT|EDC|PARFUM|EAU|EXTRAIT)\b|\+))(?=.*\bSPRAY\b).*\b([2-9]\d\d|\d{4})\s?ML\b/i, // sprays grandes sin concentración de perfume
   /^BOLSA\b/i,    // carteras de regalo (Star Company: "BOLSA CAROLINA HERRERA 212 BLACK BAG")
   /^DISNEY\b|\bEAU MY UNICORN\b/i, // infantiles con licencia, igual que INFANTIL (el PDF de la tienda no usa esa palabra; Macedonia pone "AIR-VAL EAU MY UNICORN")
   // Lociones y cremas sueltas. Los kits quedan afuera de la regla: "PERFUME 100ML + BODY LOTION" sí es perfume.
@@ -2437,6 +2441,23 @@ const NON_PERFUME_PATTERNS = [
 function plIsNonPerfumeCategory(name) {
   const s = String(name).trim();
   return NON_PERFUME_PATTERNS.some(re => re.test(s));
+}
+
+const PL_EXCLUDED_BRANDS = new Set([
+  'BRAND COLLECTION', 'LOVE COLLECTION', 'ONLYOU', 'ONLYOU COLLECTION', '0NLYOU COLLECTION',
+  'FOLIE PURE', 'SPPC', 'YVES DE SISTELLE', 'NYC SCENTS', 'LEGACY KING', 'LEGALY'
+]);
+const PL_EXCLUDED_NAME_PATTERNS = [
+  /^(PERF(UME)?\s+((FEM|MASC|UNI|UNISSEX|TESTER)\s+)*)?(BRAND COLLECTION|LOVE COLLECTION|0NLYOU|ONLYOU|FOLIE PURE|NYC SCENTS|LEGACY KING|LEGALY KING)\b/,
+  /^SPPC\b/,
+  /\bSISTELLE\b/,
+  /^CORAL ESCAPE\b/
+];
+
+function plIsExcludedBrand(brand, name) {
+  const brandKey = plStripAccents(brand || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  const rawName = String(name || '').toUpperCase();
+  return PL_EXCLUDED_BRANDS.has(brandKey) || PL_EXCLUDED_NAME_PATTERNS.some(re => re.test(rawName));
 }
 
 let customBrands = [];
@@ -10835,6 +10856,8 @@ function generatePriceList() {
       reason = !kb ? 'notKbeauty' : plIsNotSkincare(cheapest.name) ? 'notSkincare' : null;
     } else if (plIsNonPerfumeCategory(cheapest.name)) {
       reason = 'category';
+    } else if (plIsExcludedBrand(brand, cheapest.name)) {
+      reason = 'excludedBrand';
     }
     if (reason) autoExcluded[reason] = (autoExcluded[reason] || 0) + 1;
     plItems.push({
