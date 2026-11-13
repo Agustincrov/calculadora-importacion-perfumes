@@ -13797,6 +13797,11 @@ a { color: var(--accent-ink); }
 /* Hojas (filtros, marcas) */
 .sheet-wrap { position: fixed; inset: 0; z-index: 45; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 86vh; max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px); background: var(--surface); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; box-shadow: 0 -12px 40px -20px rgba(10,30,38,.35); }
+.sheet-grip { display: none; }
+@media (max-width: 1023px) {
+  .sheet-grip { display: block; flex: none; width: 36px; height: 4px; margin: 8px auto 0; border-radius: 999px; background: var(--line); }
+  .sheet-grip, .sheet-head { touch-action: none; }
+}
 .sheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
 .sheet-head h2 { margin: 0; font-family: var(--f-display); font-weight: 500; font-size: 21px; }
 .sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px 16px; display: grid; gap: 18px; overscroll-behavior: contain; }
@@ -14001,6 +14006,7 @@ footer.foot .btn { width: auto; justify-self: start; }
 <button type="button" class="fpill" id="fpill" data-open-filters aria-label="Filtros" aria-hidden="true" inert><span id="fpill-icon"></span><span>Filtros</span><span class="fpill-n" id="fpill-n" hidden></span></button>
 
 <div class="sheet-wrap" id="info" hidden><div class="dw-scrim" data-x></div><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="info-t">
+  <div class="sheet-grip" aria-hidden="true"></div>
   <header class="sheet-head"><h2 id="info-t">Cómo encargar</h2><button type="button" class="dw-x" data-x aria-label="Cerrar"></button></header>
   <div class="sheet-body"><ol style="margin:0;padding-left:20px;display:grid;gap:10px">
     <li>Armá tu pedido en la lista hasta el <b data-sch="close"></b>.</li>
@@ -14396,6 +14402,82 @@ ${SC}
     focusEl(o.opener);
     if (o.onClose) o.onClose();
   }
+  function swipeToClose(wrapEl) {
+    var mobile = matchMedia('(max-width: 1023px)');
+    var reduced = matchMedia('(prefers-reduced-motion: reduce)');
+    var drag = null, returning = null, returnTimer, suppressClick = false, clickTimer;
+    function cleanStyles(card) {
+      card.style.transform = ''; card.style.transition = ''; card.style.animationDuration = '';
+    }
+    function cleanReturn() {
+      clearTimeout(returnTimer);
+      if (returning) { cleanStyles(returning); returning = null; }
+    }
+    function sample(e) {
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.samples.push({ y: e.clientY, t: e.timeStamp });
+      while (drag.samples.length > 1 && drag.samples[0].t < e.timeStamp - 100) drag.samples.shift();
+    }
+    function finish(e, cancelled) {
+      if (!drag || e.pointerId !== drag.id) return;
+      sample(e);
+      var d = drag; drag = null;
+      if (wrapEl.hasPointerCapture(d.id)) wrapEl.releasePointerCapture(d.id);
+      if (!d.moved) return;
+      suppressClick = true;
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(function () { suppressClick = false; }, 0);
+      var first = d.samples[0], dt = e.timeStamp - first.t;
+      var velocity = dt > 0 ? (e.clientY - first.y) / dt : 0;
+      if (!cancelled && mobile.matches && !wrapEl.hidden &&
+          (d.dy > d.card.offsetHeight * .25 || d.dy > 120 || velocity > .5)) {
+        closeModal(wrapEl);
+        cleanStyles(d.card);
+      } else if (reduced.matches || wrapEl.hidden || !mobile.matches) {
+        cleanStyles(d.card);
+      } else {
+        returning = d.card;
+        returning.style.transition = 'transform .2s ease-out';
+        returning.style.transform = 'translateY(0)';
+        returnTimer = setTimeout(cleanReturn, 220);
+      }
+    }
+    wrapEl.addEventListener('pointerdown', function (e) {
+      if (drag || wrapEl.hidden || !mobile.matches || !e.isPrimary ||
+          (e.pointerType !== 'touch' && e.pointerType !== 'pen') || e.button !== 0) return;
+      var zone = e.target.closest('.sheet-grip, .sheet-head');
+      if (!zone || !wrapEl.contains(zone) || e.target.closest('button, a, input, label')) return;
+      var card = zone.closest('.sheet');
+      if (!card) return;
+      cleanReturn();
+      drag = { id: e.pointerId, card: card, y: e.clientY, dy: 0, moved: false,
+        samples: [{ y: e.clientY, t: e.timeStamp }] };
+    });
+    wrapEl.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!mobile.matches || wrapEl.hidden || !wrapEl.contains(drag.card)) { finish(e, true); return; }
+      sample(e);
+      if (!drag.moved && drag.dy < 6) return;
+      if (!drag.moved) {
+        drag.moved = true;
+        wrapEl.setPointerCapture(e.pointerId);
+        drag.card.style.animationDuration = '0s';
+        drag.card.style.transition = 'none';
+      }
+      e.preventDefault();
+      drag.card.style.transform = 'translateY(' + drag.dy + 'px)';
+    });
+    wrapEl.addEventListener('pointerup', function (e) { finish(e, false); });
+    wrapEl.addEventListener('pointercancel', function (e) { finish(e, true); });
+    wrapEl.addEventListener('transitionend', function (e) {
+      if (e.target === returning && e.propertyName === 'transform') cleanReturn();
+    });
+    wrapEl.addEventListener('click', function (e) {
+      if (!suppressClick) return;
+      suppressClick = false;
+      e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
+  }
   document.addEventListener('keydown', function (e) {
     var top = open[open.length - 1]; if (!top) return;
     if (e.key === 'Escape') { e.preventDefault(); if (top.el.tagName === 'DIALOG') top.el.close(); else closeModal(top.el); return; }
@@ -14416,7 +14498,7 @@ ${SC}
     STEPS: STEPS, STEP: STEP, CONCERNS: CONCERNS, CONCERN: CONCERN, INGREDIENTS: INGREDIENTS, INGR: INGR, PRICE_RANGES: PRICE_RANGES, PROVINCIAS: PROVINCIAS,
     ITEMS: ITEMS, BY_KEY: BY_KEY, query: query, facets: facets, group: group, brandList: brandList, subline: subline, sizeLabel: sizeLabel, cuota3: cuota3,
     Cart: Cart, schedule: schedule, totals: totals, DELIVERY: DELIVERY, ENVIO_SUCURSAL: ENVIO_SUCURSAL, message: message, waUrl: waUrl, loadDatos: loadDatos, saveDatos: saveDatos,
-    photoHtml: photoHtml, photoFailed: photoFailed, openModal: openModal, closeModal: closeModal, focusEl: focusEl, announce: announce, date: global.CATALOG_DATE || ''
+    photoHtml: photoHtml, photoFailed: photoFailed, openModal: openModal, closeModal: closeModal, swipeToClose: swipeToClose, focusEl: focusEl, announce: announce, date: global.CATALOG_DATE || ''
   };
 })(window);
 ${SC}
@@ -14793,10 +14875,11 @@ ${SC}
     function openSheet(opener) {
       if (!sheet) {
         sheet = document.createElement('div'); sheet.className = 'sheet-wrap'; sheet.hidden = true;
-        sheet.innerHTML = '<div class="dw-scrim" data-close-sheet-x></div><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><header class="sheet-head"><h2 id="sh-t">Filtros</h2>' +
+        sheet.innerHTML = '<div class="dw-scrim" data-close-sheet-x></div><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t"><div class="sheet-grip" aria-hidden="true"></div><header class="sheet-head"><h2 id="sh-t">Filtros</h2>' +
           '<button type="button" class="dw-x" data-close-sheet-x aria-label="Cerrar filtros">' + icon('close') + '</button></header><div class="sheet-body"></div>' +
           '<footer class="sheet-foot"><button type="button" class="btn btn-ghost" data-clear-all>Limpiar</button><button type="button" class="btn btn-main" data-close-sheet>Ver productos</button></footer></section>';
         document.body.appendChild(sheet);
+        SF.swipeToClose(sheet);
         sheet.addEventListener('click', function (e) {
           if (e.target.closest('[data-close-sheet],[data-close-sheet-x]')) { SF.closeModal(sheet); return; }
           handleFilterClick(e);
@@ -14895,6 +14978,7 @@ ${SC}
   document.getElementById('fdate').textContent = SF.date;
 
   var info = document.getElementById('info');
+  SF.swipeToClose(info);
   document.getElementById('info-btn').addEventListener('click', function (e) { SF.openModal(info, e.currentTarget); });
   info.addEventListener('click', function (e) { if (e.target.closest('[data-x]')) SF.closeModal(info); });
 
