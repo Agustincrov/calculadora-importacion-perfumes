@@ -45,7 +45,7 @@ Importo fetches all rates automatically and computes every number in real time a
 - A separate Korean cosmetics line (skincare only): its own sources, store importers, brand list, review and Excel export, never mixed with the perfumes. It has its own costs (12% product commission and ARS 2,000 shipping per unit) and profit formula (ARS 2,000 + 42.5% of product cost), editable in the generator
 - Exports to Excel, or publishes a searchable client catalog (`docs/catalogo.html`) to GitHub Pages in one click — with product photos, brand, category and size filters (price ranges on desktop), a floating filter button on phones, a cart and a WhatsApp order button
 - Product photos in Silkface can be enlarged; unavailable photos use a brand initial.
-- Publishes the Korean cosmetics line as its own branded list, Silkface (`docs/silkface.html`): browse by skincare routine step, filter by brand, key ingredient (detected from the product name) and price, sort by price or product type, same cart and WhatsApp order flow
+- Publishes the Korean cosmetics line as its own branded list, Silkface (`docs/silkface.html`): browse by skincare routine step, filter by brand, key ingredient (detected from the product name) and price, sort by price or product type, a floating filter button, same cart and WhatsApp order flow
 
 **Access control**
 - The app is private, behind Cloudflare Access (email OTP); only the user guide and the client lists are public
