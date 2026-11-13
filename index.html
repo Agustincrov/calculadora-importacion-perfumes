@@ -13824,6 +13824,15 @@ a { color: var(--accent-ink); }
 .notice { margin: 0; font-size: 13.5px; color: var(--ink-2); }
 .notice b { color: var(--ink); }
 
+/* Filtros flotantes: ancho fijo, también cuando cambia el contador. */
+.fpill { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 29; width: 144px; height: 44px; padding: 0 34px 0 14px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); box-shadow: 0 6px 20px -8px rgba(10,30,38,.35); font-size: 14px; font-weight: 600; opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 8px); }
+.fpill.is-visible { opacity: 1; visibility: visible; pointer-events: auto; transform: translate(-50%, 0); }
+.fpill-n { position: absolute; right: 10px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; background: var(--accent); color: #fff; font-size: 11px; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+html.kb-open .fpill { opacity: 0; visibility: hidden; pointer-events: none; transform: translate(-50%, 8px); }
+@media (max-width: 1023px) { html.has-cart .fpill { bottom: calc(var(--cartbar-height, 64px) + 10px); } }
+@media (min-width: 1100px) { .fpill { left: var(--fpill-center, 50%); } }
+@media (prefers-reduced-motion: no-preference) { .fpill { transition: opacity .18s ease, transform .18s ease, visibility .18s; } }
+
 /* Barra "Ver pedido" (celular) */
 .cartbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 10px max(16px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
 .cartbar .btn { width: 100%; justify-content: space-between; box-shadow: 0 10px 24px -12px rgba(10,30,38,.5); }
@@ -13945,6 +13954,10 @@ aside.summary { display: none; }
 .brand-opt input { width: 18px; height: 18px; accent-color: var(--accent); }
 .brand-opt span:nth-child(2) { flex: 1; }
 
+#list { scroll-margin-top: calc(var(--hdr-vis, 0px) + env(safe-area-inset-top, 0px)); }
+html.has-fpill body { padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 1023px) { html.has-fpill.has-cart body { padding-bottom: calc(var(--cartbar-height, 64px) + 64px); } }
+
 footer.foot { background: var(--surface); border-top: 1px solid var(--line); }
 footer.foot .wrap { padding-block: 28px 120px; display: grid; gap: 12px; max-width: 720px; }
 footer.foot h2 { margin: 0; font-family: var(--f-display); font-variation-settings: 'SOFT' 100; font-weight: 400; font-size: 26px; }
@@ -13985,6 +13998,7 @@ footer.foot .btn { width: auto; justify-self: start; }
   <p class="notice">Lista del <span id="fdate"></span>. Precios por transferencia; con tarjeta, hasta 3 cuotas con recargo.</p>
 </div></footer>
 <div class="cartbar" id="cartbar" hidden></div>
+<button type="button" class="fpill" id="fpill" data-open-filters aria-label="Filtros" aria-hidden="true" inert><span id="fpill-icon"></span><span>Filtros</span><span class="fpill-n" id="fpill-n" hidden></span></button>
 
 <div class="sheet-wrap" id="info" hidden><div class="dw-scrim" data-x></div><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="info-t">
   <header class="sheet-head"><h2 id="info-t">Cómo encargar</h2><button type="button" class="dw-x" data-x aria-label="Cerrar"></button></header>
@@ -14370,7 +14384,7 @@ ${SC}
   });
   function openModal(el, opener, opts) {
     opts = opts || {};
-    el.hidden = false; open.push({ el: el, opener: opener, lock: opts.lock !== false });
+    el.hidden = false; open.push({ el: el, opener: opener, lock: opts.lock !== false, onClose: opts.onClose });
     if (opts.lock !== false) lockBody(true);
     requestAnimationFrame(function () { el.classList.add('is-open'); focusEl(el.querySelector('[data-autofocus]') || el.querySelector(FOCUSABLE)); });
   }
@@ -14380,6 +14394,7 @@ ${SC}
     el.classList.remove('is-open'); el.hidden = true;
     if (!open.some(function (x) { return x.lock; })) lockBody(false);
     focusEl(o.opener);
+    if (o.onClose) o.onClose();
   }
   document.addEventListener('keydown', function (e) {
     var top = open[open.length - 1]; if (!top) return;
@@ -14430,7 +14445,7 @@ ${SC}
     var show = opts.show || ['brand', 'ingr', 'price'], out = '';
     show.forEach(function (f) {
       if (f === 'sort') {
-        out += group('Ordenar', '<div class="chips">' + [['', 'Marca'], ['step', 'Paso de la rutina'], ['asc', 'Menor precio'], ['desc', 'Mayor precio']].map(function (o) {
+        out += group('Ordenar', '<div class="chips">' + [['', 'Marca'], ['asc', 'Menor precio'], ['desc', 'Mayor precio'], ['step', 'Tipo de producto']].map(function (o) {
           return '<button type="button" class="chip" data-f="sort" data-v="' + o[0] + '" aria-pressed="' + ((state.sort || '') === o[0]) + '">' + o[1] + '</button>';
         }).join('') + '</div>');
       }
@@ -14645,7 +14660,53 @@ ${SC}
   function init(o) {
     var state = { q: '', step: 'all', concern: '', ingr: '', price: '', brands: {}, sort: '' };
     var shown = o.pageSize || 40, sel = {}, groups = [], gmap = {}, lastCounts = null, brandQ = '';
-    var listEl = $('#list');
+    var listEl = $('#list'), fpill = $('#fpill'), barAbove = false;
+    var root = document.documentElement, bar = $('.bar'), header = $('header.top'), barObserver, observedHeaderHeight;
+    if (fpill) root.classList.add('has-fpill');
+
+    function filterCount() { return F.activeCount(state) + (state.step && state.step !== 'all' ? 1 : 0); }
+    function updatePill() {
+      if (!fpill) return;
+      var n = filterCount(), badge = $('#fpill-n');
+      badge.textContent = n; badge.hidden = !n;
+      fpill.setAttribute('aria-label', n ? 'Filtros, ' + n + ' aplicados' : 'Filtros');
+      var visible = barAbove || (n > 0 && groups.length === 0);
+      fpill.classList.toggle('is-visible', visible);
+      fpill.inert = !visible;
+      fpill.setAttribute('aria-hidden', String(!visible));
+    }
+    function toResults() {
+      if (!fpill) return;
+      var offset = parseFloat(getComputedStyle(listEl).scrollMarginTop) || 0;
+      var top = Math.max(0, listEl.getBoundingClientRect().top + global.scrollY - offset);
+      if (global.scrollY > top) global.scrollTo({ top: top, behavior: 'instant' });
+    }
+    function filterSnapshot() {
+      return JSON.stringify([state.step, state.ingr, state.price, Object.keys(state.brands).sort(), state.sort]);
+    }
+    if (fpill) {
+      var column = listEl.parentElement, cb = $('#cartbar');
+      function measurePill() {
+        var r = column.getBoundingClientRect();
+        root.style.setProperty('--fpill-center', (r.left + r.width / 2) + 'px');
+        if (cb) root.style.setProperty('--cartbar-height', cb.getBoundingClientRect().height + 'px');
+        var h = parseFloat(getComputedStyle(root).getPropertyValue('--hdr-vis')) || 0;
+        if (barObserver && h === observedHeaderHeight) return;
+        observedHeaderHeight = h;
+        if (barObserver) barObserver.disconnect();
+        barObserver = new IntersectionObserver(function (entries) {
+          var e = entries[0];
+          barAbove = !e.isIntersecting && e.boundingClientRect.bottom <= e.rootBounds.top;
+          updatePill();
+        }, { rootMargin: -h + 'px 0px 0px 0px' });
+        barObserver.observe(bar);
+      }
+      var pillResize = new ResizeObserver(measurePill);
+      pillResize.observe(column);
+      if (header) pillResize.observe(header);
+      if (cb) pillResize.observe(cb);
+    }
+
 
     function selOf(g) { var k = sel[g.gid]; return g.sizes.filter(function (s) { return s.key === k; })[0] || g.sizes[0]; }
     function rowHtml(g) { var it = selOf(g); return o.renderItem(g, it, { add: addControl(it), tag: typeTag(it), sizes: sizesHtml(g, it), plain: plainMode() }); }
@@ -14688,6 +14749,7 @@ ${SC}
       var ap = $('#applied'); if (ap) ap.innerHTML = F.appliedHtml(state, o.appliedStep);
       var so = $('#sort'); if (so) so.value = state.sort || '';
       var fb = $('#btn-filters-n'); if (fb) { var n = F.activeCount(state); fb.textContent = n ? n : ''; fb.hidden = !n; }
+      updatePill();
       if (o.renderNav) o.renderNav(counts, state);
       if (o.renderRail) o.renderRail(counts, state, brandQ);
       if (sheetOpen()) renderSheet();
@@ -14708,6 +14770,7 @@ ${SC}
     function updateBadge() {
       var n = Cart.count(), b = $('#cart-n');
       if (b) { b.textContent = n; b.hidden = !n; }
+      if (fpill) root.classList.toggle('has-cart', n > 0);
       var cb = $('#cartbar');
       if (cb) { cb.hidden = !n; cb.innerHTML = '<button type="button" class="btn btn-main" data-open-cart><span>Ver pedido · ' + n + '</span><span class="num">' + fmt(Cart.subtotal()) + '</span></button>'; }
       if (o.renderSummary) o.renderSummary();
@@ -14741,7 +14804,10 @@ ${SC}
         sheet.addEventListener('change', handleFilterChange);
         sheet.addEventListener('input', handleBrandQ);
       }
-      renderSheet(); SF.openModal(sheet, opener);
+      var snapshot = filterSnapshot();
+      renderSheet(); SF.openModal(sheet, opener, { onClose: function () {
+        if (snapshot !== filterSnapshot()) toResults();
+      } });
     }
     function handleFilterClick(e) {
       var b = e.target.closest('button[data-f]');
@@ -14771,18 +14837,18 @@ ${SC}
       if (b.hasAttribute('data-more')) { var first = groups[shown]; shown += o.pageSize || 40; render(false); var el = first && listEl.querySelector('[data-row="' + first.gid + '"] button'); SF.focusEl(el); return; }
       if (b.hasAttribute('data-open-filters')) { openSheet(b); return; }
       if (b.hasAttribute('data-open-cart')) { global.SilkCart.open(b); return; }
-      if (b.dataset.rm) { F.removeApplied(state, b.dataset.rm, b.dataset.v); render(true); return; }
+      if (b.dataset.rm) { F.removeApplied(state, b.dataset.rm, b.dataset.v); render(true); toResults(); return; }
       if (b.dataset.nav) { // navegación propia de la opción (pasos de la rutina, preocupaciones)
         var f = b.dataset.nav, v = b.dataset.v;
         if (f === 'step') state.step = v; else F.apply(state, f, v);
-        render(true); if (o.afterNav) o.afterNav(f, v); return;
+        render(true); if (o.afterNav) o.afterNav(f, v); toResults(); return;
       }
       if (b.closest('#rail')) { handleFilterClick(e); return; }
-      if (b.hasAttribute('data-clear-all')) { clearAll(); return; }
+      if (b.hasAttribute('data-clear-all')) { clearAll(); toResults(); return; }
       if (b.hasAttribute('data-clear-q')) { var qi = $('#q'); qi.value = ''; state.q = ''; render(true); qi.focus(); }
     });
     document.addEventListener('change', function (e) {
-      if (e.target.id === 'sort') { state.sort = e.target.value; render(true); return; }
+      if (e.target.id === 'sort') { state.sort = e.target.value; render(true); toResults(); return; }
       if (e.target.closest('#rail')) handleFilterChange(e);
     });
     document.addEventListener('input', function (e) { if (e.target.closest('#rail')) handleBrandQ(e); });
@@ -14822,6 +14888,7 @@ ${SC}
   document.getElementById('info-btn').innerHTML = icon('info');
   document.getElementById('cart-ic').outerHTML = icon('bag');
   document.getElementById('fi').outerHTML = icon('filter');
+  document.getElementById('fpill-icon').outerHTML = icon('filter');
   ['t1', 't2', 't3'].forEach(function (id) { var el = document.getElementById(id); el.innerHTML = icon('check') + el.textContent; });
   document.querySelectorAll('[data-x]').forEach(function (b) { if (b.tagName === 'BUTTON') b.innerHTML = icon('close'); });
   var fw = document.getElementById('foot-wa'); fw.href = SF.waUrl('¡Hola Agustín! Quiero que me ayudes a armar una rutina con Silkface. Mi piel es…'); fw.insertAdjacentHTML('afterbegin', icon('chat'));
@@ -14864,7 +14931,7 @@ ${SC}
         '<div class="sum-total"><span>Productos</span><span>' + fmt(SF.Cart.subtotal()) + '</span></div><button type="button" class="btn btn-main" data-open-cart>Ver pedido</button>'
       : '<p class="sum-empty">Todavía no agregaste productos. Encargos hasta el ' + esc(SF.schedule().dia(SF.schedule().thu)) + ' ' + SF.schedule().dm(SF.schedule().thu) + '.</p>');
   }
-  SilkPage.init({ pageSize: 40, sectioned: true, appliedStep: true, renderItem: renderItem, renderNav: renderNav, renderSummary: renderSummary, filterShow: ['brand', 'ingr', 'price'] });
+  SilkPage.init({ pageSize: 40, sectioned: true, appliedStep: true, renderItem: renderItem, renderNav: renderNav, renderSummary: renderSummary, filterShow: ['brand', 'step', 'sort', 'ingr', 'price'] });
 })();
 ${SC}
 </body>
