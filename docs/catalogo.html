@@ -348,6 +348,20 @@ a { color: var(--vino); }
 body.has-bar { padding-bottom: 76px; }
 @media (min-width: 1200px) { .buybar { display: none !important; } body.has-bar { padding-bottom: 0; } }
 
+/* Filtros a mano, debajo de las hojas y encima del contenido. */
+.fpill { display: none; }
+@media (max-width: 1023px) {
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  body.has-bar { padding-bottom: calc(var(--buybar-h, 76px) + 72px + env(safe-area-inset-bottom, 0px)); }
+  .fpill { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 29; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 156px; height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--borde-marco); background: var(--blanco); color: var(--tinta); box-shadow: 0 3px 12px rgba(20,17,14,.14); font-size: 14px; font-weight: 600; opacity: 0; visibility: hidden; pointer-events: none; transform: translateX(-50%) translateY(6px); transition: opacity .18s ease, transform .18s ease, visibility .18s; }
+  .fpill.is-visible { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(-50%); }
+  .fpill .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border-radius: 999px; background: var(--vino); color: var(--lino); font-family: var(--f-mono); font-size: 11px; }
+  .fpill .n.is-empty { visibility: hidden; }
+  body.has-bar .fpill { bottom: calc(var(--buybar-h, 76px) + 10px); }
+  .kb-open .fpill { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .fpill { transition: none; } }
+
 /* Pie: Soy Agustín + decant */
 .foot { background: var(--footer); border-top: 1px solid #d8cfbf; margin-top: 40px; }
 .foot-in { max-width: 1320px; margin: 0 auto; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 36px max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 18px; }
@@ -525,6 +539,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="legal">© 2026 Crovato Fragrances · desde Córdoba, Argentina · 31°S</div>
   </div>
 </footer>
+<button type="button" class="fpill" id="fpill" aria-label="Filtros"></button>
 <div class="buybar" id="buybar" hidden><button type="button" class="btn btn-primary" id="buybarBtn"></button></div>
 
 <script>
@@ -1155,7 +1170,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
   }
   function count(st) { return appliedChips(st).length; }
 
-  /* Panel de filtros. sections: ['sort','gender','price','size','tester','brand'] */
+  /* Panel de filtros. sections: ['brand','cat','sort','gender','price','size','tester'] */
   function FilterPanel(opts) {
     var sections = opts.sections, getState = opts.getState, onApply = opts.onApply;
     var draft, brandQ = '';
@@ -1181,9 +1196,11 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
       }).join('') || '<p class="muted">No hay marcas con ese nombre.</p>';
     }
     function render() {
+      if (Object.keys(draft.brands).length) draft.cat = '';
       var n = CF.query(draft).items.length;
       var h = '<div class="sheet-card fp-card"><div class="sheet-grip" aria-hidden="true"></div><div class="fp-head"><h2 id="fpTitle" class="sheet-title">Filtrar y ordenar</h2><button type="button" class="icon-btn" data-fp="close" aria-label="Cerrar filtros">' + icon('close') + '</button></div><div class="fp-body">';
       sections.forEach(function (s) {
+        if (s === 'cat' && !Object.keys(draft.brands).length) h += radioGroup('cat', opts.cats.map(function (c) { return { id: c[0], label: c[1] }; }), draft.cat, 'Categoría');
         if (s === 'sort') h += radioGroup('sort', SORT, draft.sort, 'Ordenar por');
         if (s === 'gender') h += radioGroup('gender', [{ id: '', label: 'Todos' }].concat(GENDER), draft.gender, 'Para');
         if (s === 'price') h += radioGroup('price', [{ id: '', label: 'Cualquiera' }].concat(PRICE), draft.price, 'Precio');
@@ -1194,17 +1211,13 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
       h += '</div><div class="fp-foot"><button type="button" class="btn btn-outline" data-fp="reset">Limpiar</button><button type="button" class="btn btn-primary" data-fp="apply" data-autofocus>Ver ' + n.toLocaleString('es-AR') + ' productos</button></div></div>';
       el.innerHTML = h;
     }
-    function refreshCount() {
-      var b = el.querySelector('[data-fp="apply"]');
-      if (b) b.textContent = 'Ver ' + CF.query(draft).items.length.toLocaleString('es-AR') + ' productos';
-    }
     el.addEventListener('click', function (e) {
       if (e.target === el) return CF.closeModal(el);
       var b = e.target.closest('[data-fp]');
       if (!b) return;
       var a = b.getAttribute('data-fp');
       if (a === 'close') CF.closeModal(el);
-      if (a === 'reset') { var q = draft.q, cat = draft.cat; draft = Object.assign(newStateFn(), { q: q, cat: cat }); brandQ = ''; render(); }
+      if (a === 'reset') { var q = draft.q; draft = Object.assign(newStateFn(), { q: q }); brandQ = ''; render(); }
       if (a === 'apply') { CF.closeModal(el); onApply(draft); }
     });
     el.addEventListener('change', function (e) {
@@ -1218,7 +1231,11 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
         var f = el.querySelector('input[name="' + t.name + '"][value="' + t.value + '"]'); if (f) f.focus({ preventScroll: true });
       } else if (t.type === 'checkbox') {
         if (t.checked) draft.brands[t.value] = 1; else delete draft.brands[t.value];
-        refreshCount();
+        if (Object.keys(draft.brands).length) draft.cat = '';
+        var bodyY = el.querySelector('.fp-body').scrollTop, brandsY = el.querySelector('#fpBrands').scrollTop;
+        render();
+        el.querySelector('.fp-body').scrollTop = bodyY; el.querySelector('#fpBrands').scrollTop = brandsY;
+        el.querySelectorAll('#fpBrands input').forEach(function (input) { if (input.value === t.value) input.focus({ preventScroll: true }); });
       }
     });
     el.addEventListener('input', function (e) {
@@ -1447,9 +1464,42 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
   var $ = function (id) { return document.getElementById(id); };
   var root = document.documentElement;
   var drawer = new CartDrawer({ mode: 'two', preview: true });
-  var panel = new F.FilterPanel({ sections: ['price', 'sort', 'size', 'tester', 'brand'], priceSortsAsc: true, getState: function () { return st; }, onApply: function (d) { st = d; shown = PAGE; run(); } });
-  var sch = CF.schedule();
   var CATS = [['', 'Todas'], ['disenador', 'Diseñador'], ['arabe', 'Árabe'], ['nicho', 'Nicho']];
+  var panel = new F.FilterPanel({ sections: ['brand', 'cat', 'sort', 'size', 'tester'], cats: CATS, getState: function () { return st; }, onApply: function (d) { var changed = filterKey(st) !== filterKey(d); st = d; if (changed) { shown = PAGE; run(); toResults(); } } });
+  var pill = $('fpill'), toolbarAbove = false, toolbarObserver, observedHdr = null;
+  pill.innerHTML = icon('filter') + 'Filtros<span class="n is-empty" aria-hidden="true"></span>';
+  pill.addEventListener('click', function () { panel.open(pill); });
+  function filterKey(s) {
+    return JSON.stringify([s.q, s.cat, Object.keys(s.brands).sort(), s.price, s.min, s.max, s.gender, s.tester, s.size, s.sort]);
+  }
+  function pillUi() {
+    var nf = F.count(st) + (st.cat ? 1 : 0), badge = pill.querySelector('.n');
+    badge.textContent = nf || '';
+    badge.classList.toggle('is-empty', !nf);
+    pill.setAttribute('aria-label', nf ? 'Filtros, ' + nf + (nf === 1 ? ' aplicado' : ' aplicados') : 'Filtros');
+    pill.classList.toggle('is-visible', toolbarAbove || root.classList.contains('has-q') || (nf > 0 && !groups.length));
+  }
+  function observeToolbar(height) {
+    if (!window.IntersectionObserver || observedHdr === height) return;
+    observedHdr = height;
+    if (toolbarObserver) toolbarObserver.disconnect();
+    toolbarObserver = new IntersectionObserver(function (entries) {
+      var e = entries[0];
+      toolbarAbove = !e.isIntersecting && !!e.rootBounds && e.boundingClientRect.bottom <= e.rootBounds.top;
+      pillUi();
+    }, { rootMargin: '-' + height + 'px 0px 0px 0px', threshold: 0 });
+    toolbarObserver.observe($('toolbar'));
+  }
+  function toResults() {
+    var height = parseFloat(getComputedStyle(root).getPropertyValue('--hdr-vis')) || 0;
+    var top = Math.max(0, window.scrollY + $('results').getBoundingClientRect().top - height);
+    if (window.scrollY > top) window.scrollTo(0, top);
+  }
+  function measureBuybar() {
+    root.style.setProperty('--buybar-h', $('buybar').getBoundingClientRect().height + 'px');
+  }
+  if (window.ResizeObserver) new ResizeObserver(measureBuybar).observe($('buybar'));
+  var sch = CF.schedule();
   var REASSURE = [
     ['shield', 'Perfumes originales. Los reviso yo antes de enviarlos y, si algo no está bien, te devuelvo el dinero.'],
     ['calendar', 'Pedidos de sábado a jueves; cierran el viernes ' + sch.dm(sch.fri) + '. Llegan en 7 a 10 días hábiles desde el cierre, a veces antes.'],
@@ -1486,7 +1536,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
   function chips(fc) {
     var nf = F.count(st);
     $('toolbar').innerHTML = '<button type="button" class="chip" data-act="filters">' + icon('filter') + 'Filtros' + (nf ? ' <span class="n">' + nf + '</span>' : '') + '</button><span class="sep" aria-hidden="true"></span>' +
-      CATS.map(function (c) { return '<button type="button" class="chip" data-cat="' + c[0] + '" aria-pressed="' + (st.cat === c[0]) + '">' + c[1] + '<span class="n">' + n(c[0] ? fc.cat[c[0]] : fc.cat['*']) + '</span></button>'; }).join('') +
+      (Object.keys(st.brands).length ? '' : CATS.map(function (c) { return '<button type="button" class="chip" data-cat="' + c[0] + '" aria-pressed="' + (st.cat === c[0]) + '">' + c[1] + '<span class="n">' + n(c[0] ? fc.cat[c[0]] : fc.cat['*']) + '</span></button>'; }).join('')) +
       '<button type="button" class="chip" data-act="testers" aria-pressed="' + (st.tester === 'only') + '">Solo testers<span class="n">' + n(fc.tester.only) + '</span></button>';
     $('applied').innerHTML = F.appliedHtml(st);
     $('sort').value = st.sort;
@@ -1505,7 +1555,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
     Object.keys(st.brands).forEach(function (b) { if (brands.indexOf(b) < 0) brands.unshift(b); });
     $('rail').innerHTML =
       '<fieldset><legend>Presupuesto</legend>' + radios('price', [{ id: '', label: 'Cualquiera' }].concat(F.PRICE), st.price, fc.price) + '</fieldset>' +
-      '<fieldset><legend>Categoría</legend>' + radios('cat', CATS.map(function (c) { return { id: c[0], label: c[1] }; }), st.cat, fc.cat) + '</fieldset>' +
+      (Object.keys(st.brands).length ? '' : '<fieldset><legend>Categoría</legend>' + radios('cat', CATS.map(function (c) { return { id: c[0], label: c[1] }; }), st.cat, fc.cat) + '</fieldset>') +
       '<fieldset><legend>Tamaño</legend>' + radios('size', [{ id: '', label: 'Todos' }].concat(F.SIZE), st.size, fc.size) + '</fieldset>' +
       '<fieldset><legend>Testers <button type="button" class="tag tag-btn" data-explain="tester" aria-label="Tester: ver qué significa">¿Qué es?</button></legend>' + radios('tester', F.TESTER, st.tester, fc.tester) + '</fieldset>' +
       '<fieldset><legend>Marca</legend><div class="search">' + icon('search') + '<input type="search" id="railBrandQ" placeholder="Buscar marca" value="' + esc(brandQ) + '" autocomplete="off" aria-label="Buscar marca"></div><div class="brands" id="railBrands">' +
@@ -1531,6 +1581,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
   }
 
   function run() {
+    if (Object.keys(st.brands).length) st.cat = '';
     var r = CF.query(st);
     groups = CF.group(r.items);
     var fc = CF.facets(st);
@@ -1539,7 +1590,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
     $('countTxt').textContent = n(groups.length) + (groups.length === 1 ? ' perfume' : ' perfumes');
     $('corrected').innerHTML = r.corrected ? '<p class="corrected">No encontré "' + esc(st.q) + '". Te muestro resultados para <b>' + esc(r.corrected) + '</b>.</p>' : '';
     if (st.q !== lastQ) { lastQ = st.q; if (st.q.trim()) window.scrollTo(0, 0); }
-    paint();
+    paint(); pillUi();
   }
   function paint() {
     var flat = !!st.sort || !!st.q.trim();
@@ -1601,6 +1652,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
     $('cartBtn').setAttribute('aria-label', c ? 'Abrir el pedido, ' + c + (c === 1 ? ' producto' : ' productos') : 'Abrir el pedido');
     $('buybar').hidden = !c; document.body.classList.toggle('has-bar', !!c);
     $('buybarBtn').innerHTML = '<span>Ver pedido · ' + c + '</span><span class="tnum">' + fmt(Cart.subtotal()) + '</span>';
+    measureBuybar();
     side();
     if (key) { var r = document.querySelector('.row[data-key="' + CSS.escape(key) + '"]'); if (r) { var nr = updateRow(r); if (action === 'add' && nr) nr.querySelector('.buy').classList.add('added-flash'); } }
     else if (action) paint();
@@ -1610,12 +1662,12 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
   function setPrice(p) { st.price = p; st.min = st.max = 0; F.applyPrice(st); if (p && !st.sort) st.sort = 'asc'; }
   document.addEventListener('click', function (e) {
     var ex = e.target.closest('[data-explain]');
-    if (ex) { e.preventDefault(); CF.explain(ex.getAttribute('data-explain'), ex, function () { st.tester = 'only'; shown = PAGE; run(); }); return; }
+    if (ex) { e.preventDefault(); CF.explain(ex.getAttribute('data-explain'), ex, function () { st.tester = 'only'; shown = PAGE; run(); toResults(); }); return; }
     if (e.target.closest('.drawer') || e.target.closest('.sheet')) return;
     var c = e.target.closest('[data-cat]');
-    if (c && c.closest('#toolbar')) { st.cat = c.getAttribute('data-cat'); shown = PAGE; run(); return; }
+    if (c && c.closest('#toolbar')) { st.cat = c.getAttribute('data-cat'); shown = PAGE; run(); toResults(); return; }
     var u = e.target.closest('[data-unfilter]');
-    if (u) { F.removeFilter(st, u.getAttribute('data-unfilter'), u.getAttribute('data-v')); shown = PAGE; run(); return; }
+    if (u) { F.removeFilter(st, u.getAttribute('data-unfilter'), u.getAttribute('data-v')); shown = PAGE; run(); toResults(); return; }
     var sz = e.target.closest('[data-size]');
     if (sz) { var row = sz.closest('.row'); sel[row.getAttribute('data-g')] = +sz.getAttribute('data-size'); var nr = updateRow(row); nr.querySelector('[data-size="' + sz.getAttribute('data-size') + '"]').focus(); return; }
     var b = e.target.closest('[data-act]');
@@ -1625,8 +1677,8 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
     if (act === 'dec') Cart.dec(key);
     if (act === 'more') { shown += PAGE; paint(); var rows = document.querySelectorAll('.row'); if (rows[shown - PAGE]) rows[shown - PAGE].querySelector('button:not(.tag-btn)').focus({ preventScroll: true }); }
     if (act === 'filters') panel.open(b);
-    if (act === 'testers') { st.tester = st.tester === 'only' ? '' : 'only'; shown = PAGE; run(); }
-    if (act === 'reset') { var q = st.q; st = F.newState(); st.q = q; shown = PAGE; run(); }
+    if (act === 'testers') { st.tester = st.tester === 'only' ? '' : 'only'; shown = PAGE; run(); toResults(); }
+    if (act === 'reset') { var q = st.q; st = F.newState(); st.q = q; shown = PAGE; run(); toResults(); }
     if (act === 'open-cart') drawer.open(b);
     if (act === 'info') openInfo(b);
     if (act === 'brands') openBrands(b);
@@ -1636,12 +1688,13 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
     if (t.name && t.name.indexOf('r-') === 0) {
       var k = t.name.slice(2);
       if (k === 'price') setPrice(t.value); else st[k] = t.value;
-    } else if (t.type === 'checkbox') { if (t.checked) st.brands[t.value] = 1; else delete st.brands[t.value]; }
+    } else if (t.type === 'checkbox') { if (t.checked) { st.brands[t.value] = 1; st.cat = ''; } else delete st.brands[t.value]; }
     var y = $('rail').scrollTop, by = $('railBrands') ? $('railBrands').scrollTop : 0;
     var sel2 = t.name ? 'input[name="' + t.name + '"][value="' + t.value + '"]' : 'input[type=checkbox][value="' + CSS.escape(t.value) + '"]';
     shown = PAGE; run();
     $('rail').scrollTop = y; if ($('railBrands')) $('railBrands').scrollTop = by;
     var f = $('rail').querySelector(sel2); if (f) f.focus({ preventScroll: true });
+    toResults();
   });
   $('rail').addEventListener('input', function (e) {
     if (e.target.id !== 'railBrandQ') return;
@@ -1650,13 +1703,13 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
   });
   $('cartBtn').addEventListener('click', function () { drawer.open(this); });
   $('buybarBtn').addEventListener('click', function () { drawer.open(this); });
-  $('sort').addEventListener('change', function () { st.sort = this.value; shown = PAGE; run(); });
+  $('sort').addEventListener('change', function () { st.sort = this.value; shown = PAGE; run(); toResults(); });
 
   // Buscador: el plegado (has-q) se aplica en el acto, sin esperar el debounce, para que el teclado nunca tape los resultados
   var tmr;
   function onQuery(v) {
     root.classList.toggle('has-q', !!v.trim());
-    setHdrH();
+    setHdrH(); pillUi();
     $('qClear').hidden = !v;
     clearTimeout(tmr);
     tmr = setTimeout(function () { st.q = v; shown = PAGE; run(); }, 120);
@@ -1730,6 +1783,7 @@ var DATA = [{"brand":"Acqua di Parma","name":"CHINOTTO DI LIGURIA BLUE MED UNISS
     root.style.setProperty('--hdr-off', off + 'px');
     root.style.setProperty('--hdr-vis', (height - off) + 'px');
     root.style.setProperty('--hdr-h', height + 'px');
+    observeToolbar(height - off);
   }
   if (window.ResizeObserver) {
     var hdrObserver = new ResizeObserver(setHdrH);
