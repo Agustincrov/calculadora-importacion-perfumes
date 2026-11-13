@@ -11884,6 +11884,7 @@ a { color: var(--vino); }
 .sheet-title { margin: 0; font-family: var(--f-serif); font-weight: 500; font-size: 26px; line-height: 1.15; }
 .sheet-body p { margin: 0 0 10px; font-size: 15.5px; line-height: 1.55; }
 .sheet-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+@media (max-width: 719px) { .sheet .sheet-grip, .sheet .fp-head, .sheet .eyebrow, .sheet .sheet-title { touch-action: none; } }
 @media (min-width: 720px) { .sheet { align-items: center; } .sheet-card { border-radius: 16px; padding: 24px 28px; } .sheet-grip { display: none; } }
 
 /* Formulario */
@@ -12827,6 +12828,77 @@ ${SC}
     }
   });
 
+  function swipeToClose(sheetEl) {
+    var mobile = matchMedia('(max-width: 719px)');
+    var drag = null, returning = null, returnTimer, suppressClick = false, clickTimer;
+    function cleanReturn() {
+      clearTimeout(returnTimer);
+      if (returning) { returning.style.transform = ''; returning.style.transition = ''; returning = null; }
+    }
+    function sample(e) {
+      drag.dy = Math.max(0, e.clientY - drag.y);
+      drag.samples.push({ y: e.clientY, t: e.timeStamp });
+      while (drag.samples.length > 1 && drag.samples[0].t < e.timeStamp - 100) drag.samples.shift();
+    }
+    function finish(e, cancelled) {
+      if (!drag || e.pointerId !== drag.id) return;
+      sample(e);
+      var d = drag;
+      drag = null;
+      if (sheetEl.hasPointerCapture(d.id)) sheetEl.releasePointerCapture(d.id);
+      if (!d.moved) return;
+      suppressClick = true;
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(function () { suppressClick = false; }, 0);
+      var first = d.samples[0], dt = e.timeStamp - first.t;
+      var velocity = dt > 0 ? (e.clientY - first.y) / dt : 0;
+      if (!cancelled && mobile.matches && !sheetEl.hidden &&
+          (d.dy > d.card.offsetHeight * .25 || d.dy > 120 || velocity > .5)) {
+        closeModal(sheetEl);
+        d.card.style.transform = ''; d.card.style.transition = '';
+      } else {
+        returning = d.card;
+        returning.style.transition = 'transform .2s ease-out';
+        returning.style.transform = 'translateY(0)';
+        returnTimer = setTimeout(cleanReturn, 220);
+      }
+    }
+    sheetEl.addEventListener('pointerdown', function (e) {
+      if (drag || sheetEl.hidden || !mobile.matches || !e.isPrimary ||
+          (e.pointerType !== 'touch' && e.pointerType !== 'pen') || e.button !== 0) return;
+      var zone = e.target.closest('.sheet-grip, .fp-head, .eyebrow, .sheet-title');
+      if (!zone || !sheetEl.contains(zone) || e.target.closest('button, a, input, label')) return;
+      var card = zone.closest('.sheet-card');
+      if (!card || card.scrollTop > 0) return;
+      cleanReturn();
+      drag = { id: e.pointerId, card: card, y: e.clientY, dy: 0, moved: false,
+        samples: [{ y: e.clientY, t: e.timeStamp }] };
+    });
+    sheetEl.addEventListener('pointermove', function (e) {
+      if (!drag || e.pointerId !== drag.id) return;
+      if (!mobile.matches || sheetEl.hidden || !sheetEl.contains(drag.card)) { finish(e, true); return; }
+      sample(e);
+      if (!drag.moved && drag.dy < 6) return;
+      if (!drag.moved) {
+        drag.moved = true;
+        sheetEl.setPointerCapture(e.pointerId);
+        drag.card.style.transition = 'none';
+      }
+      e.preventDefault();
+      drag.card.style.transform = 'translateY(' + drag.dy + 'px)';
+    });
+    sheetEl.addEventListener('pointerup', function (e) { finish(e, false); });
+    sheetEl.addEventListener('pointercancel', function (e) { finish(e, true); });
+    sheetEl.addEventListener('transitionend', function (e) {
+      if (e.target === returning && e.propertyName === 'transform') cleanReturn();
+    });
+    sheetEl.addEventListener('click', function (e) {
+      if (!suppressClick) return;
+      suppressClick = false;
+      e.preventDefault(); e.stopImmediatePropagation();
+    }, true);
+  }
+
   // Hoja de explicación (bottom sheet en mobile, tarjeta centrada en desktop)
   var sheet;
   function explain(kind, opener, onOnlyTesters) {
@@ -12834,6 +12906,7 @@ ${SC}
     if (!sheet) {
       sheet = document.createElement('div');
       sheet.className = 'sheet';
+      swipeToClose(sheet);
       sheet.hidden = true;
       sheet.setAttribute('role', 'dialog');
       sheet.setAttribute('aria-labelledby', 'sheetTitle');
@@ -12872,7 +12945,7 @@ ${SC}
     ITEMS: ITEMS, ALL: ALL, DUPES: DUPES, dupeReport: dupeReport, facets: facets, lineLabel: lineLabel, BY_KEY: BY_KEY, CAT_LABELS: CAT_LABELS, PROVINCIAS: PROVINCIAS, CUOTAS: CUOTAS, DELIVERY: DELIVERY, ENVIO_SUCURSAL: ENVIO_SUCURSAL,
     fold: fold, esc: esc, fmt: fmt, store: store, icon: icon, seal: seal, query: query, group: group, Cart: Cart, schedule: schedule, totals: totals,
     whatsappUrl: whatsappUrl, waHelp: waHelp, EXPLAIN: EXPLAIN, conditionChips: conditionChips, conditionLines: conditionLines, specText: specText,
-    openModal: openModal, closeModal: closeModal, focusEl: focusEl, explain: explain, announce: announce, watchKeyboard: watchKeyboard, date: global.CATALOG_DATE || ''
+    openModal: openModal, closeModal: closeModal, swipeToClose: swipeToClose, focusEl: focusEl, explain: explain, announce: announce, watchKeyboard: watchKeyboard, date: global.CATALOG_DATE || ''
   };
 })(window);
 ${SC}
@@ -12931,6 +13004,7 @@ ${SC}
     var draft, brandQ = '';
     var el = document.createElement('div');
     el.className = 'sheet filter-sheet'; el.hidden = true;
+    CF.swipeToClose(el);
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-labelledby', 'fpTitle');
     document.body.appendChild(el);
 
@@ -13278,6 +13352,7 @@ ${SC}
   // ⓘ Cómo encargar
   var info = document.createElement('div');
   info.className = 'sheet'; info.hidden = true; info.setAttribute('role', 'dialog'); info.setAttribute('aria-labelledby', 'infoT');
+  CF.swipeToClose(info);
   info.innerHTML = '<div class="sheet-card"><div class="sheet-grip" aria-hidden="true"></div><p class="eyebrow">Cómo encargar</p><h2 id="infoT" class="sheet-title">Armá el pedido acá y mandámelo por WhatsApp</h2><ul class="info-list">' +
     REASSURE.map(function (r) { return '<li>' + icon(r[0]) + '<span>' + r[1] + '</span></li>'; }).join('') +
     '</ul><div class="sheet-actions"><button type="button" class="btn btn-primary" data-close data-autofocus>Entendido</button></div></div>';
@@ -13475,6 +13550,7 @@ ${SC}
   // ── Lista de marcas (navegación, no filtro): salta a la marca elegida y se puede seguir bajando ──
   var brandSheet = document.createElement('div');
   brandSheet.className = 'sheet brand-sheet'; brandSheet.hidden = true;
+  CF.swipeToClose(brandSheet);
   brandSheet.setAttribute('role', 'dialog'); brandSheet.setAttribute('aria-labelledby', 'brandsT');
   document.body.appendChild(brandSheet);
   var brandCur = '', brandFilter = '';
