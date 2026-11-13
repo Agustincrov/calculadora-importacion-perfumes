@@ -219,9 +219,10 @@ Los precios del catálogo quedan fijos al momento de publicar: si cambian las co
 
 Desde la pestaña **Cosmética coreana**, **Publicar catálogo** sube la lista Silkface (`silkface.html`). En esa lista tus clientes pueden:
 
-- **Elegir por paso de la rutina:** tarjetas numeradas arriba (1 Limpieza, 2 Exfoliante, 3 Tónico y pads, 4 Esencia, 5 Sérum, 6 Máscara, 7 Contorno de ojos, 8 Crema, 9 Protector solar; parches, labios y kits aparte), con la cantidad de productos.
+- **Elegir por paso de la rutina:** tarjetas numeradas arriba (1 Limpieza, 2 Exfoliante, 3 Tónico y pads, 4 Esencia, 5 Sérum, 6 Máscara, 7 Contorno de ojos, 8 Crema, 9 Protector solar; parches, labios y kits aparte).
 - **Buscar** por marca, producto, tipo o ingrediente ("boj relief", "niacinamida", "protector"), en cualquier orden y sin acentos. Si escriben mal una letra, la página corrige.
 - **Filtrar** por marca, ingrediente (centella, niacinamida, PDRN, retinol…) y precio, y **ordenar** (selector "Ordenar por" arriba de la lista) por marca, menor o mayor precio o tipo de producto. Las opciones sin productos no se muestran. El ingrediente sale de las palabras del nombre: alguno puede quedar sin etiqueta.
+- Al bajar por la lista aparece un botón flotante **Filtros**, también en computadora. En el celular, las hojas de filtros y Cómo encargar se pueden cerrar deslizando hacia abajo desde arriba.
 - Ver la **foto** de cada producto disponible y tocarla para agrandarla; si no hay foto se muestra la inicial de la marca.
 - Ver cada producto con el **tipo**, hasta dos ingredientes, los **tamaños** como etiquetas, el precio por transferencia y lo que sale en 3 cuotas.
 - **Armar el pedido y mandártelo por WhatsApp**, igual que en perfumes. El carrito es aparte del de perfumes.
