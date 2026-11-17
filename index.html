@@ -842,7 +842,6 @@
           title="Arrastralo a la barra de marcadores. Después abrí shoppingterranova.com.py y tocalo: baja la estética facial en un archivo .json (~1 min).">⬇ Terra Nova</a>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-bigs-btn" onclick="importKbeautySiteCatalog('bigs')">Traer Bigs</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-pontocom-btn" onclick="importKbeautySiteCatalog('pontocom')">Traer Ponto Com</button>
-        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-megaeletro-btn" onclick="importKbeautySiteCatalog('megaeletro')">Traer Mega Eletro</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-star-btn" onclick="importKbeautySiteCatalog('star')">Traer Star Company</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-connect-btn" onclick="importKbeautySiteCatalog('connect')" title="Trae cosmética y cremas con stock de connectimports.com.py; reemplaza la carga anterior.">Traer Connect Imports</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
@@ -1991,9 +1990,10 @@ function savePlSources() {
     .catch(err => alert(`No se pudieron guardar las listas cargadas (${err.message}): al recargar la página vuelven a como estaban.`));
 }
 
-// Card 25 (2026-11-04): en cosmética quedan Terra Nova, Ponto Com, Mega Eletro, Bigs y Star Company (98 % de lo que
-// vende la competencia argentina a +0,2 % de costo). Las demás eran incómodas para comprar o no sumaban productos.
-const PL_KBEAUTY_DROPPED_SITES = ['atacado', 'cellshop', 'shoppingchina', 'lg', 'flash', 'genove', 'intershop'];
+// En cosmética quedan Terra Nova, Ponto Com, Bigs, Star Company y Connect Imports. Las tiendas de la card 25
+// (2026-11-04) eran incómodas para comprar o no sumaban productos. Mega Eletro se sacó el 2026-11-17 (card 38)
+// porque el sitio dejó de responder al Worker.
+const PL_KBEAUTY_DROPPED_SITES = ['atacado', 'cellshop', 'shoppingchina', 'lg', 'flash', 'genove', 'intershop', 'megaeletro'];
 
 async function plLoadSources() {
   if (plIdbAvailable) {
@@ -8842,7 +8842,7 @@ function savePlTypeOverrides() {
 }
 
 // Fotos internas de cosmética: las URLs de las tiendas todavía no se publican.
-const PL_KB_IMG_PRIORITY = ['megaeletro', 'bigs', 'star', 'connect', 'pontocom', 'terranova'];
+const PL_KB_IMG_PRIORITY = ['bigs', 'star', 'connect', 'pontocom', 'terranova'];
 let plKbImgOverrides = {};
 try {
   const saved = JSON.parse(localStorage.getItem('importo-kbeauty-img-overrides') || '{}');
@@ -10550,32 +10550,6 @@ async function importTerraNovaFile(file) {
   }
 }
 
-// Mega Eletro corta la conexión desde la página 20: se lee la mitad del listado ordenado por nombre A–Z y la otra
-// mitad Z–A (las páginas del medio se repiten: se deduplica por código al armar los ítems). De a uno: con 2 a la vez
-// a veces da 429 y con 4 casi siempre; 38 seguidos de a uno pasaron sin error (2026-10-31). Si igual corta, espera
-// más que el reintento común antes de volver a pedir.
-async function plFetchMegaEletroRows(progress) {
-  const page = async ([n, order]) => {
-    const url = `${WORKER}/megaeletro?page=${n}&order=${order}`;
-    let d;
-    try { d = await plFetchKbeautyJson(url); }
-    catch (err) {
-      if (!/429|50\d/.test(err.message)) throw err;
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      d = await plFetchKbeautyJson(url);
-    }
-    if (!Array.isArray(d.items)) throw new Error('listado inválido');
-    progress(d.items.length);
-    return d;
-  };
-  const first = await page([1, 'asc']);
-  const half = Math.ceil(first.pages / 2);
-  if (!(first.pages >= 1) || half > 19) throw new Error('cantidad de páginas inválida (¿creció el catálogo?)');
-  const tasks = [...Array.from({ length: half - 1 }, (_, k) => [k + 2, 'asc']), ...Array.from({ length: first.pages > 1 ? half : 0 }, (_, k) => [k + 1, 'desc'])];
-  const rest = await plMapLimit(tasks, 1, page);
-  return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
-}
-
 // Star Company (2026-11-01): la misma ruta que perfumes con la categoría 100 "Cosméticos" entera (~620 productos,
 // 7 páginas de 96). Hay coreanos fuera de la subcategoría 617 "Cosméticos coreanos" (Medicube, Celimax). El listado
 // solo muestra lo que tiene stock.
@@ -10627,7 +10601,6 @@ async function plFetchConnectKbeautyRows(progress) {
 const PL_KBEAUTY_SITE_IMPORTS = {
   bigs: { label: 'Bigs', fetchRows: plFetchBigsKbeautyRows },
   pontocom: { label: 'Ponto Com', fetchRows: plFetchPontocomKbeautyRows },
-  megaeletro: { label: 'Mega Eletro', fetchRows: plFetchMegaEletroRows },
   star: { label: 'Star Company', fetchRows: plFetchStarKbeautyRows },
   connect: { label: 'Connect Imports', fetchRows: plFetchConnectKbeautyRows },
 };
