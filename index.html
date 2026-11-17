@@ -844,6 +844,7 @@
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-pontocom-btn" onclick="importKbeautySiteCatalog('pontocom')">Traer Ponto Com</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-megaeletro-btn" onclick="importKbeautySiteCatalog('megaeletro')">Traer Mega Eletro</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-star-btn" onclick="importKbeautySiteCatalog('star')">Traer Star Company</button>
+        <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import id="pl-kbeauty-connect-btn" onclick="importKbeautySiteCatalog('connect')" title="Trae cosmética y cremas con stock de connectimports.com.py; reemplaza la carga anterior.">Traer Connect Imports</button>
         <button class="btn btn-outline pl-kbeauty-only" data-kbeauty-import onclick="importAllKbeautySiteCatalogs()">Traer todos (cosmética)</button>
       </div>
 
@@ -8701,8 +8702,9 @@ const KBEAUTY_BRANDS = [
   ['point&', 'POINT DEEP CLEAN', 'POINT CLEAN FORMULA', 'POINT PORE'],
   ['Graceday'], ['Orjena'], ['Be the Skin'], ['Nextbeau'], ['Commonlabs', 'COMMON LABS'], ['Catch Me Patch'],
   ['Miguhara'], ['Make Prem', 'MAKEPREM'], ['Kocostar'], ['Papa Recipe'], ['Moms Bath Recipe', "MOM'S BATH RECIPE"],
-  ['Nature Republic'], ['AHC'], ['Rejuran'], ['Dr.Reju-All', 'DR REJU ALL'], ['Bergamo'], ['Elroel'],
-  ['Elravie'] // 2026-11-01, Star Company (Derma Elravie, de Humedix)
+  ['Nature Republic'], ['AHC'], ['Rejuran'], ['Dr.Reju-All', 'DR REJU ALL', 'DR REJU AII'], ['Bergamo'], ['Elroel'],
+  ['Elravie'], // 2026-11-01, Star Company (Derma Elravie, de Humedix)
+  ['Jollyour'], ['Lilyeve'] // 2026-11-17, Connect Imports
 ];
 
 // Igual que plNormalizeForBrandMatch, más el acento agudo suelto como apóstrofo (Terra Nova escribe "D´Alba").
@@ -8840,7 +8842,7 @@ function savePlTypeOverrides() {
 }
 
 // Fotos internas de cosmética: las URLs de las tiendas todavía no se publican.
-const PL_KB_IMG_PRIORITY = ['megaeletro', 'bigs', 'star', 'pontocom', 'terranova'];
+const PL_KB_IMG_PRIORITY = ['megaeletro', 'bigs', 'star', 'connect', 'pontocom', 'terranova'];
 let plKbImgOverrides = {};
 try {
   const saved = JSON.parse(localStorage.getItem('importo-kbeauty-img-overrides') || '{}');
@@ -10590,11 +10592,44 @@ async function plFetchStarKbeautyRows(progress) {
   return [first, ...rest].flatMap(d => d.items.map(x => plKbeautyWorkerRow(x)));
 }
 
+// Lectura de texto con el mismo timeout y pausas que los importadores JSON.
+async function plFetchConnectKbeautyText(url) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(60000) });
+      if (!r.ok) throw new Error(`respondió ${r.status}`);
+      return await r.text();
+    } catch (err) {
+      if (err.name === 'TimeoutError') err = new Error('no respondió en 60 s');
+      if (attempt >= 2 || !/429|5\d\d|60 s|Failed to fetch/.test(err.message)) throw err;
+      await new Promise(resolve => setTimeout(resolve, 1500 * (attempt + 1)));
+    }
+  }
+}
+
+async function plFetchConnectKbeautyRows(progress) {
+  const text = await plFetchConnectKbeautyText(`https://connectimports.com.py/data/products.js?v=${Date.now()}`);
+  let products;
+  try {
+    const start = text.indexOf('['), end = text.lastIndexOf(']');
+    if (start < 0 || end < start) throw new Error('listado inválido');
+    products = JSON.parse(text.slice(start, end + 1));
+    if (!Array.isArray(products) || !products.length) throw new Error('listado inválido');
+  } catch { throw new Error('listado inválido'); }
+  const rows = products
+    .filter(x => ['COSMETICOS', 'CREMES'].includes(plStripAccents(String(x.category || '')).toUpperCase()))
+    .map(x => plKbeautyWorkerRow({ code: x.id, name: x.title, price: x.priceUsd,
+      brand: x.brand === 'GERAL' ? '' : x.brand, stock: x.stock, img: x.noPhoto ? undefined : x.image }));
+  progress(rows.length);
+  return rows;
+}
+
 const PL_KBEAUTY_SITE_IMPORTS = {
   bigs: { label: 'Bigs', fetchRows: plFetchBigsKbeautyRows },
   pontocom: { label: 'Ponto Com', fetchRows: plFetchPontocomKbeautyRows },
   megaeletro: { label: 'Mega Eletro', fetchRows: plFetchMegaEletroRows },
   star: { label: 'Star Company', fetchRows: plFetchStarKbeautyRows },
+  connect: { label: 'Connect Imports', fetchRows: plFetchConnectKbeautyRows },
 };
 let plKbeautyImportBusy = false;
 
