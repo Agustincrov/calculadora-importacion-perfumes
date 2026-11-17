@@ -2,7 +2,7 @@
 // Handles: USDT/ARS (dolarapi.com "cripto" = precio de Binance P2P), catálogos de perfumes de
 // Ponto Com (pontocom.com) y Star Company (starcompany-py.com), scraping del listado paginado, Multipass
 // (multipass.com.py) y LG Importados (lgimportados.com), que tienen JSON pero no mandan CORS, cosmética coreana (Bigs,
-// Shopping China, Ponto Com, LG, Mega Eletro, Flash Importados, Star Company e Intershop), perfumes de Intershop y publicación de docs/catalogo.html en GitHub
+// Shopping China, Ponto Com, LG, Flash Importados, Star Company e Intershop), perfumes de Intershop y publicación de docs/catalogo.html en GitHub
 // (/publish-catalog). Macedonia no pasa por acá: su hosting (SiteGround) le responde con un captcha a todo
 // pedido que sale de Cloudflare; el catálogo se baja desde el navegador (ver index.html). Se paga solo en USDT: las rutas de PIX, comparapix, blue y oficial
 // se sacaron el 2026-10-10.
@@ -53,7 +53,6 @@ async function handle(req, env) {
     }
     if (path === '/bigs') return await fetchBigsPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/shoppingchina') return await fetchShoppingChina(new URL(req.url).searchParams);
-    if (path === '/megaeletro') return await fetchMegaEletroPage(new URL(req.url).searchParams);
     if (path === '/flash') return await fetchFlashPage(Number(new URL(req.url).searchParams.get('page')));
     if (path === '/intershop') return await fetchIntershopPage(new URL(req.url).searchParams);
     if (path === '/asm' && req.method === 'GET') return await fetchAsmPage(new URL(req.url).searchParams);
@@ -384,38 +383,6 @@ async function fetchShoppingChina(q) {
   return jsonResp({ page, total: Number(total[1].replace(/[.,]/g, '')), items });
 }
 
-// Mega Eletro (megaeletronicos.com, Laravel): categoría Cosméticos (17) con stock, 42 por página. Cada tarjeta trae
-// el producto entero en JSON dentro del onclick de "favoritos" (precio, promo, stock, marca). El sitio corta la
-// conexión desde la página 20 (de ~23): se recorre ordenado por nombre de los dos lados (asc y desc, hasta la 12) y la
-// app junta los resultados. Con 4 pedidos a la vez responde 429: la app pide de a 2.
-async function fetchMegaEletroPage(q) {
-  const page = Number(q.get('page')), order = q.get('order') || 'asc';
-  if (!Number.isInteger(page) || page < 1 || page > 19) return jsonResp({ error: 'page inválida' }, 400);
-  if (order !== 'asc' && order !== 'desc') return jsonResp({ error: 'order inválido' }, 400);
-  const html = await fetchKbeautyPage(`https://www.megaeletronicos.com/producto/categoria/cosmeticos/17?available=yes&order_name=${order}&page=${page}`);
-  const items = [];
-  for (const m of html.matchAll(/addItemToFavorite\((\{[\s\S]*?\})\)"/g)) {
-    let x;
-    try { x = JSON.parse(decodeEntities(m[1])); } catch { continue; }
-    let img = '';
-    try {
-      if (typeof x.image === 'string' && x.image) {
-        const url = new URL(x.image, 'https://resource.megaeletronicos.com');
-        if (url.protocol === 'https:') img = url.href;
-      }
-    } catch { /* Una URL inválida no impide importar el producto. */ }
-    const promo = Number(x.price_promo);
-    items.push({
-      img,
-      code: String(x.code || x.id), name: String(x.product_lang?.name_web || x.product_lang?.name || '').replace(/\s+/g, ' ').trim(),
-      price: promo > 0 ? promo : Number(x.price) || null, stock: Number(x.stock) || 0, brand: x.brand?.name || '',
-    });
-  }
-  const pages = Math.max(0, ...[...html.matchAll(/[?&](?:amp;)?page=(\d+)/g)].map(m => Number(m[1])));
-  if (!items.length && page === 1) return jsonResp({ error: 'megaeletro: no se encontró el listado' }, 502);
-  return jsonResp({ page, order, pages, items });
-}
-
 // Flash Importados (flashimportados.com): categoría Facial, 50 por página (~25). Tarjeta: "Código: <span>N</span>",
 // link /brand/…, <h2> con el nombre y "U$ 17,00"; los agotados no muestran precio.
 async function fetchFlashPage(page) {
@@ -525,7 +492,7 @@ async function fetchAsmPage(q) {
 
 // ── Fotos de Silkface — originales privados, nombres públicos opacos ──
 const PHOTO_HOSTS = new Set([
-  'www.pontocom.com', 'resource.megaeletronicos.com', 'bigs.com.py',
+  'www.pontocom.com', 'bigs.com.py',
   'www.starcompany-py.com', 'assets-terranova.egondola.app',
   'api.eleganciacompany.com', 'img.genove.com.py', 'www.lgimportados.com',
   'intershop.com.py', 'compras.macedonia.com.py', 'dados.sfo3.cdn.digitaloceanspaces.com',
