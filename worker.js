@@ -529,7 +529,7 @@ const PHOTO_HOSTS = new Set([
   'www.starcompany-py.com', 'assets-terranova.egondola.app',
   'api.eleganciacompany.com', 'img.genove.com.py', 'www.lgimportados.com',
   'intershop.com.py', 'compras.macedonia.com.py', 'dados.sfo3.cdn.digitaloceanspaces.com',
-  'asmimportados.com.py',
+  'asmimportados.com.py', 'img.connectimports.com.py',
 ]);
 const PHOTO_VERSION = 'v2'; // Cambiarla cuando cambie la transformación, así se generan de nuevo.
 const PHOTO_MAX_BYTES = 20 * 1024 * 1024;
