@@ -213,7 +213,7 @@ La página también muestra las condiciones de los encargos: pedidos de sábado 
 
 Si el mismo perfume y tamaño aparece en dos proveedores con menos de 10 % de diferencia de precio, el catálogo muestra solo el más barato. Si la versión de hombre y la de mujer quedan con el mismo nombre, se les agrega "· Hombre" o "· Mujer".
 
-Los precios del catálogo quedan fijos al momento de publicar: si cambian las cotizaciones, volvé a generar y publicar.
+Después de publicar, los precios se actualizan solos cuando el USDT se mueve 0,5 % o más, sin volver a Generar. Si cambia un precio en USD o el stock de un proveedor, hay que Generar y Publicar como siempre.
 
 #### Silkface (cosmética coreana)
 

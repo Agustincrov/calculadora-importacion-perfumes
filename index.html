@@ -11285,6 +11285,38 @@ function plFinalPrice(costTotal, marginPct, roundStep) {
   return Math.ceil(raw / step) * step;
 }
 
+function plPriceCoefficients(it, configs) {
+  if (it.manualPrice != null) {
+    return { a: Number((it.manualPrice / getRate('r-usdt')).toFixed(6)), b: 0 };
+  }
+  const line = it.line === 'kbeauty' ? 'kbeauty' : 'perfumes';
+  const cfg = configs[line];
+  const cat = line === 'kbeauty' ? 'kbeauty' : plCategoryFor(it);
+  const f = plFormulas[cat] || plFormulas.disenador;
+  const cost0 = plComputeCostTotal(it.priceUsd, { ...cfg.rates, usdt: 0 }, cfg.envioFijo, line);
+  const cost1 = plComputeCostTotal(it.priceUsd, { ...cfg.rates, usdt: 1 }, cfg.envioFijo, line);
+  return {
+    a: Number((cost1 - cost0 + it.priceUsd * f.pct / 100).toFixed(6)),
+    b: Number((cost0 + f.fixed).toFixed(2)),
+  };
+}
+
+function plPriceManifest(target) {
+  const configs = { perfumes: plGetConfig('perfumes'), kbeauty: plGetConfig('kbeauty') };
+  const items = target === 'silkface'
+    ? plPublishableItems().filter(it => Math.round(it.manualPrice != null ? it.manualPrice : it.finalPriceArs) > 0)
+    : plCatalogPublishItems();
+  return {
+    v: 1,
+    usdt: getRate('r-usdt'),
+    step: getRate('r-round-step') || 1,
+    items: items.map(it => {
+      const { a, b } = plPriceCoefficients(it, configs);
+      return [a, b];
+    }),
+  };
+}
+
 function plGetConfig(line = 'perfumes') {
   return {
     envioFijo: getRate(line === 'kbeauty' ? 'r-kb-envio-fijo' : 'r-envio-fijo'),
@@ -12245,9 +12277,13 @@ function exportPlExcel() {
 
 // Archivo único (sin hosting) con buscador en vivo — se lo mandás al cliente como cualquier
 // archivo por WhatsApp y lo abre en el navegador del celu, sin necesitar Excel.
-function buildCatalogHtml(photoKeys) {
-  const sorted = plPublishableItems()
+function plCatalogPublishItems() {
+  return plPublishableItems()
     .sort((a, b) => (a.brand || '').localeCompare(b.brand || '') || a.displayName.localeCompare(b.displayName));
+}
+
+function buildCatalogHtml(photoKeys) {
+  const sorted = plCatalogPublishItems();
   if (sorted.length === 0) return null;
 
   const data = sorted.map(it => {
@@ -15772,15 +15808,23 @@ async function publishCatalogAuto() {
       photos = await plKbPreparePhotos(photoItems, (n, total) => { statusEl.textContent = `Preparando fotos ${n} de ${total}…`; });
       html = t.build(photos.keys);
     }
+    const prices = plPriceManifest(t.target);
+    const dataMatch = html.match(/var DATA = (\[.*?\]);\n/s);
+    let rowsMatch = false;
+    try {
+      const rows = dataMatch && JSON.parse(dataMatch[1]);
+      rowsMatch = Array.isArray(rows) && rows.length === prices.items.length;
+    } catch (e) { /* sin DATA válido, se publica sin manifiesto */ }
     const resp = await fetch(`${WORKER}/publish-catalog`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Publish-Secret': secret },
-      body: JSON.stringify({ html, target: t.target }),
+      body: JSON.stringify({ html, target: t.target, ...(rowsMatch ? { prices } : {}) }),
     });
     const data = await resp.json();
     if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
     statusEl.innerHTML = `✓ Publicado — <a href="${data.url}" target="_blank">${data.url}</a>`;
     if (photos) statusEl.appendChild(document.createTextNode(plKbPhotoSummary(photos, photoItems)));
+    if (!rowsMatch) statusEl.appendChild(document.createTextNode(' · sin recálculo automático (no coinciden las filas)'));
     statusEl.style.color = 'var(--success)';
   } catch (e) {
     statusEl.textContent = `✗ No se pudo publicar: ${e.message}`;
