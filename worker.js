@@ -24,6 +24,9 @@ export default {
   async fetch(req, env, ctx) {
     return handle(req, env);
   },
+  scheduled(controller, env, ctx) {
+    ctx.waitUntil(repriceAll(env, {}));
+  },
 };
 
 async function handle(req, env) {
@@ -57,6 +60,7 @@ async function handle(req, env) {
     if (path === '/intershop') return await fetchIntershopPage(new URL(req.url).searchParams);
     if (path === '/asm' && req.method === 'GET') return await fetchAsmPage(new URL(req.url).searchParams);
     if (path === '/publish-catalog' && req.method === 'POST') return await handlePublishCatalog(req, env);
+    if (path === '/reprice' && req.method === 'POST') return await handleReprice(req, env);
     // La app lo consulta antes de publicar una lista que no sea el catálogo: un Worker viejo no la conoce.
     if (path === '/publish-targets') return jsonResp({ targets: Object.keys(PUBLISH_TARGETS) });
     return jsonResp({ error: 'not found' }, 404);
@@ -75,12 +79,15 @@ function jsonResp(data, status = 200) {
 // traffic (its Cloudflare WAF returns error 1106). dolarapi.com has no such
 // block and its "cripto" casa is the standard USDT/ARS-equivalent rate.
 async function fetchBinanceUSDT() {
+  return jsonResp({ price: await getUsdtVenta() });
+}
+
+async function getUsdtVenta() {
   const r = await fetch('https://dolarapi.com/v1/dolares/cripto', {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
   });
   const data = await r.json();
-  const price = typeof data?.venta === 'number' ? data.venta : null;
-  return jsonResp({ price });
+  return typeof data?.venta === 'number' ? data.venta : null;
 }
 
 // ── Dólar blue en Córdoba — via infodolar.com ─────────────────────
@@ -653,6 +660,33 @@ const PUBLISH_TARGETS = {
   silkface: { path: 'docs/silkface.html', page: 'silkface.html', label: 'Silkface' },
 };
 
+function isValidPriceManifest(prices) {
+  return prices?.v === 1
+    && Number.isFinite(prices.usdt) && prices.usdt > 0
+    && Number.isFinite(prices.step) && prices.step > 0
+    && Array.isArray(prices.items)
+    && prices.items.every(pair => Array.isArray(pair) && pair.length === 2 && pair.every(Number.isFinite));
+}
+
+async function savePublishedPrices(body, target, putResp, env) {
+  if (!env.FOTOS) return 'error';
+  const key = `precios/${target}.json`;
+  try {
+    if (!Object.prototype.hasOwnProperty.call(body, 'prices')) {
+      await env.FOTOS.delete(key);
+      return 'deleted';
+    }
+    if (!isValidPriceManifest(body.prices)) return 'invalid';
+    const sha = (await putResp.json())?.content?.sha;
+    if (typeof sha !== 'string' || !sha) return 'error';
+    const { v, usdt, step, items } = body.prices;
+    await env.FOTOS.put(key, JSON.stringify({ v, usdt, step, items, sha, publishedAt: new Date().toISOString() }));
+    return 'saved';
+  } catch (e) {
+    return 'error';
+  }
+}
+
 async function handlePublishCatalog(req, env) {
   const secret = req.headers.get('X-Publish-Secret');
   if (!secret || !env.PUBLISH_SECRET || secret !== env.PUBLISH_SECRET) {
@@ -670,7 +704,8 @@ async function handlePublishCatalog(req, env) {
   }
 
   // Sin "target" = catálogo de perfumes (lo que mandaban las versiones anteriores de la app).
-  const target = PUBLISH_TARGETS[body?.target || 'catalogo'];
+  const targetName = body?.target || 'catalogo';
+  const target = PUBLISH_TARGETS[targetName];
   if (!target) return jsonResp({ error: 'destino desconocido' }, 400);
   const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${target.path}`;
   const ghHeaders = {
@@ -704,10 +739,129 @@ async function handlePublishCatalog(req, env) {
 
   return jsonResp({
     ok: true,
+    prices: await savePublishedPrices(body, targetName, putResp, env),
     // GitHub Pages sirve desde /docs como raíz del sitio — NO se antepone "docs/" a la URL pública,
     // aunque el archivo viva en ese path dentro del repo (por eso se usa target.page y no target.path).
     url: `https://${GITHUB_OWNER.toLowerCase()}.github.io/${GITHUB_REPO}/${target.page}`,
   });
+}
+
+// ── Recálculo de precios por cotización ────────────────────────────
+async function handleReprice(req, env) {
+  const secret = req.headers.get('X-Publish-Secret');
+  if (!secret || !env.PUBLISH_SECRET || secret !== env.PUBLISH_SECRET) {
+    return jsonResp({ error: 'unauthorized' }, 401);
+  }
+  let body;
+  try {
+    const text = await req.text();
+    body = text.trim() ? JSON.parse(text) : {};
+  } catch { return jsonResp({ error: 'invalid json' }, 400); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+      || (body.force !== undefined && typeof body.force !== 'boolean')
+      || (body.dry !== undefined && typeof body.dry !== 'boolean')) {
+    return jsonResp({ error: 'force y dry deben ser booleanos' }, 400);
+  }
+  return jsonResp(await repriceAll(env, { force: body.force === true, dry: body.dry === true }));
+}
+
+async function repriceAll(env, opts = {}) {
+  let usdt;
+  try { usdt = await getUsdtVenta(); } catch { usdt = null; }
+  if (!Number.isFinite(usdt) || usdt <= 0) return { skipped: 'sin cotización' };
+  const results = [];
+  for (const target of ['catalogo', 'silkface']) {
+    try {
+      results.push({ target, ...await repriceTarget(env, target, usdt, opts) });
+    } catch (e) {
+      results.push({ target, skipped: String(e.message || e) });
+    }
+  }
+  return { usdt, results };
+}
+
+async function repriceTarget(env, targetName, usdt, { force = false, dry = false } = {}) {
+  if (!env.FOTOS) return { skipped: 'falta binding FOTOS' };
+  const key = `precios/${targetName}.json`;
+  const object = await env.FOTOS.get(key);
+  if (!object) return { skipped: 'sin manifiesto' };
+  const m = await object.json();
+  if (!isValidPriceManifest(m) || typeof m.sha !== 'string' || !m.sha) {
+    return { skipped: 'manifiesto inválido' };
+  }
+  const change = usdt / m.usdt - 1;
+  // Evita que 1708.5 / 1700 - 1 quede apenas por debajo de 0.005.
+  if (!force && Math.abs(usdt - m.usdt) < m.usdt * 0.005) return { skipped: 'sin cambio', change };
+
+  const target = PUBLISH_TARGETS[targetName];
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${target.path}`;
+  const ghHeaders = {
+    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+    'User-Agent': 'importo-catalog-publisher',
+    'Accept': 'application/vnd.github+json',
+  };
+  const getResp = await fetch(apiUrl, { headers: { ...ghHeaders, 'Accept': 'application/vnd.github.object+json' } });
+  if (!getResp.ok) return { skipped: `GitHub: ${getResp.status}` };
+  let file = await getResp.json();
+  if (file.sha !== m.sha) return { skipped: 'el archivo cambió desde la publicación' };
+  // Contents omite el contenido de archivos de más de 1 MiB; el blob conserva el mismo SHA.
+  if (file.encoding === 'none' && !file.content) {
+    const blobResp = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/blobs/${encodeURIComponent(m.sha)}`, { headers: ghHeaders });
+    if (!blobResp.ok) return { skipped: `GitHub: ${blobResp.status}` };
+    file = await blobResp.json();
+    if (file.sha !== m.sha) return { skipped: 'el archivo cambió desde la publicación' };
+  }
+  if (file.encoding !== 'base64' || typeof file.content !== 'string') return { skipped: 'contenido no disponible' };
+  const html = base64ToUtf8(file.content);
+  const dataPattern = /var DATA = (\[.*?\]);\n/s;
+  const match = html.match(dataPattern);
+  let data;
+  try { data = match ? JSON.parse(match[1]) : null; } catch { data = null; }
+  if (!Array.isArray(data) || data.length !== m.items.length) return { skipped: 'filas distintas' };
+  const datePattern = /var CATALOG_DATE = '[^']*';/;
+  if (!datePattern.test(html)) return { skipped: 'sin fecha de catálogo' };
+
+  let changed = 0;
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i], [a, b] = m.items[i];
+    const raw = Math.round((a * usdt + b) * 100) / 100;
+    const price = Math.ceil(raw / m.step) * m.step;
+    if (!d || typeof d !== 'object' || Array.isArray(d)
+        || !Number.isFinite(d.price) || !Number.isFinite(price)) return { skipped: 'datos de precio inválidos' };
+    if (d.price !== price) changed++;
+    d.price = price;
+  }
+  const summary = { target: targetName, base: m.usdt, usdt, change, changed, committed: false };
+  if (dry) return summary;
+
+  const now = new Date();
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(now).map(p => [p.type, p.value]));
+  const date = `${parts.day}/${parts.month}/${parts.year}`;
+  const timestamp = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+  const updated = html
+    .replace(dataPattern, () => 'var DATA = ' + JSON.stringify(data).replace(/</g, '\\u003c') + ';\n')
+    .replace(datePattern, () => `var CATALOG_DATE = '${date}';`);
+  const putResp = await fetch(apiUrl, {
+    method: 'PUT',
+    headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: `Actualizar cotización — ${target.label} — ${timestamp} (USDT ${usdt})`,
+      content: utf8ToBase64(updated), sha: m.sha,
+    }),
+  });
+  if (!putResp.ok) return { skipped: `GitHub: ${putResp.status}` };
+  summary.committed = true;
+  try {
+    const sha = (await putResp.json())?.content?.sha;
+    if (typeof sha !== 'string' || !sha) return { ...summary, skipped: 'GitHub no devolvió el SHA nuevo' };
+    await env.FOTOS.put(key, JSON.stringify({ ...m, usdt, sha, repricedAt: now.toISOString() }));
+  } catch (e) {
+    return { ...summary, skipped: `no se pudo guardar el manifiesto: ${e.message || e}` };
+  }
+  return summary;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
@@ -721,4 +875,9 @@ function utf8ToBase64(str) {
   let binary = '';
   for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
   return btoa(binary);
+}
+
+function base64ToUtf8(str) {
+  const binary = atob(str.replace(/\s/g, ''));
+  return new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0)));
 }
